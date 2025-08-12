@@ -50,7 +50,7 @@
 [ ] **Set up Swift/RealityKit project scaffold**
 [ ] Create base iOS app project in Xcode.
 [ ] Integrate RealityKit scene rendering.
-[ ] Test rendering of placeholder assets in AR.
+[ ] Test rendering of placeholder assets in VR.
 
 [ ] **Implement privacy controls**
 [ ] Add FaceID/Passcode lock functionality.
@@ -66,7 +66,7 @@
 [ ] Set up connection to Amazon Neptune (using connection details from Terraform outputs).
 
 [ ] **Configure external API integrations**
-[ ] Set up Claude API client for LLM conversations.
+[ ] Set up OpenRouter API client for LLM conversations (Claude, GPT, etc.).
 [ ] Configure OpenAI API for text embeddings.
 
 ---
@@ -101,18 +101,18 @@
 [ ] **Implement LLM conversation pipeline**
 [ ] Create FastAPI endpoints for conversation requests.
 [ ] Connect to Neptune to retrieve GraphRAG context using Gremlin queries.
-[ ] Call Claude API with RAG context and return response.
+[ ] Call OpenRouter API (Claude/GPT models) with RAG context and return response.
 [ ] Implement OpenAI embeddings for semantic search in Neptune.
 
 ---
 
 ## **Phase 3 – Interface Layer**
 
-**Criteria:** User-facing UI and AR components. Dependent on Phase 1 foundation and partially on Phase 2 data layer.
+**Criteria:** User-facing UI and VR components. Dependent on Phase 1 foundation and partially on Phase 2 data layer.
 
 ---
 
-### **Trevor – Frontend (iOS AR)**
+### **Trevor – Frontend (iOS VR)**
 
 [ ] **Implement Landing/Login/Signup screens**
 [ ] Build SwiftUI screens for login and signup.
