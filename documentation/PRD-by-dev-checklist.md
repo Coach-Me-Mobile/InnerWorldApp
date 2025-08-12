@@ -98,11 +98,13 @@
 
 ### **Darren – Backend & AI Pipeline**
 
-[ ] **Implement LLM conversation pipeline**
-[ ] Create Lambda function for conversation requests via API Gateway.
-[ ] Connect to Neptune to retrieve GraphRAG context using Gremlin queries.
-[ ] Call OpenRouter API (Claude/GPT models) with RAG context and return response.
+[ ] **Implement LLM conversation pipeline with LangGraph**
+[ ] Create Lambda function for conversation orchestration via API Gateway (REST).
+[ ] Build LangGraph workflow: safety_check → context_retrieval → persona_prompt → llm_generation → memory_storage.
+[ ] Connect to Neptune for GraphRAG context retrieval using Gremlin queries.
+[ ] Call OpenRouter API (Claude/GPT models) through LangGraph generation node.
 [ ] Implement OpenAI embeddings for semantic search in Neptune.
+[ ] Add conversation state management and persona-specific prompt templates.
 
 ---
 
