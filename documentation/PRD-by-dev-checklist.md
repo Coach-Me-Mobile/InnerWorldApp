@@ -201,6 +201,100 @@ Update Neptune graph - create nodes and relationships
 Clean up DynamoDB - remove processed conversation data
 ```
 
+#### Backend LangGraph Implementation Examples
+
+##### LangGraph Workflow
+```python
+def create_session_aware_graph():
+    graph = StateGraph()
+    
+    # Session initialization (runs once per session)
+    graph.add_node("session_init", session_initialization_node)
+    graph.add_node("context_retrieval", neptune_context_node)
+    
+    # Per-message processing
+    graph.add_node("safety_check", safety_moderation_node)
+    graph.add_node("persona_prompt", persona_prompt_node)
+    graph.add_node("llm_generation", openrouter_generation_node)
+    graph.add_node("live_storage", dynamodb_storage_node)
+    
+    # Session end processing (runs once per session)
+    graph.add_node("session_end", session_processing_node)
+    graph.add_node("graph_update", neptune_update_node)
+    
+    return graph.compile()
+```
+
+##### WebSocket Lambda Handler
+```python
+def conversation_handler(event, context):
+    user_input = event['message']
+    persona = event['persona']
+    user_id = event['user_id']
+    session_id = event['session_id']
+    
+    # 1. Retrieve GraphRAG context from Neptune (cached in session)
+    context = get_cached_context(session_id) or get_user_context_graph(user_id, persona)
+    
+    # 2. LangGraph orchestration
+    graph = create_conversation_graph()
+    result = graph.invoke({
+        "user_input": user_input,
+        "persona": persona,
+        "context": context,
+        "user_profile": get_user_profile(user_id),
+        "session_id": session_id
+    })
+    
+    # 3. Store conversation in DynamoDB
+    store_conversation_dynamodb(session_id, user_input, result.response)
+    
+    # 4. Send response via WebSocket
+    send_websocket_message(event['connectionId'], result.response)
+    
+    return {"statusCode": 200}
+```
+
+##### Session Processing Lambda
+```python
+def session_end_processor(event, context):
+    session_id = event['session_id']
+    user_id = event['user_id']
+    
+    # 1. Retrieve full conversation from DynamoDB
+    conversation = get_full_conversation(session_id)
+    
+    # 2. Extract conversation elements
+    elements = extract_conversation_elements(conversation)
+    
+    # 3. Update Neptune graph
+    update_neptune_graph(user_id, elements)
+    
+    # 4. Clean up DynamoDB
+    cleanup_session_data(session_id)
+    
+    return {"statusCode": 200}
+
+def extract_conversation_elements(conversation):
+    """Extract Events, Feelings, Values, etc. from conversation"""
+    elements = {
+        "events": [],
+        "feelings": [],
+        "values": [],
+        "goals": [],
+        "habits": []
+    }
+    
+    # Use LLM to analyze conversation and extract elements
+    analysis_prompt = build_extraction_prompt(conversation)
+    response = openrouter_client.chat.completions.create(
+        model="anthropic/claude-3.5-sonnet",
+        messages=[{"role": "user", "content": analysis_prompt}]
+    )
+    
+    return parse_extracted_elements(response.choices[0].message.content)
+```
+
 [Reference Doc](https://docs.aws.amazon.com/apigateway/latest/developerguide/websocket-api-chat-app.html) 
 
 ---
@@ -221,6 +315,179 @@ Clean up DynamoDB - remove processed conversation data
 [ ] Add session start/end UI with WebSocket connection status and controls.
 [ ] Implement session recovery logic for network interruptions.
 [ ] Handle graceful session termination with proper WebSocket cleanup.
+
+#### WebSocket Implementation Examples
+
+##### Connection Management
+```swift
+class ConversationWebSocket: ObservableObject {
+    private var webSocketTask: URLSessionWebSocketTask?
+    @Published var connectionState: ConnectionState = .disconnected
+    @Published var messages: [ConversationMessage] = []
+    
+    func connect(sessionId: String, persona: String) {
+        let url = URL(string: "wss://your-api.amazonaws.com/production")!
+        webSocketTask = URLSession.shared.webSocketTask(with: url)
+        webSocketTask?.resume()
+        
+        // Send initial connection with session context
+        sendConnectionMessage(sessionId: sessionId, persona: persona)
+        startListening()
+    }
+    
+    private func startListening() {
+        webSocketTask?.receive { [weak self] result in
+            switch result {
+            case .success(let message):
+                self?.handleMessage(message)
+                self?.startListening() // Continue listening
+            case .failure(let error):
+                print("WebSocket error: \(error)")
+                self?.connectionState = .error
+            }
+        }
+    }
+}
+```
+
+##### Message Protocol
+```swift
+// Outgoing message format
+struct OutgoingMessage: Codable {
+    let action: String = "sendmessage"
+    let message: String
+    let persona: String
+    let sessionId: String
+    let userId: String
+    let timestamp: String
+}
+
+// Incoming message handling
+func handleIncomingMessage(_ data: Data) {
+    if let response = try? JSONDecoder().decode(IncomingMessage.self, from: data) {
+        DispatchQueue.main.async {
+            self.messages.append(ConversationMessage(
+                content: response.content,
+                sender: .assistant,
+                timestamp: Date(),
+                deliveryState: .delivered,
+                persona: Persona(rawValue: response.persona)
+            ))
+        }
+    }
+}
+```
+
+##### Session Management
+```swift
+struct ConversationSessionView: View {
+    @StateObject private var webSocket = ConversationWebSocket()
+    @State private var sessionTimeRemaining: TimeInterval = 1200 // 20 minutes
+    @State private var currentPersona: Persona = .courage
+    
+    var body: some View {
+        VStack {
+            ConnectionStatusBar(state: webSocket.connectionState)
+            SessionTimerView(timeRemaining: sessionTimeRemaining)
+            ChatMessagesView(messages: webSocket.messages)
+            MessageInputView { message in
+                webSocket.sendMessage(message, persona: currentPersona)
+            }
+        }
+        .onAppear { startSession() }
+        .onDisappear { endSession() }
+    }
+    
+    private func startSession() {
+        let sessionId = UUID().uuidString
+        webSocket.connect(sessionId: sessionId, persona: currentPersona.rawValue)
+        startSessionTimer()
+    }
+    
+    private func endSession() {
+        webSocket.disconnect()
+        // Trigger session processing on backend
+    }
+}
+```
+
+##### Connection Status UI
+```swift
+struct ConnectionStatusBar: View {
+    let state: ConnectionState
+    
+    var body: some View {
+        HStack {
+            Circle()
+                .fill(statusColor)
+                .frame(width: 8, height: 8)
+            Text(statusText)
+                .font(.caption)
+        }
+    }
+    
+    private var statusColor: Color {
+        switch state {
+        case .connected: return .green
+        case .connecting: return .yellow
+        case .disconnected, .error: return .red
+        }
+    }
+}
+```
+
+##### Typing Indicators
+```swift
+struct TypingIndicatorView: View {
+    @State private var animating = false
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3) { index in
+                Circle()
+                    .fill(Color.gray)
+                    .frame(width: 6, height: 6)
+                    .scaleEffect(animating ? 1.2 : 0.8)
+                    .animation(
+                        .easeInOut(duration: 0.6)
+                        .repeatForever()
+                        .delay(Double(index) * 0.2),
+                        value: animating
+                    )
+            }
+            Text("Courage is thinking...")
+                .font(.caption)
+                .foregroundColor(.gray)
+        }
+    }
+}
+```
+
+##### Message State Management
+```swift
+struct ConversationMessage: Identifiable {
+    let id = UUID()
+    let content: String
+    let sender: MessageSender
+    let timestamp: Date
+    var deliveryState: DeliveryState = .sending
+    var persona: Persona?
+}
+
+enum DeliveryState {
+    case sending
+    case delivered
+    case failed
+    case processing // When AI is thinking
+}
+
+enum ConnectionState {
+    case disconnected
+    case connecting
+    case connected
+    case error
+}
+```
 
 ---
 
