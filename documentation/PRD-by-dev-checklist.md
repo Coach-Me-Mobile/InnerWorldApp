@@ -89,22 +89,24 @@
 ### **Nataly – Infrastructure**
 
 [ ] **Deploy serverless backend infrastructure via Terraform**
-[ ] Configure Lambda functions with API Gateway for REST endpoints.
-[ ] Set up Lambda layers for shared dependencies (OpenRouter, Neptune clients).
-[ ] Deploy Lambda functions with proper IAM roles for Neptune and Cognito access.
-[ ] Configure environment-specific Lambda deployments (dev/staging/prod).
+[ ] Configure WebSocket API with Lambda functions for real-time conversation.
+[ ] Set up DynamoDB table for live conversation storage with TTL.
+[ ] Set up Lambda layers for shared dependencies (OpenRouter, Neptune, LangGraph clients).
+[ ] Deploy Lambda functions with proper IAM roles for Neptune, DynamoDB, and Cognito access.
+[ ] Configure environment-specific deployments (dev/staging/prod).
 
 ---
 
 ### **Darren – Backend & AI Pipeline**
 
-[ ] **Implement LLM conversation pipeline with LangGraph**
-[ ] Create Lambda function for conversation orchestration via API Gateway (REST).
-[ ] Build LangGraph workflow: safety_check → context_retrieval → persona_prompt → llm_generation → memory_storage.
-[ ] Connect to Neptune for GraphRAG context retrieval using Gremlin queries.
+[ ] **Implement real-time conversation pipeline with WebSocket + LangGraph**
+[ ] Create WebSocket Lambda functions: $connect, $disconnect, $default, sendmessage.
+[ ] Build LangGraph workflow: session_init → safety_check → persona_prompt → llm_generation → live_storage.
+[ ] Implement session start: Neptune context retrieval to prime LangGraph with user history.
+[ ] Create real-time message handling: DynamoDB storage → LangGraph processing → WebSocket response.
+[ ] Build session end processing: DynamoDB → Neptune graph update with conversation elements.
 [ ] Call OpenRouter API (Claude/GPT models) through LangGraph generation node.
-[ ] Implement OpenAI embeddings for semantic search in Neptune.
-[ ] Add conversation state management and persona-specific prompt templates.
+[ ] Add conversation state persistence and persona-specific prompt templates.
 
 ---
 
