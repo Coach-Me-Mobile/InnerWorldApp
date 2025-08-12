@@ -10,14 +10,20 @@
 
 ### **Nataly – DevOps/Infrastructure**
 
-[ ] **Set up core AWS infrastructure**
-[ ] Create AWS dev/prod accounts and environments.
-[ ] Configure AWS Secrets Manager for credentials and API keys.
-[ ] Set up AWS CodePipeline for build/deploy and GitHub Actions for code quality.
+[ ] **Set up Terraform IaC foundation**
+[ ] Initialize Terraform project with AWS provider configuration.
+[ ] Create modular Terraform structure for dev/staging/prod environments.
+[ ] Set up remote state backend (S3 + DynamoDB) for team collaboration.
+
+[ ] **Configure core AWS infrastructure via Terraform**
+[ ] Deploy VPC, subnets, security groups, and networking components.
+[ ] Set up AWS Secrets Manager for credentials and API keys.
+[ ] Configure AWS CodePipeline for build/deploy and GitHub Actions for code quality.
 
 [ ] **Configure AWS Cognito for authentication**
-[ ] Create Cognito User Pool and Identity Pool.
+[ ] Create Cognito User Pool and Identity Pool via Terraform.
 [ ] Enable Apple ID and email/password sign-in.
+[ ] Set up proper IAM roles and policies for Cognito integration.
 
 ---
 
@@ -26,21 +32,20 @@
 [ ] **Define 3D asset standards**
 [ ] Standardize on USDZ format for RealityKit compatibility.
 [ ] Define scaling, lighting, and material requirements for ImmersiveSpace.
-[ ] Document asset optimization guidelines for AR performance.
+[ ] Document asset optimization guidelines for VR performance.
 
 [ ] **Model base Dreamroom environment**
 [ ] Create square room with 4 themed walls as USDZ assets.
 [ ] Design for ImmersiveSpace (360-degree immersive environment).
 [ ] Validate rendering performance and visual quality in RealityKit.
 
-[ ] **Set up Amazon Neptune cluster**
-[ ] Create dev and prod Neptune clusters for horizontal scalability.
-[ ] Configure VPC and security groups for secure access.
-[ ] Set up Neptune endpoint connections from backend services.
+[ ] **Prepare for Neptune integration**
+[ ] Define GraphRAG data model and schema requirements.
+[ ] Document Neptune connection patterns for backend services.
 
 ---
 
-### **Trevor – Frontend (iOS AR)**
+### **Trevor – Frontend (iOS VR)**
 
 [ ] **Set up Swift/RealityKit project scaffold**
 [ ] Create base iOS app project in Xcode.
@@ -58,7 +63,7 @@
 [ ] **Create backend skeleton (FastAPI)**
 [ ] Initialize FastAPI project with async support.
 [ ] Create health-check endpoint for CI verification.
-[ ] Set up connection to Amazon Neptune (stub).
+[ ] Set up connection to Amazon Neptune (using connection details from Terraform outputs).
 
 [ ] **Configure external API integrations**
 [ ] Set up Claude API client for LLM conversations.
@@ -83,10 +88,11 @@
 
 ### **Nataly – Infrastructure**
 
-[ ] **Deploy backend to AWS**
-[ ] Configure FastAPI backend on AWS (Elastic Beanstalk or ECS).
-[ ] Integrate Cognito JWT verification middleware.
-[ ] Connect backend to Neptune dev cluster.
+[ ] **Deploy backend infrastructure via Terraform**
+[ ] Configure FastAPI backend deployment (ECS with Fargate or Elastic Beanstalk).
+[ ] Set up Application Load Balancer and auto-scaling policies.
+[ ] Deploy backend with proper IAM roles for Neptune and Cognito access.
+[ ] Configure environment-specific backend deployments (dev/staging/prod).
 
 ---
 
@@ -125,6 +131,16 @@
 [ ] **Integrate themed wall art & textures**
 [ ] Create USDZ wall textures for Courage, Comfort, Creative, Compass.
 [ ] Implement dynamic theme loading into ImmersiveSpace environment.
+
+---
+
+### **Hutch + Nataly Collaboration**
+
+[ ] **Deploy Neptune infrastructure via Terraform**
+[ ] Create Neptune cluster configuration in Terraform modules.
+[ ] Set up Neptune-specific VPC endpoints and security groups.
+[ ] Configure Neptune parameter groups for optimal GraphRAG performance.
+[ ] Deploy dev and prod Neptune clusters with proper IAM roles.
 
 ---
 
@@ -222,12 +238,14 @@
 ### **Nataly**
 
 [ ] **Subscription/paywall setup**
+[ ] Deploy subscription infrastructure via Terraform (API Gateway, Lambda).
 [ ] Configure FastAPI endpoints for subscription validation.
-[ ] Integrate with App Store subscription APIs.
+[ ] Integrate with App Store subscription APIs and webhook handling.
 
 [ ] **Admin/operator tools**
+[ ] Deploy admin infrastructure via Terraform (separate VPC/security context).
 [ ] Create configurable persona scripts and prompts (YAML/JSON).
-[ ] Build safety threshold tuning interface.
+[ ] Build safety threshold tuning interface with proper access controls.
 [ ] Add habit and resource configuration tools.
 
 ---
