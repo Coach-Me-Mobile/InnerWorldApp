@@ -60,10 +60,10 @@
 
 ### **Darren – Backend & API**
 
-[ ] **Create backend skeleton (FastAPI)**
-[ ] Initialize FastAPI project with async support.
-[ ] Create health-check endpoint for CI verification.
-[ ] Set up connection to Amazon Neptune (using connection details from Terraform outputs).
+[ ] **Create serverless backend (AWS Lambda)**
+[ ] Initialize Lambda functions for conversation handling.
+[ ] Create health-check Lambda for monitoring.
+[ ] Set up Neptune connection layer for Lambda functions.
 
 [ ] **Configure external API integrations**
 [ ] Set up OpenRouter API client for LLM conversations (Claude, GPT, etc.).
@@ -88,18 +88,18 @@
 
 ### **Nataly – Infrastructure**
 
-[ ] **Deploy backend infrastructure via Terraform**
-[ ] Configure FastAPI backend deployment (ECS with Fargate or Elastic Beanstalk).
-[ ] Set up Application Load Balancer and auto-scaling policies.
-[ ] Deploy backend with proper IAM roles for Neptune and Cognito access.
-[ ] Configure environment-specific backend deployments (dev/staging/prod).
+[ ] **Deploy serverless backend infrastructure via Terraform**
+[ ] Configure Lambda functions with API Gateway for REST endpoints.
+[ ] Set up Lambda layers for shared dependencies (OpenRouter, Neptune clients).
+[ ] Deploy Lambda functions with proper IAM roles for Neptune and Cognito access.
+[ ] Configure environment-specific Lambda deployments (dev/staging/prod).
 
 ---
 
 ### **Darren – Backend & AI Pipeline**
 
 [ ] **Implement LLM conversation pipeline**
-[ ] Create FastAPI endpoints for conversation requests.
+[ ] Create Lambda function for conversation requests via API Gateway.
 [ ] Connect to Neptune to retrieve GraphRAG context using Gremlin queries.
 [ ] Call OpenRouter API (Claude/GPT models) with RAG context and return response.
 [ ] Implement OpenAI embeddings for semantic search in Neptune.
@@ -238,9 +238,9 @@
 ### **Nataly**
 
 [ ] **Subscription/paywall setup**
-[ ] Deploy subscription infrastructure via Terraform (API Gateway, Lambda).
-[ ] Configure FastAPI endpoints for subscription validation.
-[ ] Integrate with App Store subscription APIs and webhook handling.
+[ ] Deploy subscription Lambda functions via Terraform (API Gateway integration).
+[ ] Create Lambda functions for subscription validation and webhook handling.
+[ ] Integrate with App Store subscription APIs.
 
 [ ] **Admin/operator tools**
 [ ] Deploy admin infrastructure via Terraform (separate VPC/security context).
