@@ -161,19 +161,66 @@
 [ ] Pass persona-specific prompt templates to LLM.
 [ ] Add basic emotion-tagging for emotes.
 
+#### DynamoDB Table: LiveConversations
+{
+    "conversation_id": "session_123_2024-01-15",  # Partition Key
+    "message_id": "msg_001",                      # Sort Key
+    "user_id": "user123",
+    "persona": "courage",
+    "timestamp": "2024-01-15T10:05:00Z",
+    "message_type": "user" | "assistant",
+    "content": "I'm nervous about my presentation",
+    "session_start": "2024-01-15T10:00:00Z",
+    "ttl": 1705334400,  # Auto-delete after processing
+    # GSI for session queries
+    "session_id": "session_123",
+    "message_sequence": 1
+}
+
+#### Conversation Flow
+```
+Session Start:
+Connect to WebSocket - establish persistent connection
+Neptune Context Retrieval - get user's conversation history/context
+Prime LangGraph - load persona + user context into conversation state
+Begin conversation - real-time message exchange via WebSocket
+
+During Conversation:
+Message received via WebSocket
+Store in DynamoDB - immediate persistence with conversation_id
+LangGraph processing - with pre-loaded Neptune context
+OpenRouter LLM call - generate persona response
+Response via WebSocket - immediate delivery to VR app
+Update DynamoDB - store AI response
+
+Session End (20 minutes or manual):
+Trigger session processing Lambda
+Retrieve full conversation from DynamoDB
+Extract conversation elements (Events, Feelings, Values, etc.)
+Update Neptune graph - create nodes and relationships
+Clean up DynamoDB - remove processed conversation data
+```
+
+[Reference Doc](https://docs.aws.amazon.com/apigateway/latest/developerguide/websocket-api-chat-app.html) 
+
 ---
 
 ### **Trevor – Chat UI**
 
-[ ] **Build immersive chat interface**
-[ ] Integrate chat UI within ImmersiveSpace environment.
-[ ] Display persona avatar/emotes as 3D elements in the space.
-[ ] Handle input and streaming LLM responses in immersive context.
+[ ] **Build immersive WebSocket chat interface**
+[ ] Integrate WebSocket connection management within ImmersiveSpace environment.
+[ ] Implement real-time message handling with connection state management.
+[ ] Display persona avatar/emotes as 3D elements with live response animations.
+[ ] Handle WebSocket message queuing and delivery confirmation.
+[ ] Add connection status indicators (connecting, connected, disconnected, error).
+[ ] Implement automatic reconnection logic for dropped connections.
 
-[ ] **Implement session flow and timing**
-[ ] Create 20-minute daily session timer with visible countdown.
-[ ] Build session flow: micro-centering → chat → reflection → gratitude note → exit.
-[ ] Add session start/end UI with simple controls.
+[ ] **Implement WebSocket session flow and timing**
+[ ] Create 20-minute daily session timer with visible countdown and WebSocket session management.
+[ ] Build session flow: WebSocket connect → micro-centering → chat → reflection → gratitude note → WebSocket disconnect.
+[ ] Add session start/end UI with WebSocket connection status and controls.
+[ ] Implement session recovery logic for network interruptions.
+[ ] Handle graceful session termination with proper WebSocket cleanup.
 
 ---
 
