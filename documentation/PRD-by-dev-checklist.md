@@ -13,7 +13,7 @@
 [ ] **Set up core AWS infrastructure**
 [ ] Create AWS dev/prod accounts and environments.
 [ ] Configure AWS Secrets Manager for credentials and API keys.
-[ ] Set up GitHub Actions for CI/CD.
+[ ] Set up AWS CodePipeline for build/deploy and GitHub Actions for code quality.
 
 [ ] **Configure AWS Cognito for authentication**
 [ ] Create Cognito User Pool and Identity Pool.
@@ -24,17 +24,19 @@
 ### **Hutch – 3D Assets & Graph Database**
 
 [ ] **Define 3D asset standards**
-[ ] Choose and document supported formats (glTF/USDC).
-[ ] Define scaling, anchor, and lighting requirements for AR scene.
+[ ] Standardize on USDZ format for RealityKit compatibility.
+[ ] Define scaling, lighting, and material requirements for ImmersiveSpace.
+[ ] Document asset optimization guidelines for AR performance.
 
 [ ] **Model base Dreamroom environment**
-[ ] Create square room with 4 themed walls.
-[ ] Export as RealityKit-compatible asset.
-[ ] Validate anchor placement on flat surfaces in RealityKit.
+[ ] Create square room with 4 themed walls as USDZ assets.
+[ ] Design for ImmersiveSpace (360-degree immersive environment).
+[ ] Validate rendering performance and visual quality in RealityKit.
 
-[ ] **Set up Neo4j Aura cloud instance**
-[ ] Create dev and prod graph databases.
-[ ] Configure secure connections from backend services.
+[ ] **Set up Amazon Neptune cluster**
+[ ] Create dev and prod Neptune clusters for horizontal scalability.
+[ ] Configure VPC and security groups for secure access.
+[ ] Set up Neptune endpoint connections from backend services.
 
 ---
 
@@ -56,7 +58,7 @@
 [ ] **Create backend skeleton (FastAPI)**
 [ ] Initialize FastAPI project with async support.
 [ ] Create health-check endpoint for CI verification.
-[ ] Set up connection to Neo4j (stub).
+[ ] Set up connection to Amazon Neptune (stub).
 
 [ ] **Configure external API integrations**
 [ ] Set up Claude API client for LLM conversations.
@@ -75,7 +77,7 @@
 [ ] **Design GraphRAG schema**
 [ ] Define nodes: Event, Feeling, Need, Value, Goal, Habit, Person, Topic.
 [ ] Define edge types: temporal, causal, about, supports, conflicts, felt_during.
-[ ] Implement schema in Neo4j dev environment.
+[ ] Implement schema in Neptune dev environment using Gremlin/SPARQL.
 
 ---
 
@@ -84,7 +86,7 @@
 [ ] **Deploy backend to AWS**
 [ ] Configure FastAPI backend on AWS (Elastic Beanstalk or ECS).
 [ ] Integrate Cognito JWT verification middleware.
-[ ] Connect backend to Neo4j dev database.
+[ ] Connect backend to Neptune dev cluster.
 
 ---
 
@@ -92,9 +94,9 @@
 
 [ ] **Implement LLM conversation pipeline**
 [ ] Create FastAPI endpoints for conversation requests.
-[ ] Connect to Neo4j to retrieve GraphRAG context.
+[ ] Connect to Neptune to retrieve GraphRAG context using Gremlin queries.
 [ ] Call Claude API with RAG context and return response.
-[ ] Implement OpenAI embeddings for semantic search.
+[ ] Implement OpenAI embeddings for semantic search in Neptune.
 
 ---
 
@@ -111,18 +113,18 @@
 [ ] Integrate AWS Cognito sign-in flow (Apple ID, email/password).
 [ ] Handle token exchange with backend.
 
-[ ] **Render static Main Room scene**
-[ ] Load base Dreamroom asset from Hutch.
-[ ] Place 4 themed walls with hotspots for navigation.
-[ ] Implement basic hotspot interactions (tap detection, visual highlight).
+[ ] **Render ImmersiveSpace Dreamroom**
+[ ] Load base Dreamroom USDZ assets into ImmersiveSpace.
+[ ] Create 360-degree immersive environment with 4 themed walls.
+[ ] Implement hotspot interactions within immersive context (gaze/tap detection).
 
 ---
 
 ### **Hutch + Trevor Collaboration**
 
 [ ] **Integrate themed wall art & textures**
-[ ] Create wall textures for Courage, Comfort, Creative, Compass.
-[ ] Implement theme loading into RealityKit scene.
+[ ] Create USDZ wall textures for Courage, Comfort, Creative, Compass.
+[ ] Implement dynamic theme loading into ImmersiveSpace environment.
 
 ---
 
@@ -143,10 +145,10 @@
 
 ### **Trevor – Chat UI**
 
-[ ] **Build AR chat interface**
-[ ] Overlay text chat UI in AR scene.
-[ ] Display persona avatar/emotes.
-[ ] Handle input and streaming LLM responses.
+[ ] **Build immersive chat interface**
+[ ] Integrate chat UI within ImmersiveSpace environment.
+[ ] Display persona avatar/emotes as 3D elements in the space.
+[ ] Handle input and streaming LLM responses in immersive context.
 
 [ ] **Implement session flow and timing**
 [ ] Create 20-minute daily session timer with visible countdown.
@@ -159,8 +161,8 @@
 
 [ ] **Connect conversation logs to GraphRAG**
 [ ] Create nodes from conversation: Event, Feeling, Value, etc.
-[ ] Link nodes with edge relationships.
-[ ] Store timestamps for temporal edges.
+[ ] Link nodes with edge relationships using Gremlin traversals.
+[ ] Store timestamps for temporal edges in Neptune.
 
 ---
 
@@ -168,7 +170,7 @@
 
 [ ] **Implement Hotspot Features**
 [ ] Bookshelf: Display static quotes/breathing exercises.
-[ ] Desk: View/Add/Delete notes, store in Neo4j.
+[ ] Desk: View/Add/Delete notes, store in Neptune.
 [ ] Window: Display gratitude prompts and habit confirmations.
 [ ] Plant: Show session timer and daily progress.
 
@@ -201,7 +203,7 @@
 
 [ ] **Theme switching UI**
 [ ] Build settings menu to switch room themes.
-[ ] Apply selected theme in AR scene.
+[ ] Apply selected theme dynamically in ImmersiveSpace.
 
 ---
 
