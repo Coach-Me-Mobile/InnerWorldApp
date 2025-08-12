@@ -1,0 +1,237 @@
+# SwiftLint configuration for InnerWorldApp
+# Comprehensive Swift code quality rules for iOS AR app
+
+# Paths to include in linting
+included:
+  - Sources
+  - App
+  - InnerWorldApp
+  - Tests
+  - UITests
+
+# Paths to exclude from linting
+excluded:
+  - Pods
+  - .build
+  - build
+  - DerivedData
+  - fastlane
+  - .swiftpm
+  - "*.generated.swift"
+  - "*.pb.swift"
+  - "**/*.storyboard"
+  - "**/*.xib"
+
+# Disabled rules (temporarily or permanently)
+disabled_rules:
+  - trailing_whitespace  # Handled by pre-commit
+  - line_length         # Will be configured below
+
+# Opt-in rules (not enabled by default)
+opt_in_rules:
+  - array_init
+  - attributes_order
+  - closure_end_indentation
+  - closure_spacing
+  - collection_alignment
+  - contains_over_filter_count
+  - contains_over_filter_is_empty
+  - contains_over_first_not_nil
+  - contains_over_range_nil_comparison
+  - discouraged_object_literal
+  - empty_collection_literal
+  - empty_count
+  - empty_string
+  - enum_case_associated_values_count
+  - explicit_init
+  - extension_access_modifier
+  - fallthrough
+  - fatal_error_message
+  - file_header
+  - first_where
+  - flatmap_over_map_reduce
+  - force_unwrapping
+  - function_default_parameter_at_end
+  - identical_operands
+  - implicit_return
+  - joined_default_parameter
+  - last_where
+  - legacy_random
+  - literal_expression_end_indentation
+  - lower_acl_than_parent
+  - modifier_order
+  - multiline_arguments
+  - multiline_function_chains
+  - multiline_literal_brackets
+  - multiline_parameters
+  - nimble_operator
+  - no_space_in_method_call
+  - number_separator
+  - object_literal
+  - operator_usage_whitespace
+  - overridden_super_call
+  - override_in_extension
+  - pattern_matching_keywords
+  - prefer_self_type_over_type_of_self
+  - prefer_zero_over_explicit_init
+  - prefixed_toplevel_constant
+  - prohibited_interface_builder
+  - prohibited_super_call
+  - quick_discouraged_call
+  - quick_discouraged_focused_test
+  - quick_discouraged_pending_test
+  - reduce_into
+  - redundant_nil_coalescing
+  - redundant_type_annotation
+  - single_test_class
+  - sorted_first_last
+  - sorted_imports
+  - static_operator
+  - strong_iboutlet
+  - switch_case_on_newline
+  - toggle_bool
+  - unavailable_function
+  - unneeded_parentheses_in_closure_argument
+  - unowned_variable_capture
+  - unused_import
+  - unused_private_declaration
+  - vertical_parameter_alignment_on_call
+  - vertical_whitespace_closing_braces
+  - vertical_whitespace_opening_braces
+  - xct_specific_matcher
+  - yoda_condition
+
+# Rule configurations
+line_length:
+  warning: 120
+  error: 150
+  ignores_comments: true
+  ignores_urls: true
+  ignores_function_declarations: true
+  ignores_interpolated_strings: true
+
+type_body_length:
+  warning: 300
+  error: 400
+
+function_body_length:
+  warning: 50
+  error: 100
+
+function_parameter_count:
+  warning: 6
+  error: 8
+
+cyclomatic_complexity:
+  warning: 10
+  error: 15
+
+large_tuple:
+  warning: 3
+  error: 4
+
+type_name:
+  min_length: 3
+  max_length: 40
+  excluded:
+    - "T"
+    - "U"
+    - "V"
+    - "AR"
+    - "AI"
+    - "UI"
+    - "3D"
+    - "ID"
+
+identifier_name:
+  min_length: 1
+  max_length: 40
+  excluded:
+    - "x"
+    - "y"
+    - "z"
+    - "id"
+    - "db"
+    - "ar"
+    - "ai"
+    - "ui"
+    - "3d"
+
+file_length:
+  warning: 400
+  error: 500
+
+nesting:
+  type_level:
+    warning: 3
+    error: 4
+  function_level:
+    warning: 5
+    error: 6
+
+# Custom rules for this project
+custom_rules:
+  # Ensure API keys are not hardcoded
+  no_hardcoded_api_keys:
+    name: "No Hardcoded API Keys"
+    regex: '(apiKey|API_KEY|secretKey|SECRET_KEY)\s*[=:]\s*["''][^"'']{20,}["'']'
+    message: "API keys should not be hardcoded. Use environment variables or secure storage."
+    severity: error
+
+  # Ensure crisis resources are externalized
+  no_hardcoded_crisis_info:
+    name: "No Hardcoded Crisis Information"
+    regex: '(988|1-800-|crisis|suicide|hotline)\s*["''][^"'']*["'']'
+    message: "Crisis resources should be externalized, not hardcoded."
+    severity: warning
+
+  # Encourage proper logging
+  use_proper_logging:
+    name: "Use Proper Logging"
+    regex: 'print\s*\('
+    message: "Use proper logging instead of print() statements for production code."
+    severity: warning
+
+  # Ensure privacy compliance comments
+  privacy_sensitive_code:
+    name: "Privacy Sensitive Code"
+    regex: '(userdata|userData|personal|sensitive|private).*='
+    message: "Code handling user data should include privacy compliance comments."
+    severity: warning
+
+  # Discourage force unwrapping in production
+  avoid_force_unwrap:
+    name: "Avoid Force Unwrapping"
+    regex: '\!\s*$'
+    message: "Avoid force unwrapping. Use proper optional handling."
+    severity: warning
+
+  # Ensure proper error handling for API calls
+  api_error_handling:
+    name: "API Error Handling"
+    regex: '(URLSession|fetch|request).*\{'
+    message: "API calls should include proper error handling and logging."
+    severity: warning
+
+# Reporter type
+reporter: "xcode"
+
+# Violation severity
+warning_threshold: 10
+error_threshold: 50
+
+# File header rule configuration
+file_header:
+  required_pattern: |
+                    \/\/
+                    \/\/.*\.swift
+                    \/\/  InnerWorldApp
+                    \/\/
+                    \/\/  Created by .* on \d{1,2}\/\d{1,2}\/\d{2,4}\.
+                    \/\/  Copyright © \d{4} GauntletAI\. All rights reserved\.
+                    \/\/
+
+# Excluded file types
+analyzer_rules:
+  - unused_import
+  - unused_declaration

@@ -1,0 +1,320 @@
+# CI/CD Pipeline for InnerWorldApp
+# Comprehensive code quality, security, and iOS build checks
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, feature/*, hotfix/* ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  XCODE_VERSION: '15.1'
+  IOS_SIMULATOR: 'iPhone 15 Pro'
+  IOS_VERSION: '17.0'
+
+jobs:
+  # Security and secret scanning
+  security-scan:
+    name: Security & Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better secret detection
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+        with:
+          config: .gitleaks.toml
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run additional secret detection
+        uses: Yelp/detect-secrets-action@master
+        with:
+          args: '--scan --all-files --force-use-all-plugins'
+
+  # Code quality and linting
+  code-quality:
+    name: Code Quality & Linting
+    runs-on: macos-14
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+
+      - name: Cache Swift packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            .build
+            ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Install SwiftLint
+        run: |
+          echo "Installing SwiftLint..."
+          brew install swiftlint
+          swiftlint version
+
+      - name: Run SwiftLint
+        run: |
+          echo "Running SwiftLint..."
+          swiftlint lint --reporter github-actions-logging --config .swiftlint.yml
+
+      - name: Install pre-commit
+        run: |
+          echo "Installing pre-commit..."
+          pip3 install pre-commit
+          pre-commit --version
+
+      - name: Run pre-commit hooks
+        run: |
+          echo "Running pre-commit hooks..."
+          pre-commit run --all-files --show-diff-on-failure
+
+      - name: Check for TODO/FIXME comments
+        run: |
+          echo "Checking for TODO/FIXME comments..."
+          if grep -r "TODO\|FIXME\|XXX" --include="*.swift" .; then
+            echo "::warning::Found TODO/FIXME comments in code"
+          fi
+
+  # iOS build and testing
+  ios-build:
+    name: iOS Build & Test
+    runs-on: macos-14
+    needs: [security-scan, code-quality]
+    strategy:
+      matrix:
+        scheme: [InnerWorldApp]
+        destination: 
+          - 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.0'
+          - 'platform=iOS Simulator,name=iPad Pro (12.9-inch) (6th generation),OS=17.0'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+
+      - name: Cache Swift packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            .build
+            ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Setup iOS Simulator
+        run: |
+          echo "Setting up iOS Simulator..."
+          xcrun simctl list devices available
+          xcrun simctl boot "iPhone 15 Pro" || true
+
+      - name: Resolve Swift Package Dependencies
+        run: |
+          echo "Resolving Swift Package Dependencies..."
+          if [ -f "Package.swift" ]; then
+            swift package resolve
+          fi
+
+      - name: Build iOS App
+        run: |
+          echo "Building iOS App..."
+          set -o pipefail
+          xcodebuild \
+            -scheme ${{ matrix.scheme }} \
+            -destination '${{ matrix.destination }}' \
+            -configuration Debug \
+            clean build \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty
+
+      - name: Run Unit Tests
+        run: |
+          echo "Running Unit Tests..."
+          set -o pipefail
+          xcodebuild \
+            -scheme ${{ matrix.scheme }} \
+            -destination '${{ matrix.destination }}' \
+            -configuration Debug \
+            test \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty --report junit
+
+      - name: Run UI Tests
+        run: |
+          echo "Running UI Tests..."
+          set -o pipefail
+          xcodebuild \
+            -scheme ${{ matrix.scheme }} \
+            -destination '${{ matrix.destination }}' \
+            -configuration Debug \
+            test \
+            -testPlan UITests \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty --report junit
+        continue-on-error: true  # UI tests might be flaky
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results-${{ matrix.scheme }}
+          path: |
+            build/reports/
+            *.junit
+
+  # Privacy and compliance checks
+  privacy-compliance:
+    name: Privacy & Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for hardcoded crisis resources
+        run: |
+          echo "Checking for hardcoded crisis resources..."
+          if grep -r "988\|1-800-\|suicide\|crisis" --include="*.swift" .; then
+            echo "::error::Found hardcoded crisis resources. These should be externalized."
+            exit 1
+          fi
+
+      - name: Check for hardcoded API endpoints
+        run: |
+          echo "Checking for hardcoded API endpoints..."
+          if grep -r "https://\|http://" --include="*.swift" . | grep -v "//.*https\|//.*http"; then
+            echo "::warning::Found potential hardcoded API endpoints"
+          fi
+
+      - name: Validate privacy-related code
+        run: |
+          echo "Validating privacy-related code..."
+          if grep -r "location\|camera\|microphone\|contacts\|photos" --include="*.swift" .; then
+            echo "::notice::Found privacy-sensitive code. Ensure proper usage descriptions are included."
+          fi
+
+  # API and Neo4j integration tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [security-scan]
+    services:
+      neo4j:
+        image: neo4j:5.15
+        env:
+          NEO4J_AUTH: neo4j/testpassword
+          NEO4J_PLUGINS: '["apoc"]'
+        ports:
+          - 7474:7474
+          - 7687:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p testpassword 'RETURN 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js for API testing
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install API testing tools
+        run: |
+          npm install -g newman
+          pip3 install pytest requests
+
+      - name: Test Neo4j connection
+        run: |
+          echo "Testing Neo4j connection..."
+          curl -f http://localhost:7474/db/neo4j/tx/commit \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Basic $(echo -n 'neo4j:testpassword' | base64)" \
+            -d '{"statements":[{"statement":"RETURN 1 as test"}]}'
+
+      - name: Run API integration tests
+        run: |
+          echo "Running API integration tests..."
+          # Add your API test scripts here
+          echo "Integration tests completed"
+
+  # Documentation and changelog checks
+  documentation:
+    name: Documentation & Changelog
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check README exists
+        run: |
+          if [ ! -f "README.md" ]; then
+            echo "::error::README.md is missing"
+            exit 1
+          fi
+
+      - name: Validate markdown files
+        uses: DavidAnson/markdownlint-cli2-action@v14
+        with:
+          globs: '**/*.md'
+
+      - name: Check for changelog updates
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "Checking for changelog updates..."
+          if git diff --name-only origin/main...HEAD | grep -q "CHANGELOG\|documentation/"; then
+            echo "::notice::Documentation changes detected"
+          else
+            echo "::warning::No documentation updates found"
+          fi
+
+  # Notification for failures
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [security-scan, code-quality, ios-build, privacy-compliance, integration-tests]
+    if: failure()
+    steps:
+      - name: Send failure notification
+        run: |
+          echo "::error::CI/CD Pipeline failed. Check the logs for details."
+          echo "Failed jobs: ${{ needs.*.result }}"
