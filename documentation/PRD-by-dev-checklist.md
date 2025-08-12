@@ -101,10 +101,10 @@
 
 [ ] **Implement real-time conversation pipeline with WebSocket + LangGraph**
 [ ] Create WebSocket Lambda functions: $connect, $disconnect, $default, sendmessage.
-[ ] Build LangGraph workflow: session_init → safety_check → persona_prompt → llm_generation → live_storage.
-[ ] Implement session start: Neptune context retrieval to prime LangGraph with user history.
-[ ] Create real-time message handling: DynamoDB storage → LangGraph processing → WebSocket response.
-[ ] Build session end processing: DynamoDB → Neptune graph update with conversation elements.
+[ ] Build LangGraph workflow: safety_check → persona_prompt → llm_generation → live_storage.
+[ ] Implement login context caching: Neptune context retrieval on authentication and cache in session store.
+[ ] Create real-time message handling: retrieve cached context → LangGraph processing → WebSocket response.
+[ ] Build session end processing: DynamoDB → Neptune graph update → refresh cached context.
 [ ] Call OpenRouter API (Claude/GPT models) through LangGraph generation node.
 [ ] Add conversation state persistence and persona-specific prompt templates.
 
@@ -122,6 +122,8 @@
 [ ] Build SwiftUI screens for login and signup.
 [ ] Integrate AWS Cognito sign-in flow (Apple ID, email/password).
 [ ] Handle token exchange with backend.
+[ ] Trigger Neptune context caching on successful login.
+[ ] Cache user context locally for offline scenarios.
 
 [ ] **Render ImmersiveSpace Dreamroom**
 [ ] Load base Dreamroom USDZ assets into ImmersiveSpace.
@@ -177,18 +179,24 @@
     "message_sequence": 1
 }
 
-#### Conversation Flow
+#### Optimized Conversation Flow
 ```
-Session Start:
+User Login:
+Authenticate with Cognito
+Neptune Context Retrieval - get user's full conversation history/context
+Cache context in user session (DynamoDB/ElastiCache)
+Context available for all conversations during login session
+
+Conversation Session Start:
 Connect to WebSocket - establish persistent connection
-Neptune Context Retrieval - get user's conversation history/context
-Prime LangGraph - load persona + user context into conversation state
+Retrieve cached context from login session
+Prime LangGraph - load persona + cached user context
 Begin conversation - real-time message exchange via WebSocket
 
 During Conversation:
 Message received via WebSocket
 Store in DynamoDB - immediate persistence with conversation_id
-LangGraph processing - with pre-loaded Neptune context
+LangGraph processing - with pre-cached Neptune context
 OpenRouter LLM call - generate persona response
 Response via WebSocket - immediate delivery to VR app
 Update DynamoDB - store AI response
@@ -198,34 +206,56 @@ Trigger session processing Lambda
 Retrieve full conversation from DynamoDB
 Extract conversation elements (Events, Feelings, Values, etc.)
 Update Neptune graph - create nodes and relationships
+Update cached context for next conversation
 Clean up DynamoDB - remove processed conversation data
 ```
 
 #### Backend LangGraph Implementation Examples
 
-##### LangGraph Workflow
+##### Optimized LangGraph Workflow
 ```python
-def create_session_aware_graph():
+def create_conversation_graph():
+    """Simplified workflow - context already cached from login"""
     graph = StateGraph()
     
-    # Session initialization (runs once per session)
-    graph.add_node("session_init", session_initialization_node)
-    graph.add_node("context_retrieval", neptune_context_node)
-    
-    # Per-message processing
+    # Per-message processing (context pre-loaded)
     graph.add_node("safety_check", safety_moderation_node)
     graph.add_node("persona_prompt", persona_prompt_node)
     graph.add_node("llm_generation", openrouter_generation_node)
     graph.add_node("live_storage", dynamodb_storage_node)
     
-    # Session end processing (runs once per session)
-    graph.add_node("session_end", session_processing_node)
-    graph.add_node("graph_update", neptune_update_node)
+    # Define edges
+    graph.add_edge("safety_check", "persona_prompt")
+    graph.add_edge("persona_prompt", "llm_generation") 
+    graph.add_edge("llm_generation", "live_storage")
+    
+    return graph.compile()
+
+def create_login_context_handler():
+    """Separate handler for login-time context retrieval"""
+    graph = StateGraph()
+    
+    graph.add_node("neptune_context_retrieval", neptune_full_context_node)
+    graph.add_node("context_caching", cache_context_node)
     
     return graph.compile()
 ```
 
-##### WebSocket Lambda Handler
+##### Login Context Handler
+```python
+def login_context_handler(event, context):
+    """Called during user authentication to cache Neptune context"""
+    user_id = event['user_id']
+    
+    # 1. Retrieve full GraphRAG context from Neptune
+    full_context = get_user_context_graph(user_id)
+    
+    # 2. Cache context for login session (ElastiCache or DynamoDB)
+    cache_user_context(user_id, full_context, ttl=3600)  # 1 hour TTL
+    
+    return {"statusCode": 200, "cached_context": True}
+
+##### Optimized WebSocket Handler
 ```python
 def conversation_handler(event, context):
     user_input = event['message']
@@ -233,16 +263,17 @@ def conversation_handler(event, context):
     user_id = event['user_id']
     session_id = event['session_id']
     
-    # 1. Retrieve GraphRAG context from Neptune (cached in session)
-    context = get_cached_context(session_id) or get_user_context_graph(user_id, persona)
+    # 1. Retrieve cached context from login (fast!)
+    cached_context = get_cached_context(user_id)
+    if not cached_context:
+        return {"statusCode": 401, "error": "Context not found - please re-login"}
     
-    # 2. LangGraph orchestration
+    # 2. LangGraph orchestration (no Neptune call needed)
     graph = create_conversation_graph()
     result = graph.invoke({
         "user_input": user_input,
         "persona": persona,
-        "context": context,
-        "user_profile": get_user_profile(user_id),
+        "context": cached_context,
         "session_id": session_id
     })
     
@@ -270,7 +301,10 @@ def session_end_processor(event, context):
     # 3. Update Neptune graph
     update_neptune_graph(user_id, elements)
     
-    # 4. Clean up DynamoDB
+    # 4. Update cached context with new information
+    refresh_cached_context(user_id, elements)
+    
+    # 5. Clean up DynamoDB
     cleanup_session_data(session_id)
     
     return {"statusCode": 200}
