@@ -550,7 +550,7 @@ enum ConnectionState {
 [ ] Integrate on-device and backend moderation for harmful content.
 [ ] Trigger US crisis modal (988, Trevor Project, Crisis Text Line) when thresholds met.
 [ ] Enable journaling-only mode after safety trigger.
-[ ] Add 13+ age gate and "not therapy" disclaimer.
+[ ] Add 13+ age gate and "not therapy" disclaimers.
 
 ---
 
@@ -572,18 +572,6 @@ enum ConnectionState {
 [ ] **Theme switching UI**
 [ ] Build settings menu to switch room themes.
 [ ] Apply selected theme dynamically in ImmersiveSpace.
-
----
-
-### **Darren**
-
-[ ] **Persona memory toggle**
-[ ] Allow users to disable per-persona memory tracking.
-[ ] Adjust GraphRAG queries accordingly.
-
-[ ] **Privacy-preserving analytics**
-[ ] Implement local analytics by default with opt-in cloud sync.
-[ ] Track session count, persona usage, mood deltas, habit confirmations.
 
 ---
 
