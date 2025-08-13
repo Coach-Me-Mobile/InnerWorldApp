@@ -15,7 +15,141 @@ The infrastructure provides a complete serverless backend for teen VR conversati
 - **📊 CloudWatch**: Comprehensive monitoring, logging, and alerting
 - **🎯 Cost-Optimized**: Production-ready architecture starting at $400/month for 100 teens
 
-## 🏗️ Architecture
+## 🏗️ Infrastructure Architecture
+
+### **📊 Complete Production Architecture Diagram**
+
+```mermaid
+graph TB
+    subgraph "iOS VR App"
+        A[Teen User] --> B[InnerWorld VR App]
+        B --> C[Apple Sign-In / Email Auth]
+    end
+    
+    subgraph "AWS Cloud Infrastructure"
+        subgraph "Authentication Layer"
+            C --> D[AWS Cognito User Pool]
+            D --> E[JWT Token Generation]
+        end
+        
+        subgraph "API Gateway Layer"
+            E --> F[WebSocket API Gateway]
+            F --> G[JWT Authorizer]
+            G --> H[Connection Routes]
+            H --> I[$connect Route]
+            H --> J[$disconnect Route]
+            H --> K[sendmessage Route]
+        end
+        
+        subgraph "Lambda Functions"
+            I --> L[Connect Handler Lambda]
+            J --> M[Disconnect Handler Lambda]
+            K --> N[Conversation Handler Lambda]
+            O[Health Check Lambda] --> P[REST API Gateway]
+        end
+        
+        subgraph "Database Layer"
+            subgraph "Neptune GraphRAG Cluster"
+                Q[Primary Instance<br/>db.r5.large<br/>$250.56/month]
+                R[Reader Replica<br/>db.r5.large<br/>$250.56/month]
+                S[Graph Storage<br/>100GB @ $10/month]
+                Q --> R
+            end
+            
+            subgraph "DynamoDB Tables"
+                T[LiveConversations<br/>TTL: 24h<br/>Real-time messages]
+                U[WebSocketConnections<br/>TTL: 30min<br/>Connection tracking]
+                V[SessionContext<br/>TTL: 1h<br/>Context cache]
+            end
+        end
+        
+        subgraph "External APIs"
+            W[OpenRouter API<br/>Claude 3.5 Sonnet]
+            X[OpenAI API<br/>Text Embeddings]
+        end
+        
+        subgraph "Security & Secrets"
+            Y[AWS Secrets Manager]
+            Y --> Y1[OpenRouter API Keys]
+            Y --> Y2[Apple Sign-In Config]
+            Y --> Y3[JWT Secrets]
+            Y --> Y4[Neptune Config]
+        end
+        
+        subgraph "Monitoring & Logging"
+            Z[CloudWatch Logs]
+            AA[CloudWatch Alarms]
+            BB[X-Ray Tracing]
+        end
+        
+        subgraph "Networking"
+            CC[VPC 10.0.0.0/16]
+            CC --> DD[Public Subnets<br/>NAT Gateway]
+            CC --> EE[Private Subnets<br/>Lambda Functions]
+            CC --> FF[Database Subnets<br/>Neptune Cluster]
+            
+            GG[Security Groups]
+            GG --> HH[Lambda SG<br/>HTTPS + Neptune]
+            GG --> II[Neptune SG<br/>Port 8182 from Lambda]
+        end
+    end
+    
+    %% Data Flow Connections
+    L --> U
+    L --> V
+    M --> U
+    N --> T
+    N --> U
+    N --> V
+    N --> Q
+    N --> R
+    N --> W
+    N --> X
+    
+    %% Secrets Access
+    L --> Y
+    M --> Y
+    N --> Y
+    
+    %% Monitoring
+    L --> Z
+    M --> Z
+    N --> Z
+    O --> Z
+    Q --> AA
+    T --> AA
+    U --> AA
+    V --> AA
+    
+    %% Cost Labels
+    Q -.->|$521/month<br/>Fixed Neptune| Cost1[💰 Fixed Costs]
+    T -.->|$1.25/teen/month<br/>Variable Usage| Cost2[💰 Variable Costs]
+    
+    %% Styling
+    classDef userLayer fill:#e1f5fe
+    classDef authLayer fill:#f3e5f5
+    classDef apiLayer fill:#e8f5e8
+    classDef lambdaLayer fill:#fff3e0
+    classDef dbLayer fill:#fce4ec
+    classDef externalLayer fill:#f1f8e9
+    classDef securityLayer fill:#fff8e1
+    classDef monitoringLayer fill:#e3f2fd
+    classDef networkLayer fill:#f9fbe7
+    classDef costLayer fill:#ffebee
+    
+    class A,B,C userLayer
+    class D,E authLayer
+    class F,G,H,I,J,K apiLayer
+    class L,M,N,O,P lambdaLayer
+    class Q,R,S,T,U,V dbLayer
+    class W,X externalLayer
+    class Y,Y1,Y2,Y3,Y4 securityLayer
+    class Z,AA,BB monitoringLayer
+    class CC,DD,EE,FF,GG,HH,II networkLayer
+    class Cost1,Cost2 costLayer
+```
+
+### **🔄 Terraform Module Structure**
 
 ```
 ┌─ Production Environment ─┐    ┌─ Core Modules ─┐
@@ -33,21 +167,75 @@ The infrastructure provides a complete serverless backend for teen VR conversati
 └──────────────────┘
 ```
 
-## 🎯 Teen VR Chat Flow
+## 🎯 Teen VR Chat Flow & Data Architecture
 
-**Authentication & Connection:**
+### **🔐 Authentication & Connection Flow**
 ```
-iOS VR App → Cognito (Apple Sign-In) → JWT Token → WebSocket API → Connect Handler → DynamoDB Connection Tracking
+1. Teen opens VR app → Apple Sign-In / Email auth
+2. AWS Cognito validates → JWT token generated  
+3. WebSocket connection → JWT authorizer validates token
+4. Connect Handler Lambda → Store connection in DynamoDB
+5. Session context retrieved from Neptune → Cached in DynamoDB
 ```
 
-**Real-Time Conversation:**
+### **💬 Real-Time Conversation Flow**
 ```
-Teen Message → WebSocket → Lambda → DynamoDB (live) + Neptune (context) → OpenRouter (Claude) → Response
+1. Teen sends VR message → WebSocket API Gateway
+2. Conversation Handler Lambda processes message
+3. Current context fetched from DynamoDB SessionContext table
+4. Historical emotional patterns retrieved from Neptune GraphRAG
+5. OpenRouter API called (Claude 3.5 Sonnet) with context
+6. OpenAI embeddings generated for message categorization
+7. Response delivered via WebSocket → VR app displays
+8. Message stored in DynamoDB LiveConversations (24h TTL)
 ```
 
-**Session Processing:**
+### **🧠 GraphRAG Emotional Intelligence Processing**
 ```
-Session End → Extract Themes → Update Neptune Graph → Cache Context → TTL Cleanup
+1. Session ends → Conversation messages analyzed
+2. Emotional themes extracted → Graph embeddings created
+3. Neptune graph updated with new emotional patterns:
+   - Events (conversation topics, triggers)
+   - Feelings (emotional states, intensity)
+   - Values (personal beliefs, priorities)
+   - Goals (aspirations, achievements)
+   - Habits (behavioral patterns)
+   - Relationships (social connections, dynamics)
+4. Context cache refreshed in DynamoDB SessionContext
+5. TTL cleanup removes processed live conversations
+```
+
+### **📊 Database Design Patterns**
+
+#### **🗄️ Neptune GraphRAG Schema**
+```
+Vertices: Teen, Event, Feeling, Value, Goal, Habit, Relationship
+Edges: temporal, causal, about, supports, conflicts, felt_during
+
+Example Graph Pattern:
+Teen --felt_during--> Anxiety --about--> SchoolStress --temporal--> MorningRoutine
+Teen --supports--> SelfCare --conflicts--> SocialPressure
+```
+
+#### **🚀 DynamoDB Table Design**
+```
+LiveConversations:
+  PK: conversation_id (session_date)
+  SK: message_sequence  
+  GSI: SessionIndex (session_id), UserIndex (user_id)
+  TTL: 24 hours (processed → Neptune → deleted)
+
+WebSocketConnections:
+  PK: connection_id
+  Attributes: user_id, session_id, connected_at
+  GSI: UserConnectionsIndex, SessionConnectionsIndex  
+  TTL: 30 minutes (auto-cleanup stale connections)
+
+SessionContext:
+  PK: user_id
+  SK: session_id
+  Attributes: cached_context, emotional_state, conversation_history
+  TTL: 1 hour (refreshed each session)
 ```
 
 ## 🚀 Quick Start
