@@ -1,0 +1,14 @@
+# ==============================================================================
+# STAGING ENVIRONMENT VARIABLES
+# ==============================================================================
+# Example terraform.tfvars for the staging environment
+# Copy this file to terraform.tfvars and update with actual values
+# ==============================================================================
+
+# GitHub Configuration (required for staging)
+github_connection_arn = "arn:aws:codestar-connections:us-east-1:123456789012:connection/example-connection-id"
+github_repository     = "GauntletAI/InnerWorldApp"
+
+# Note: GitHub CodeStar connection must be created manually in AWS Console
+# Navigate to: Developer Tools > Settings > Connections
+# Create a connection to GitHub and copy the ARN here

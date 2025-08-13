@@ -87,9 +87,19 @@ session_logs/
 # Development Tools
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 *~
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfplan
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+!terraform.tfvars.example
 
 # macOS
 .DS_Store
