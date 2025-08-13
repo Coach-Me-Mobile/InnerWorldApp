@@ -60,14 +60,14 @@
 
 ### **Darren – Backend & API**
 
-[ ] **Create serverless backend (AWS Lambda)**
-[ ] Initialize Lambda functions for conversation handling.
-[ ] Create health-check Lambda for monitoring.
-[ ] Set up Neptune connection layer for Lambda functions.
+[X] **Create serverless backend (AWS Lambda)**
+[X] Initialize Lambda functions for conversation handling.
+[X] Create health-check Lambda for monitoring.
+[X] Set up Neptune connection layer for Lambda functions.
 
-[ ] **Configure external API integrations**
-[ ] Set up OpenRouter API client for LLM conversations (Claude, GPT, etc.).
-[ ] Configure OpenAI API for text embeddings.
+[X] **Configure external API integrations**
+[X] Set up OpenRouter API client for LLM conversations (Claude, GPT, etc.).
+[X] Configure OpenAI API for text embeddings.
 
 ---
 

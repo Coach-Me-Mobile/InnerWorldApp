@@ -1,0 +1,31 @@
+# SAM configuration file for InnerWorld Backend
+
+version = 0.1
+
+[default.global.parameters]
+stack_name = "innerworld-backend-dev"
+region = "us-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+disable_rollback = true
+
+[default.build.parameters]
+cached = true
+parallel = true
+
+[default.deploy.parameters]
+stack_name = "innerworld-backend-dev"
+s3_bucket = "innerworld-sam-deployment-bucket"
+s3_prefix = "innerworld-backend"
+region = "us-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+disable_rollback = true
+
+[default.local_start_api.parameters]
+warm_containers = "EAGER"
+host = "0.0.0.0"
+port = 3000
+
+[default.local_invoke.parameters]
+warm_containers = "EAGER"

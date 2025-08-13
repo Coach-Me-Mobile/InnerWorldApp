@@ -1,0 +1,36 @@
+services:
+  # LocalStack for AWS services emulation
+  localstack:
+    image: localstack/localstack:3.0
+    container_name: innerworld-localstack
+    ports:
+      - "4566:4566"  # LocalStack Gateway
+      - "4510-4559:4510-4559"  # External services port range
+    environment:
+      - SERVICES=lambda,apigateway,dynamodb,secretsmanager,cognito-idp
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - LAMBDA_EXECUTOR=docker-reuse
+      - LOCALSTACK_HOSTNAME=localstack
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+
+
+
+
+
+
+
+
+networks:
+  default:
+    name: innerworld-dev
+
+volumes:
+  localstack-data:

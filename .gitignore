@@ -166,3 +166,87 @@ local.sqlite
 
 # Simulator Files
 ios_simulator/
+
+# Go Development
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+backend/bin/*
+!backend/bin/.gitkeep
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+vendor/
+
+# Go workspace file
+go.work
+
+# Go build cache
+.cache/go-build/
+
+# Go module download cache
+go/pkg/mod/
+
+# IDE-specific files for Go
+.vscode/launch.json
+.vscode/settings.json
+
+# Air live reloading for Go
+tmp/
+
+# Go coverage files
+coverage.txt
+coverage.html
+*.cover
+
+# Go profiling files
+*.prof
+*.pprof
+
+# Go race detector output
+*.race
+
+# Lambda deployment packages
+*.zip
+
+# AWS specific
+.aws-sam/
+
+# Environment files for Go backend
+backend/.env
+backend/.env.local
+backend/.env.production
+backend/.env.staging
+
+# Local development scripts output
+backend/scripts/*.log
+
+# Docker Compose override files
+backend/docker-compose.override.yml
+
+# LocalStack data
+backend/localstack/data/
+
+# Local testing artifacts
+backend/sam-events/*.log
+backend/sam-events/local-*.json
+backend/test-results/
+backend/coverage/
+
+# Temporary test binaries and artifacts
+/tmp/*test*
+backend/tmp-*
+backend/*.tmp
+
+# Individual developer test files
+backend/my-test-*
+backend/dev-test-*
+backend/*-local-only.*
