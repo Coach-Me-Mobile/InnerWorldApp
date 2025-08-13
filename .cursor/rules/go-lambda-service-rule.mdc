@@ -1,0 +1,17 @@
+---
+description: Specific guidelines for implementing AWS Lambda functions in Go for InnerWorld.
+globs: */lambda/**/*.go,*/handlers/**/*.go
+---
+When working with AWS Lambda functions in Go:
+- Use the `github.com/aws/aws-lambda-go/lambda` package for handlers
+- Structure handlers: parse event → validate input → business logic → return response
+- Implement proper error handling with structured logging (AWS CloudWatch)
+- Use environment variables for configuration (retrieved from AWS Secrets Manager)
+- Implement connection pooling for Neptune and external APIs (reuse across invocations)
+- Handle cold starts by pre-warming connections in package init() or globals
+- Use context for request timeouts and cancellation
+- Return proper HTTP status codes for API Gateway integration
+- Implement retry logic for external API calls (OpenRouter, OpenAI)
+- Use AWS X-Ray for tracing and debugging Lambda performance
+- Cache frequently used data in Lambda memory between invocations
+- Follow the single responsibility principle: one Lambda per function

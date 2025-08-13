@@ -1,0 +1,17 @@
+---
+description: Guidelines for WebSocket API Gateway integration and real-time communication.
+globs: */websocket/**/*.go,*/handlers/websocket*.go
+---
+When working with WebSocket connections in AWS API Gateway + Lambda:
+- Implement standard WebSocket Lambda handlers: $connect, $disconnect, $default, sendmessage
+- Store connection IDs in DynamoDB for message routing (with TTL for cleanup)
+- Use API Gateway's @connections endpoint to send messages back to clients
+- Handle connection state management (connect/disconnect/error states)
+- Implement message queuing for offline users or failed deliveries
+- Structure WebSocket messages with clear action types and payloads
+- Add connection authentication using JWT tokens from AWS Cognito
+- Implement heartbeat/ping-pong for connection health monitoring
+- Handle WebSocket errors gracefully (network drops, Lambda timeouts)
+- Use AWS CloudWatch for monitoring WebSocket connection metrics
+- Implement message throttling to prevent abuse
+- Cache user context in connection storage for fast message processing

@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  InnerWorld Backend - Phase 1
+  
+  SAM Template for local Lambda testing
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: provided.al2
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        ENVIRONMENT: development
+        DEBUG: true
+
+Resources:
+  ConversationHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: bin/
+      Handler: bootstrap
+      Description: Handles conversation requests with OpenRouter LLM integration
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /conversation
+            Method: post
+        DirectInvoke:
+          Type: Api
+          Properties:
+            Path: /conversation/direct
+            Method: post
+      Environment:
+        Variables:
+          FUNCTION_NAME: conversation-handler
+
+  HealthCheck:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: bin/
+      Handler: bootstrap
+      Description: Health check endpoint for the backend services
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /health
+            Method: get
+        HealthCheck:
+          Type: Api
+          Properties:
+            Path: /
+            Method: get
+      Environment:
+        Variables:
+          FUNCTION_NAME: health-check
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  ConversationApi:
+    Description: "API Gateway endpoint URL for conversation handler"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/conversation/"
+  
+  HealthCheckApi:
+    Description: "API Gateway endpoint URL for health check"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/health/"
+  
+  ConversationHandlerFunction:
+    Description: "Conversation Handler Lambda Function ARN"
+    Value: !GetAtt ConversationHandler.Arn
+  
+  HealthCheckFunction:
+    Description: "Health Check Lambda Function ARN"
+    Value: !GetAtt HealthCheck.Arn

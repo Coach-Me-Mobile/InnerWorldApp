@@ -168,6 +168,30 @@ output "cost_tracking" {
 }
 
 # ==============================================================================
+# LAMBDA OUTPUTS
+# ==============================================================================
+
+output "lambda" {
+  description = "Lambda functions information"
+  value = {
+    functions         = module.lambda.lambda_functions_summary
+    api_gateways     = module.lambda.api_gateways_summary
+    execution_role_arn = module.lambda.lambda_execution_role_arn
+  }
+  sensitive = false
+}
+
+output "api_endpoints" {
+  description = "API endpoint URLs for testing and integration"
+  value = {
+    rest_api_base_url    = module.lambda.rest_api_endpoint
+    health_check_url     = module.lambda.rest_api_health_endpoint
+    websocket_url        = module.lambda.websocket_api_endpoint
+  }
+  sensitive = false
+}
+
+# ==============================================================================
 # CONFIGURATION SUMMARY
 # ==============================================================================
 
@@ -178,6 +202,7 @@ output "infrastructure_summary" {
     vpc_created           = true
     cognito_configured    = true
     secrets_manager_setup = true
+    lambda_deployed      = true
     
     # Optional features
     codepipeline_enabled = var.enable_codepipeline
@@ -192,6 +217,10 @@ output "infrastructure_summary" {
     # Security features
     mfa_configuration = var.cognito_config.mfa_configuration
     backup_enabled   = var.backup_config.enable_backups
+    
+    # API endpoints
+    rest_api_url     = module.lambda.rest_api_endpoint
+    websocket_url    = module.lambda.websocket_api_endpoint
   }
   sensitive = false
 }

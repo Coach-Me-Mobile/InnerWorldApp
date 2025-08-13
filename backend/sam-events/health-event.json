@@ -1,0 +1,17 @@
+{
+  "httpMethod": "GET",
+  "path": "/health",
+  "headers": {
+    "User-Agent": "SAM-Local-Test"
+  },
+  "body": null,
+  "isBase64Encoded": false,
+  "requestContext": {
+    "requestId": "sam-local-health-test",
+    "stage": "dev",
+    "httpMethod": "GET",
+    "path": "/health"
+  },
+  "queryStringParameters": null,
+  "pathParameters": null
+}

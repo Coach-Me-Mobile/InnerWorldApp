@@ -1,0 +1,22 @@
+---
+description: Best practices for Neptune graph database and DynamoDB interactions in Go Lambda functions.
+globs: */db/**/*.go,*/lambda/**/*.go
+---
+When interacting with Neptune (Graph Database):
+- Use Gremlin traversals for graph queries, not SQL
+- Implement connection pooling for Neptune cluster endpoints
+- Handle graph traversal errors and empty result sets gracefully
+- Use Neptune's read replicas for high-read workloads
+- Cache frequently accessed graph patterns in Lambda memory
+- Structure GraphRAG queries: intent → subgraph expansion → context retrieval
+- Use OpenAI embeddings for semantic similarity in graph searches
+- Implement proper error handling for Neptune connection timeouts
+
+When interacting with DynamoDB:
+- Use batch operations for multiple item writes/reads
+- Implement TTL for conversation data cleanup (live conversations auto-expire)
+- Design partition keys to avoid hot partitions (use session_id, not user_id)
+- Use GSI (Global Secondary Index) for alternate query patterns
+- Handle DynamoDB throttling with exponential backoff
+- Use DynamoDB transactions for consistency when needed
+- Implement proper error handling for conditional writes
