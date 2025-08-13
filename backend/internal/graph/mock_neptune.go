@@ -76,3 +76,17 @@ func (m *MockNeptuneClient) DeleteUserData(ctx context.Context, userID string) e
 	delete(m.users, userID)
 	return nil
 }
+
+// CreateNode creates a mock node in the graph
+func (m *MockNeptuneClient) CreateNode(userID string, nodeType string, content string) error {
+	log.Printf("[MOCK NEPTUNE] Creating %s node for user %s: %s", nodeType, userID, content)
+	// Mock implementation - just log the operation
+	return nil
+}
+
+// CreateEdge creates a mock edge in the graph
+func (m *MockNeptuneClient) CreateEdge(userID string, nodeID string, edgeType string, target string) error {
+	log.Printf("[MOCK NEPTUNE] Creating %s edge for user %s: %s -> %s", edgeType, userID, nodeID, target)
+	// Mock implementation - just log the operation
+	return nil
+}

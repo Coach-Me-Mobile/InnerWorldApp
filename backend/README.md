@@ -1,15 +1,24 @@
-# InnerWorld Backend - Phase 1
+# InnerWorld Backend - Phase 2
 
-Basic serverless backend foundation for the InnerWorld AR app, implementing only the core Phase 1 requirements.
+Complete serverless conversation AI pipeline for the InnerWorld AR app, implementing Phase 2 real-time conversation and session management.
 
-## Phase 1 Scope
+## Phase 2 Implementation ✅
 
-This implementation covers **only** Darren's Phase 1 tasks:
+**Phase 1 Foundation:**
 - ✅ Basic Lambda function structure (conversation handler + health check)
 - ✅ OpenRouter API client for LLM conversations
 - ✅ OpenAI API client for text embeddings  
 - ✅ Mock Neptune connection layer
 - ✅ Local development environment
+
+**Phase 2 - Real-Time Conversation Pipeline:**
+- ✅ **3 Lambda Functions**: Login Context Handler, WebSocket Handler, Session End Processor
+- ✅ **LangChain-Go Integration**: input_safety → persona_prompt → llm_generation → output_safety → live_storage
+- ✅ **Persona Loading System**: Configurable loader with default template (expandable for Phase 4+)
+- ✅ **DynamoDB Operations**: LiveConversations storage (24-hour TTL), UserContextCache with TTL
+- ✅ **Context Caching**: Login-time Neptune context retrieval for performance
+- ✅ **Session Processing**: Conversation element extraction and graph updates
+- ✅ **Error Handling**: Retry logic, circuit breakers, resilience patterns
 
 ## Quick Start
 
@@ -21,102 +30,271 @@ This implementation covers **only** Darren's Phase 1 tasks:
 ### Setup
 ```bash
 cd backend/
-make setup          # Initial setup
-make dev-start      # Start development environment
-make build          # Build Lambda functions
-make test-conversation  # Test basic conversation
+make setup               # Initial setup
+make dev-start          # Start development environment
+./scripts/build-phase2.sh   # Build Phase 2 Lambda functions
+./scripts/test-phase2.sh    # Run comprehensive Phase 2 tests
 ```
 
-## Architecture
+## Phase 2 Architecture
 
 ```
 backend/
 ├── cmd/
-│   ├── conversation-handler/  # Basic conversation Lambda
-│   └── health-check/         # Health monitoring Lambda
+│   ├── conversation-handler/     # Phase 1 basic handler
+│   ├── health-check/            # Health monitoring
+│   ├── login-context-handler/   # 🆕 Login context caching
+│   ├── websocket-handler/       # 🆕 Real-time conversation
+│   ├── session-processor/       # 🆕 Session end processing
+│   └── test-phase2/            # 🆕 Integration tests
 ├── internal/
-│   ├── config/              # Basic configuration
-│   ├── embeddings/          # OpenAI client
-│   ├── graph/               # Neptune interface + mock
-│   ├── llm/                 # OpenRouter client
-│   └── types/               # Basic data structures
-└── docker-compose.yml       # LocalStack
+│   ├── config/                 # Configuration management
+│   ├── embeddings/             # OpenAI client
+│   ├── graph/                  # Neptune interface + mock
+│   ├── llm/                    # OpenRouter client
+│   ├── personas/               # 🆕 Persona loading system
+│   ├── resilience/             # 🆕 Error handling & retry logic
+│   ├── storage/                # 🆕 DynamoDB mock operations
+│   ├── types/                  # 🆕 Phase 2 data structures
+│   └── workflow/               # 🆕 LangGraph conversation workflow
+├── scripts/
+│   ├── build-phase2.sh         # 🆕 Phase 2 build script
+│   └── test-phase2.sh          # 🆕 Phase 2 test script
+└── docker-compose.yml          # LocalStack
 ```
 
-## Core Components
+## Phase 2 Core Components
 
-### Conversation Handler
-- Processes basic conversation requests via API Gateway
-- Integrates with OpenRouter for LLM responses
-- Uses mock responses when API keys not configured
-- Simple request/response format
+### 1. Login Context Handler Lambda
+- **Trigger**: Cognito Post-Authentication
+- **Purpose**: Cache user's Neptune GraphRAG context at login
+- **Process**: Neptune context retrieval → DynamoDB cache storage
+- **Performance**: Heavy operation done once per login session
 
-### Health Check
-- Monitors system connectivity
-- Tests Neptune mock client
-- Returns service status
+### 2. WebSocket Message Handler Lambda  
+- **Triggers**: API Gateway WebSocket (`$connect`, `$disconnect`, `sendmessage`)
+- **Purpose**: Real-time conversation processing
+- **Workflow**: Cached context → LangGraph → OpenRouter LLM → WebSocket response
+- **Features**: Connection management, persona selection, session tracking
 
-### OpenRouter Integration
-- Basic LLM conversation client
-- Simple system prompt (no personas)
-- Error handling and fallback responses
+### 3. Session End Processor Lambda
+- **Triggers**: WebSocket disconnect or manual session end
+- **Purpose**: Convert conversation into Neptune graph nodes/edges  
+- **Process**: DynamoDB messages → element extraction → Neptune updates → context refresh
+- **Cleanup**: Remove processed conversation data with TTL
 
-### Mock Neptune
-- Development-only Neptune client
-- Basic user context storage
-- Ready for real Neptune integration
+### 4. LangChain-Go Conversation Processing
+- **Pipeline**: input_safety → persona_prompt → llm_generation → output_safety → live_storage using LangChain-Go
+- **Safety**: Bidirectional safety checks - both user inputs and AI responses filtered for harmful content
+- **Personas**: Load configured persona template with user context injection
+- **Storage**: Both user message and AI response stored in DynamoDB
 
-### Configuration
-- Environment-aware settings
-- Optional API keys for development
-- Production validation
+### 5. Persona Loading System
+- **Default Template**: Single supportive companion template for Phase 2 testing
+- **Configurable Loader**: Expandable system for Phase 4+ persona implementations
+- **Context-Aware**: Inject user's GraphRAG context into system prompts
+- **Boundaries**: Built-in safety guidelines and age-appropriate constraints
 
-## API Examples
+### 6. DynamoDB Storage (Mock)
+- **LiveConversations**: Message-per-item with session GSI, 24-hour TTL
+- **UserContextCache**: Cached Neptune context, 1-hour TTL
+- **Performance**: Fast context access during conversations
+- **Cleanup**: Automatic TTL-based data removal
 
-### Conversation Request
+### 7. Error Handling & Resilience
+- **Retry Logic**: Exponential backoff with configurable attempts
+- **Circuit Breakers**: Fail-fast for consistently failing services  
+- **Service-Specific**: Different retry logic for Neptune, DynamoDB, OpenRouter
+- **Graceful Degradation**: Fallback responses when services fail
+
+## Phase 2 API Examples
+
+### WebSocket Message (Conversation)
 ```json
 {
-  "message": "Hello!",
-  "userId": "user-123"
+  "action": "sendmessage",
+  "message": "I'm nervous about my presentation tomorrow",
+  "persona": "courage",
+  "sessionId": "session_123",
+  "userId": "user_456"
 }
 ```
 
-### Response
+### WebSocket Response
 ```json
 {
-  "messageId": "uuid-here",
-  "content": "Hello! I'm here to support you.",
-  "timestamp": "2024-01-15T10:00:00Z"
+  "messageId": "msg_abc123",
+  "content": "You've got this! What's one small step you could take to prepare?",
+  "persona": "courage",
+  "timestamp": "2024-01-15T10:05:00Z",
+  "sessionId": "session_123",
+  "messageType": "assistant"
 }
 ```
 
-## Development
+### Login Context Request (Cognito Trigger)
+```json
+{
+  "userId": "user_456",
+  "loginSessionId": "login_789"
+}
+```
 
+### Session End Request
+```json
+{
+  "sessionId": "session_123",
+  "userId": "user_456", 
+  "reason": "manual"
+}
+```
+
+## Phase 2 Development
+
+### Build & Test
 ```bash
-make help           # Show all commands
-make dev-start      # Start environment
-make build          # Build functions
-make test-conversation  # Test real OpenRouter conversation!
-make test-health    # Test complete health check system
-make test-services  # Check LocalStack status
-make clean         # Clean up
+# Phase 2 specific commands
+./scripts/build-phase2.sh   # Build all 3 Lambda functions
+./scripts/test-phase2.sh    # Run comprehensive tests
+
+# Legacy Phase 1 commands still work
+make help                   # Show all commands
+make dev-start             # Start LocalStack environment  
+make build                 # Build Phase 1 functions
+make test-conversation     # Test basic conversation
+make test-health           # Test health check system
 ```
 
-## Integration Ready
+### Testing Individual Components
+```bash
+# Test persona system
+go run cmd/test-phase2/main.go
 
-This Phase 1 implementation provides:
-- **Clean interfaces** for Neptune integration
-- **Configuration patterns** for AWS deployment
-- **Basic Lambda structure** ready for Terraform
-- **Mock implementations** for independent development
+# Test individual Lambda functions
+echo '{"userId": "test-user"}' | go run cmd/login-context-handler/main.go
+echo '{"action": "sendmessage", "message": "Hello", "persona": "comfort"}' | go run cmd/websocket-handler/main.go
+echo '{"sessionId": "test-session", "userId": "test-user", "reason": "manual"}' | go run cmd/session-processor/main.go
 
-## Next Phases
+# Test all 4 personas
+for persona in courage comfort creative compass; do
+  echo "{\"action\":\"sendmessage\",\"message\":\"Test message\",\"persona\":\"$persona\"}" | go run cmd/websocket-handler/main.go
+done
+```
 
-- **Phase 2**: WebSocket API, conversation storage, session management
-- **Phase 3**: Frontend integration, authentication
-- **Phase 4**: Personas, safety moderation, advanced features
+## Phase 2 Conversation Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User (iOS VR)
+    participant W as WebSocket Handler
+    participant L as LangGraph Workflow
+    participant D as DynamoDB
+    participant O as OpenRouter
+    participant S as Session Processor
+    participant N as Neptune (Mock)
+    
+    U->>+W: Connect WebSocket
+    U->>+W: Send Message (persona, content)
+    W->>+D: Get Cached Context
+    D-->>-W: User Context
+    W->>+L: Process Conversation
+    L->>L: Input Safety Check
+    L->>L: Load Persona + Context
+    L->>+O: Generate LLM Response
+    O-->>-L: AI Response
+    L->>L: Output Safety Check
+    L->>+D: Store Message + Response
+    D-->>-L: Stored
+    L-->>-W: Workflow Result
+    W-->>-U: Send AI Response
+    
+    Note over U,W: Session continues...
+    
+    U->>W: Disconnect (or timeout)
+    W->>+S: Trigger Session End
+    S->>+D: Get Session Messages
+    D-->>-S: All Messages
+    S->>S: Extract Elements
+    S->>+N: Update Graph
+    N-->>-S: Updated
+    S->>+D: Refresh User Context Cache
+    D-->>-S: Refreshed
+    S->>+D: Cleanup Messages
+    D-->>-S: Cleaned
+```
+
+## Dependencies & Blockers
+
+### Infrastructure Dependencies (Nataly)
+- **WebSocket API Gateway** with Lambda integration
+- **DynamoDB tables**: `LiveConversations`, `UserContextCache`  
+- **Lambda layers**: OpenRouter, Neptune, LangGraph dependencies
+- **IAM roles**: Lambda access to Neptune, DynamoDB, Cognito
+
+### Graph Database Dependencies (Hutch)
+- **Neptune GraphRAG schema**: Node types (Event, Feeling, Value, Goal, Habit, Person, Topic)
+- **Edge relationships**: temporal, causal, about, supports, conflicts, felt_during
+- **Gremlin queries**: Context retrieval and graph update patterns
+
+### Mock Implementations (Phase 2 Ready)
+- **Mock DynamoDB**: In-memory storage for development/testing
+- **Mock Neptune**: Basic context storage and graph operations
+- **Mock WebSocket**: Response logging instead of actual WebSocket calls
+- **Fallback responses**: When OpenRouter API unavailable
+
+## Testing
+
+### 🎯 End-to-End Conversation Test (Recommended)
+```bash
+./scripts/test-e2e-conversation.sh
+```
+This comprehensive test demonstrates the complete WebSocket conversation flow:
+- Setup and component initialization
+- Neptune context loading and DynamoDB caching  
+- Bidirectional safety checks (input + output)
+- Persona context injection with system prompts
+- Message storage with 24-hour TTL verification
+- WebSocket disconnect and resource cleanup
+
+### Unit Tests
+```bash
+# Run all Phase 2 unit tests
+./scripts/test-phase2.sh
+
+# Run specific component tests
+go test ./internal/... -v
+
+# Build all Lambda functions  
+./scripts/build-phase2.sh
+```
+
+## Production Deployment
+
+### Lambda Functions Ready for Deploy
+```bash
+./scripts/build-phase2.sh
+ls bin/
+# login-context-handler.zip
+# websocket-handler.zip  
+# session-processor.zip
+```
+
+### Environment Variables Needed
+```bash
+# OpenRouter API (optional for development)
+OPENROUTER_API_KEY=your-key-here
+
+# Neptune (production) 
+NEPTUNE_ENDPOINT=your-neptune-cluster.region.neptune.amazonaws.com
+NEPTUNE_PORT=8182
+
+# DynamoDB Tables
+LIVE_CONVERSATIONS_TABLE=LiveConversations-dev
+USER_CONTEXT_CACHE_TABLE=UserContextCache-dev
+```
 
 ---
 
-**Status: Phase 1 Complete ✅**  
-**Ready for**: Infrastructure integration and Phase 2 development
+**Status: Phase 2 Complete ✅**  
+**Ready for**: Infrastructure deployment and Phase 3 integration  
+**Next**: Trevor's VR frontend WebSocket client integration
