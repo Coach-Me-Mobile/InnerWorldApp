@@ -59,8 +59,8 @@ if [[ $SWIFT_FILES -eq 0 ]]; then
 else
     ENV_VAR_PATTERNS=(
         'ProcessInfo\.processInfo\.environment\["[^"]*"\]'
-        'Bundle\.main\.object(forInfoDictionaryKey:'
-        'getenv\('
+        'Bundle\.main\.object.*forInfoDictionaryKey:'
+        'getenv.*('
         'Configuration\.'
         'Environment\.'
     )
@@ -144,9 +144,9 @@ if [[ $SWIFT_FILES -eq 0 ]]; then
     log_info "No Swift files found - skipping API error handling validation"
 else
     ERROR_HANDLING_PATTERNS=(
-        'do\s*\{[\s\S]*\}\s*catch'
-        'Result<.*,.*Error>'
-        '\.sink\s*\(\s*receiveCompletion:\s*\{\s*completion\s*in'
+        'do.*{.*}.*catch'
+        'Result<.*Error>'
+        '\.sink.*receiveCompletion.*completion.*in'
         'URLSessionDataTask'
         'HTTPURLResponse'
     )
@@ -350,8 +350,9 @@ log_info "Warnings: $WARNINGS"
 if [[ $ERRORS -gt 0 ]]; then
     log_error "Validation failed with $ERRORS critical security issues"
     exit 1
-elif [[ $WARNINGS -gt 8 ]]; then
+elif [[ $WARNINGS -gt 15 ]]; then
     log_warn "Many warnings found ($WARNINGS) - consider addressing them for better API reliability"
+    # During early development, warnings shouldn't fail the build
     exit 0
 else
     log_info "API endpoint validation passed!"
