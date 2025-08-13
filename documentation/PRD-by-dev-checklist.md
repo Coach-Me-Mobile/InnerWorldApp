@@ -10,20 +10,20 @@
 
 ### **Nataly – DevOps/Infrastructure**
 
-[ ] **Set up Terraform IaC foundation**
-[ ] Initialize Terraform project with AWS provider configuration.
-[ ] Create modular Terraform structure for dev/staging/prod environments.
-[ ] Set up remote state backend (S3 + DynamoDB) for team collaboration.
+[x] **Set up Terraform IaC foundation**
+[x] Initialize Terraform project with AWS provider configuration.
+[x] Create modular Terraform structure for dev/staging/prod environments.
+[x] Set up remote state backend (S3 + DynamoDB) for team collaboration.
 
-[ ] **Configure core AWS infrastructure via Terraform**
-[ ] Deploy VPC, subnets, security groups, and networking components.
-[ ] Set up AWS Secrets Manager for credentials and API keys.
-[ ] Configure AWS CodePipeline for build/deploy and GitHub Actions for code quality.
+[x] **Configure core AWS infrastructure via Terraform**
+[x] Deploy VPC, subnets, security groups, and networking components.
+[x] Set up AWS Secrets Manager for credentials and API keys.
+[x] Configure AWS CodePipeline for build/deploy and GitHub Actions for code quality.
 
-[ ] **Configure AWS Cognito for authentication**
-[ ] Create Cognito User Pool and Identity Pool via Terraform.
-[ ] Enable Apple ID and email/password sign-in.
-[ ] Set up proper IAM roles and policies for Cognito integration.
+[x] **Configure AWS Cognito for authentication**
+[x] Create Cognito User Pool and Identity Pool via Terraform.
+[x] Enable Apple ID and email/password sign-in.
+[x] Set up proper IAM roles and policies for Cognito integration.
 
 ---
 

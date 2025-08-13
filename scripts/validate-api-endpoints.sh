@@ -51,27 +51,34 @@ done
 # Check for proper environment variable usage
 log_info "Checking for environment variable usage..."
 
-ENV_VAR_PATTERNS=(
-    'ProcessInfo\.processInfo\.environment\["[^"]*"\]'
-    'Bundle\.main\.object(forInfoDictionaryKey:'
-    'getenv\('
-    'Configuration\.'
-    'Environment\.'
-)
+# First check if we have any Swift files to analyze
+SWIFT_FILES=$(find . -name "*.swift" 2>/dev/null | wc -l)
 
-ENV_VARS_FOUND=false
-for pattern in "${ENV_VAR_PATTERNS[@]}"; do
-    if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
-        ENV_VARS_FOUND=true
-        break
-    fi
-done
-
-if ! $ENV_VARS_FOUND; then
-    log_warn "No environment variable usage found - API endpoints should be configurable"
-    ((WARNINGS++))
+if [[ $SWIFT_FILES -eq 0 ]]; then
+    log_info "No Swift files found - skipping Swift-specific validations (early development phase)"
 else
-    log_info "Environment variable usage detected"
+    ENV_VAR_PATTERNS=(
+        'ProcessInfo\.processInfo\.environment\["[^"]*"\]'
+        'Bundle\.main\.object(forInfoDictionaryKey:'
+        'getenv\('
+        'Configuration\.'
+        'Environment\.'
+    )
+
+    ENV_VARS_FOUND=false
+    for pattern in "${ENV_VAR_PATTERNS[@]}"; do
+        if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
+            ENV_VARS_FOUND=true
+            break
+        fi
+    done
+
+    if ! $ENV_VARS_FOUND; then
+        log_warn "No environment variable usage found - API endpoints should be configurable"
+        ((WARNINGS++))
+    else
+        log_info "Environment variable usage detected"
+    fi
 fi
 
 # Check for SSL/TLS enforcement
@@ -93,214 +100,246 @@ done
 # Check for API key handling
 log_info "Checking for proper API key handling..."
 
-API_KEY_HANDLING_PATTERNS=(
-    'Keychain'
-    'kSecClass'
-    'SecItemAdd'
-    'SecItemCopyMatching'
-    'UserDefaults'  # This should be flagged as insecure
-)
+if [[ $SWIFT_FILES -eq 0 ]]; then
+    log_info "No Swift files found - skipping API key storage validation"
+else
+    API_KEY_HANDLING_PATTERNS=(
+        'Keychain'
+        'kSecClass'
+        'SecItemAdd'
+        'SecItemCopyMatching'
+        'UserDefaults'  # This should be flagged as insecure
+    )
 
-SECURE_STORAGE_FOUND=false
-INSECURE_STORAGE_FOUND=false
+    SECURE_STORAGE_FOUND=false
+    INSECURE_STORAGE_FOUND=false
 
-for pattern in "${API_KEY_HANDLING_PATTERNS[@]}"; do
-    if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
-        if [[ "$pattern" == "UserDefaults" ]]; then
-            if matches=$(find . -name "*.swift" -exec grep -Hn "UserDefaults.*[aA][pP][iI].*[kK][eE][yY]\|UserDefaults.*[sS][eE][cC][rR][eE][tT]\|UserDefaults.*[tT][oO][kK][eE][nN]" {} \;); then
-                echo "$matches"
-                log_error "Found API keys stored in UserDefaults (insecure)"
-                ((ERRORS++))
-                INSECURE_STORAGE_FOUND=true
+    for pattern in "${API_KEY_HANDLING_PATTERNS[@]}"; do
+        if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
+            if [[ "$pattern" == "UserDefaults" ]]; then
+                if matches=$(find . -name "*.swift" -exec grep -Hn "UserDefaults.*[aA][pP][iI].*[kK][eE][yY]\|UserDefaults.*[sS][eE][cC][rR][eE][tT]\|UserDefaults.*[tT][oO][kK][eE][nN]" {} \;); then
+                    echo "$matches"
+                    log_error "Found API keys stored in UserDefaults (insecure)"
+                    ((ERRORS++))
+                    INSECURE_STORAGE_FOUND=true
+                fi
+            else
+                SECURE_STORAGE_FOUND=true
             fi
-        else
-            SECURE_STORAGE_FOUND=true
         fi
-    fi
-done
+    done
 
-if $SECURE_STORAGE_FOUND; then
-    log_info "Secure storage (Keychain) usage detected"
-elif ! $INSECURE_STORAGE_FOUND; then
-    log_warn "No API key storage mechanism found"
-    ((WARNINGS++))
+    if $SECURE_STORAGE_FOUND; then
+        log_info "Secure storage (Keychain) usage detected"
+    elif ! $INSECURE_STORAGE_FOUND; then
+        log_warn "No API key storage mechanism found"
+        ((WARNINGS++))
+    fi
 fi
 
 # Check for proper error handling in API calls
 log_info "Checking for API error handling..."
 
-ERROR_HANDLING_PATTERNS=(
-    'do\s*\{[\s\S]*\}\s*catch'
-    'Result<.*,.*Error>'
-    '\.sink\s*\(\s*receiveCompletion:\s*\{\s*completion\s*in'
-    'URLSessionDataTask'
-    'HTTPURLResponse'
-)
-
-ERROR_HANDLING_FOUND=false
-for pattern in "${ERROR_HANDLING_PATTERNS[@]}"; do
-    if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
-        ERROR_HANDLING_FOUND=true
-        break
-    fi
-done
-
-if $ERROR_HANDLING_FOUND; then
-    log_info "API error handling detected"
+if [[ $SWIFT_FILES -eq 0 ]]; then
+    log_info "No Swift files found - skipping API error handling validation"
 else
-    log_warn "No API error handling found"
-    ((WARNINGS++))
+    ERROR_HANDLING_PATTERNS=(
+        'do\s*\{[\s\S]*\}\s*catch'
+        'Result<.*,.*Error>'
+        '\.sink\s*\(\s*receiveCompletion:\s*\{\s*completion\s*in'
+        'URLSessionDataTask'
+        'HTTPURLResponse'
+    )
+
+    ERROR_HANDLING_FOUND=false
+    for pattern in "${ERROR_HANDLING_PATTERNS[@]}"; do
+        if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
+            ERROR_HANDLING_FOUND=true
+            break
+        fi
+    done
+
+    if $ERROR_HANDLING_FOUND; then
+        log_info "API error handling detected"
+    else
+        log_warn "No API error handling found"
+        ((WARNINGS++))
+    fi
 fi
 
 # Check for rate limiting implementation
 log_info "Checking for rate limiting..."
 
-RATE_LIMITING_PATTERNS=(
-    'rateLimit'
-    'throttle'
-    'debounce'
-    'semaphore'
-    'DispatchSemaphore'
-    'Timer'
-)
-
-RATE_LIMITING_FOUND=false
-for pattern in "${RATE_LIMITING_PATTERNS[@]}"; do
-    if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
-        RATE_LIMITING_FOUND=true
-        break
-    fi
-done
-
-if $RATE_LIMITING_FOUND; then
-    log_info "Rate limiting implementation detected"
+if [[ $SWIFT_FILES -eq 0 ]]; then
+    log_info "No Swift files found - skipping rate limiting validation"
 else
-    log_warn "No rate limiting found - important for API cost control"
-    ((WARNINGS++))
+    RATE_LIMITING_PATTERNS=(
+        'rateLimit'
+        'throttle'
+        'debounce'
+        'semaphore'
+        'DispatchSemaphore'
+        'Timer'
+    )
+
+    RATE_LIMITING_FOUND=false
+    for pattern in "${RATE_LIMITING_PATTERNS[@]}"; do
+        if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
+            RATE_LIMITING_FOUND=true
+            break
+        fi
+    done
+
+    if $RATE_LIMITING_FOUND; then
+        log_info "Rate limiting implementation detected"
+    else
+        log_warn "No rate limiting found - important for API cost control"
+        ((WARNINGS++))
+    fi
 fi
 
 # Check for timeout configuration
 log_info "Checking for timeout configuration..."
 
-TIMEOUT_PATTERNS=(
-    'timeoutInterval'
-    'timeout'
-    'requestTimeout'
-)
-
-TIMEOUT_FOUND=false
-for pattern in "${TIMEOUT_PATTERNS[@]}"; do
-    if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
-        TIMEOUT_FOUND=true
-        break
-    fi
-done
-
-if $TIMEOUT_FOUND; then
-    log_info "Timeout configuration detected"
+if [[ $SWIFT_FILES -eq 0 ]]; then
+    log_info "No Swift files found - skipping timeout validation"
 else
-    log_warn "No timeout configuration found"
-    ((WARNINGS++))
+    TIMEOUT_PATTERNS=(
+        'timeoutInterval'
+        'timeout'
+        'requestTimeout'
+    )
+
+    TIMEOUT_FOUND=false
+    for pattern in "${TIMEOUT_PATTERNS[@]}"; do
+        if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
+            TIMEOUT_FOUND=true
+            break
+        fi
+    done
+
+    if $TIMEOUT_FOUND; then
+        log_info "Timeout configuration detected"
+    else
+        log_warn "No timeout configuration found"
+        ((WARNINGS++))
+    fi
 fi
 
 # Check for retry mechanisms
 log_info "Checking for retry mechanisms..."
 
-RETRY_PATTERNS=(
-    'retry'
-    'attempt'
-    'backoff'
-    'exponential'
-)
-
-RETRY_FOUND=false
-for pattern in "${RETRY_PATTERNS[@]}"; do
-    if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
-        RETRY_FOUND=true
-        break
-    fi
-done
-
-if $RETRY_FOUND; then
-    log_info "Retry mechanism detected"
+if [[ $SWIFT_FILES -eq 0 ]]; then
+    log_info "No Swift files found - skipping retry mechanism validation"
 else
-    log_warn "No retry mechanism found - important for reliability"
-    ((WARNINGS++))
+    RETRY_PATTERNS=(
+        'retry'
+        'attempt'
+        'backoff'
+        'exponential'
+    )
+
+    RETRY_FOUND=false
+    for pattern in "${RETRY_PATTERNS[@]}"; do
+        if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
+            RETRY_FOUND=true
+            break
+        fi
+    done
+
+    if $RETRY_FOUND; then
+        log_info "Retry mechanism detected"
+    else
+        log_warn "No retry mechanism found - important for reliability"
+        ((WARNINGS++))
+    fi
 fi
 
 # Check for API versioning
 log_info "Checking for API versioning..."
 
-VERSIONING_PATTERNS=(
-    '/v[0-9]'
-    'version'
-    'api.*version'
-)
-
-VERSIONING_FOUND=false
-for pattern in "${VERSIONING_PATTERNS[@]}"; do
-    if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
-        VERSIONING_FOUND=true
-        break
-    fi
-done
-
-if $VERSIONING_FOUND; then
-    log_info "API versioning detected"
+if [[ $SWIFT_FILES -eq 0 ]]; then
+    log_info "No Swift files found - skipping API versioning validation"
 else
-    log_warn "No API versioning found - important for backward compatibility"
-    ((WARNINGS++))
+    VERSIONING_PATTERNS=(
+        '/v[0-9]'
+        'version'
+        'api.*version'
+    )
+
+    VERSIONING_FOUND=false
+    for pattern in "${VERSIONING_PATTERNS[@]}"; do
+        if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
+            VERSIONING_FOUND=true
+            break
+        fi
+    done
+
+    if $VERSIONING_FOUND; then
+        log_info "API versioning detected"
+    else
+        log_warn "No API versioning found - important for backward compatibility"
+        ((WARNINGS++))
+    fi
 fi
 
 # Check for proper logging of API calls
 log_info "Checking for API call logging..."
 
-LOGGING_PATTERNS=(
-    'Logger'
-    'os_log'
-    'NSLog'
-    'log\.'
-)
-
-LOGGING_FOUND=false
-for pattern in "${LOGGING_PATTERNS[@]}"; do
-    if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
-        LOGGING_FOUND=true
-        break
-    fi
-done
-
-if $LOGGING_FOUND; then
-    log_info "Logging implementation detected"
+if [[ $SWIFT_FILES -eq 0 ]]; then
+    log_info "No Swift files found - skipping API logging validation"
 else
-    log_warn "No logging found - important for debugging API issues"
-    ((WARNINGS++))
+    LOGGING_PATTERNS=(
+        'Logger'
+        'os_log'
+        'NSLog'
+        'log\.'
+    )
+
+    LOGGING_FOUND=false
+    for pattern in "${LOGGING_PATTERNS[@]}"; do
+        if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
+            LOGGING_FOUND=true
+            break
+        fi
+    done
+
+    if $LOGGING_FOUND; then
+        log_info "Logging implementation detected"
+    else
+        log_warn "No logging found - important for debugging API issues"
+        ((WARNINGS++))
+    fi
 fi
 
 # Check for API response validation
 log_info "Checking for API response validation..."
 
-VALIDATION_PATTERNS=(
-    'Codable'
-    'JSONDecoder'
-    'JSONSerialization'
-    'validate'
-    'schema'
-)
-
-VALIDATION_FOUND=false
-for pattern in "${VALIDATION_PATTERNS[@]}"; do
-    if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
-        VALIDATION_FOUND=true
-        break
-    fi
-done
-
-if $VALIDATION_FOUND; then
-    log_info "API response validation detected"
+if [[ $SWIFT_FILES -eq 0 ]]; then
+    log_info "No Swift files found - skipping API response validation"
 else
-    log_warn "No API response validation found"
-    ((WARNINGS++))
+    VALIDATION_PATTERNS=(
+        'Codable'
+        'JSONDecoder'
+        'JSONSerialization'
+        'validate'
+        'schema'
+    )
+
+    VALIDATION_FOUND=false
+    for pattern in "${VALIDATION_PATTERNS[@]}"; do
+        if find . -name "*.swift" -exec grep -l "$pattern" {} \; | grep -q .; then
+            VALIDATION_FOUND=true
+            break
+        fi
+    done
+
+    if $VALIDATION_FOUND; then
+        log_info "API response validation detected"
+    else
+        log_warn "No API response validation found"
+        ((WARNINGS++))
+    fi
 fi
 
 # Summary
