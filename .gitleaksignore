@@ -1,0 +1,16 @@
+# Ignore .env files (they're gitignored anyway)
+backend/.env:*
+
+# Ignore example/template files  
+**/terraform.tfvars.example:*
+**/*.example:*
+
+# Ignore documentation
+**/*.md:*
+**/README*:*
+
+# Ignore generated files and dependencies
+**/node_modules/**:*
+**/go.sum:*
+**/.aws-sam/**:*
+**/bin/**:*

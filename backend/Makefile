@@ -57,12 +57,11 @@ build-lambda: ## Build Lambda functions for AWS deployment (Linux)
 	@echo "🔨 Building Lambda functions for AWS deployment..."
 	@mkdir -p bin
 	@echo "   Building health-check for Linux..."
-	@GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/health-check-linux ./cmd/health-check/main.go
+	@GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/bootstrap ./cmd/health-check/main.go
+	@cd bin && zip health-check.zip bootstrap && rm bootstrap
 	@echo "   Building conversation-handler for Linux..."
-	@GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/conversation-handler-linux ./cmd/conversation-handler/main.go
-	@echo "   Creating deployment packages..."
-	@cd bin && zip health-check.zip health-check-linux
-	@cd bin && zip conversation-handler.zip conversation-handler-linux
+	@GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/bootstrap ./cmd/conversation-handler/main.go
+	@cd bin && zip conversation-handler.zip bootstrap && rm bootstrap
 	@echo "✅ Lambda deployment packages ready:"
 	@echo "   📦 bin/health-check.zip"
 	@echo "   📦 bin/conversation-handler.zip"

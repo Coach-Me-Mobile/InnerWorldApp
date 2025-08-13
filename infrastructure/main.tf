@@ -168,3 +168,38 @@ module "codepipeline" {
   
   tags = local.common_tags
 }
+
+# Lambda module - Lambda functions with API Gateway
+module "lambda" {
+  source = "./modules/lambda"
+  
+  name_prefix   = local.name_prefix
+  environment   = var.environment
+  aws_region    = var.aws_region
+  account_id    = local.account_id
+  
+  # Networking configuration - use existing VPC resources
+  vpc_id                    = module.networking.vpc_id
+  private_subnet_ids        = module.networking.private_subnet_ids
+  lambda_security_group_id  = module.networking.lambda_security_group_id
+  
+  # Secrets Manager ARNs for Lambda permissions
+  secrets_manager_arns = [
+    module.secrets.openai_api_key_arn,
+    module.secrets.neo4j_credentials_arn,
+    module.secrets.apple_signin_key_arn,
+    module.secrets.jwt_secret_arn
+  ]
+  
+  # Lambda configuration
+  lambda_environment_variables = {
+    ENVIRONMENT = var.environment
+    DEBUG       = var.environment == "dev" ? "true" : "false"
+    AWS_REGION  = var.aws_region
+  }
+  
+  log_retention_days     = var.log_retention_days
+  enable_xray_tracing    = var.enable_xray_tracing
+  
+  tags = local.common_tags
+}

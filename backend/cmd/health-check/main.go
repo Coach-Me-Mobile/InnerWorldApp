@@ -109,11 +109,14 @@ func handleHealthCheck(ctx context.Context, request events.APIGatewayProxyReques
 	}
 
 	// Determine HTTP status code
-	statusCode := 200
-	if overallStatus == "unhealthy" {
+	var statusCode int
+	switch overallStatus {
+	case "unhealthy":
 		statusCode = 503 // Service Unavailable
-	} else if overallStatus == "degraded" {
+	case "degraded":
 		statusCode = 200 // Still operational
+	default:
+		statusCode = 200
 	}
 
 	// Marshal response

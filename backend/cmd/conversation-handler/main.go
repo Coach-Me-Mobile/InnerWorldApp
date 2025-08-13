@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"innerworld-backend/internal/config"
-	"innerworld-backend/internal/embeddings"
-	"innerworld-backend/internal/graph"
+	// TODO: Uncomment when GraphRAG is implemented in Phase 2
+	// "innerworld-backend/internal/embeddings"
+	// "innerworld-backend/internal/graph"
 	"innerworld-backend/internal/llm"
 	"log"
 	"time"
@@ -33,8 +34,10 @@ type ConversationResponse struct {
 var (
 	cfg              *config.Config
 	openRouterClient *llm.OpenRouterClient
-	openAIClient     *embeddings.OpenAIEmbeddingsClient
-	neptuneClient    graph.NeptuneClient
+	// TODO: Implement openAIClient for embeddings when GraphRAG is added
+	// openAIClient     *embeddings.OpenAIEmbeddingsClient
+	// TODO: Implement neptuneClient for graph operations when GraphRAG is added
+	// neptuneClient    graph.NeptuneClient
 )
 
 // init runs once when Lambda container starts
@@ -55,17 +58,17 @@ func init() {
 		log.Println("OpenRouter API key not provided - will use mock responses")
 	}
 
-	// Initialize OpenAI client if API key is available
-	if cfg.OpenAI.APIKey != "" && cfg.OpenAI.APIKey != "your-openai-api-key-here" {
-		openAIClient = embeddings.NewOpenAIEmbeddingsClient(cfg.OpenAI.APIKey)
-		log.Println("Initialized OpenAI embeddings client")
-	} else {
-		log.Println("OpenAI API key not provided - embeddings disabled")
-	}
+	// TODO: Initialize OpenAI client when GraphRAG is implemented
+	// if cfg.OpenAI.APIKey != "" && cfg.OpenAI.APIKey != "your-openai-api-key-here" {
+	//	openAIClient = embeddings.NewOpenAIEmbeddingsClient(cfg.OpenAI.APIKey)
+	//	log.Println("Initialized OpenAI embeddings client")
+	// } else {
+	//	log.Println("OpenAI API key not provided - embeddings disabled")
+	// }
 
-	// Initialize Neptune client (mock for development)
-	neptuneClient = graph.NewMockNeptuneClient()
-	log.Println("Initialized Mock Neptune client")
+	// TODO: Initialize Neptune client when GraphRAG is implemented
+	// neptuneClient = graph.NewMockNeptuneClient()
+	log.Println("GraphRAG components (OpenAI/Neptune) disabled in Phase 1")
 }
 
 // handleConversationRequest processes basic conversation requests

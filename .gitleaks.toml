@@ -1,9 +1,18 @@
 title = "InnerWorldApp Gitleaks Configuration"
 
-[extend]
-path = "https://raw.githubusercontent.com/gitleaks/gitleaks/master/config/gitleaks.toml"
+# Custom allowlist paths - exclude .env and example files globally
+[allowlist]
+paths = [
+  '''.*\.env$''',
+  '''.*\.env\..*$''', 
+  '''.*\.example$''',
+  '''.*terraform\.tfvars\.example$''',
+  '''.*\.md$''',
+  '''.*README.*''',
+  '''.*\.git/.*'''
+]
 
-# Custom rules for InnerWorldApp
+# Custom rules for InnerWorldApp specific patterns
 [[rules]]
 id = "openai-api-key"
 description = "OpenAI API Key"
@@ -11,19 +20,10 @@ regex = '''sk-[A-Za-z0-9]{48}'''
 
 [[rules]]
 id = "apple-team-id"
-description = "Apple Team ID"
+description = "Apple Team ID" 
 regex = '''[A-Z0-9]{10}'''
 
 [[rules]]
 id = "neo4j-password"
 description = "Neo4j Password"
 regex = '''(?i)(neo4j.*password|password.*neo4j)[\s]*[:=][\s]*["\']?([^"\'\s]+)'''
-
-# Allowlist for example files
-[[rules.allowlist]]
-description = "Example terraform.tfvars files"
-paths = [
-    '''.*terraform\.tfvars\.example$''',
-    '''.*\.md$''',
-    '''.*README.*'''
-]

@@ -10,7 +10,7 @@ Globals:
   Function:
     Timeout: 30
     MemorySize: 512
-    Runtime: go1.x
+    Runtime: provided.al2
     Architectures:
       - x86_64
     Environment:
@@ -23,7 +23,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: bin/
-      Handler: conversation-handler-linux
+      Handler: bootstrap
       Description: Handles conversation requests with OpenRouter LLM integration
       Events:
         ApiEvent:
@@ -44,7 +44,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: bin/
-      Handler: health-check-linux
+      Handler: bootstrap
       Description: Health check endpoint for the backend services
       Events:
         ApiEvent:
