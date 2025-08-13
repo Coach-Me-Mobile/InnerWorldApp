@@ -43,8 +43,7 @@ output "security_groups" {
   value = {
     default_sg_id = module.networking.default_security_group_id
     lambda_sg_id  = module.networking.lambda_security_group_id
-    rds_sg_id     = module.networking.rds_security_group_id
-    alb_sg_id     = module.networking.alb_security_group_id
+    neptune_sg_id = module.networking.neptune_security_group_id
   }
   sensitive = false
 }

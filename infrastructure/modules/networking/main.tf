@@ -272,13 +272,15 @@ resource "aws_security_group" "lambda" {
   }
 }
 
-# RDS/Neptune security group
-resource "aws_security_group" "rds" {
-  name_prefix = "${var.name_prefix}-rds-"
+
+
+# Neptune/RDS security group (renamed for clarity)
+resource "aws_security_group" "neptune" {
+  name_prefix = "${var.name_prefix}-neptune-"
   vpc_id      = aws_vpc.main.id
-  description = "Security group for RDS and Neptune databases"
+  description = "Security group for Neptune graph database"
   
-  # Allow Lambda access
+  # Allow Lambda access to Neptune port 8182
   ingress {
     from_port       = 8182
     to_port         = 8182
@@ -287,68 +289,8 @@ resource "aws_security_group" "rds" {
     description     = "Neptune access from Lambda"
   }
   
-  # Allow MySQL/PostgreSQL if needed
-  ingress {
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.lambda.id]
-    description     = "MySQL access from Lambda"
-  }
-  
-  ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.lambda.id]
-    description     = "PostgreSQL access from Lambda"
-  }
-  
   tags = merge(var.tags, {
-    Name = "${var.name_prefix}-rds-sg"
-    Type = "SecurityGroup"
-  })
-  
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# Application Load Balancer security group
-resource "aws_security_group" "alb" {
-  name_prefix = "${var.name_prefix}-alb-"
-  vpc_id      = aws_vpc.main.id
-  description = "Security group for Application Load Balancer"
-  
-  # HTTPS inbound
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTPS inbound"
-  }
-  
-  # HTTP inbound (for redirects)
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTP inbound for redirects"
-  }
-  
-  # All outbound to Lambda targets
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = [var.vpc_cidr]
-    description = "All traffic to VPC targets"
-  }
-  
-  tags = merge(var.tags, {
-    Name = "${var.name_prefix}-alb-sg"
+    Name = "${var.name_prefix}-neptune-sg"
     Type = "SecurityGroup"
   })
   

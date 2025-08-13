@@ -44,12 +44,12 @@ resource "aws_secretsmanager_secret_version" "openai_api_key" {
 }
 
 # ==============================================================================
-# NEO4J DATABASE CREDENTIALS
+# NEPTUNE CONFIGURATION
 # ==============================================================================
 
-resource "aws_secretsmanager_secret" "neo4j_credentials" {
-  name        = "${var.name_prefix}/neo4j/credentials"
-  description = "Neo4j Aura database credentials for GraphRAG"
+resource "aws_secretsmanager_secret" "neptune_config" {
+  name        = "${var.name_prefix}/neptune/config"
+  description = "Neptune graph database configuration for GraphRAG"
   
   recovery_window_in_days = var.recovery_window_days
   
@@ -58,21 +58,23 @@ resource "aws_secretsmanager_secret" "neo4j_credentials" {
   }
   
   tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-neo4j-credentials"
-    Type        = "DatabaseCredentials"
-    Service     = "Neo4j"
-    Sensitivity = "High"
+    Name        = "${var.name_prefix}-neptune-config"
+    Type        = "DatabaseConfiguration"
+    Service     = "Neptune"
+    Sensitivity = "Medium"
   })
 }
 
-resource "aws_secretsmanager_secret_version" "neo4j_credentials" {
-  secret_id = aws_secretsmanager_secret.neo4j_credentials.id
+resource "aws_secretsmanager_secret_version" "neptune_config" {
+  secret_id = aws_secretsmanager_secret.neptune_config.id
   secret_string = jsonencode({
-    uri      = var.neo4j_uri != "" ? var.neo4j_uri : "REPLACE_WITH_ACTUAL_URI"
-    username = var.neo4j_username != "" ? var.neo4j_username : "neo4j"
-    password = var.neo4j_password != "" ? var.neo4j_password : "REPLACE_WITH_ACTUAL_PASSWORD"
-    database = var.neo4j_database != "" ? var.neo4j_database : "neo4j"
-    created_at = timestamp()
+    # These will be populated by Terraform outputs after Neptune creation
+    cluster_endpoint = "POPULATED_BY_TERRAFORM"
+    reader_endpoint  = "POPULATED_BY_TERRAFORM"
+    port            = "8182"
+    iam_auth_enabled = "true"
+    ssl_enabled     = "true"
+    created_at      = timestamp()
   })
   
   lifecycle {
@@ -275,7 +277,7 @@ data "aws_iam_policy_document" "secrets_access" {
     
     resources = [
       aws_secretsmanager_secret.openai_api_key.arn,
-      aws_secretsmanager_secret.neo4j_credentials.arn,
+      aws_secretsmanager_secret.neptune_config.arn,
       aws_secretsmanager_secret.apple_signin_key.arn,
       aws_secretsmanager_secret.jwt_secret.arn,
       aws_secretsmanager_secret.webhook_secret.arn,

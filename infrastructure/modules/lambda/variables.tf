@@ -126,3 +126,35 @@ variable "cors_allowed_methods" {
   type        = list(string)
   default     = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 }
+
+# ==============================================================================
+# COGNITO CONFIGURATION
+# ==============================================================================
+
+variable "cognito_user_pool_id" {
+  description = "Cognito User Pool ID for JWT authorization"
+  type        = string
+  default     = ""
+}
+
+variable "cognito_user_pool_client_id" {
+  description = "Cognito User Pool Client ID for JWT authorization"
+  type        = string
+  default     = ""
+}
+
+# ==============================================================================
+# WEBSOCKET CONFIGURATION
+# ==============================================================================
+
+variable "websocket_throttle_rate_limit" {
+  description = "WebSocket API throttle rate limit (requests per second)"
+  type        = number
+  default     = 1000
+}
+
+variable "websocket_throttle_burst_limit" {
+  description = "WebSocket API throttle burst limit"
+  type        = number
+  default     = 2000
+}

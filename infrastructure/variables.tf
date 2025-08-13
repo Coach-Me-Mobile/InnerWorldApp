@@ -176,11 +176,7 @@ variable "enable_vpc_flow_logs" {
   default     = true
 }
 
-variable "enable_guardduty" {
-  description = "Enable AWS GuardDuty for threat detection"
-  type        = bool
-  default     = false # Enable for prod environments
-}
+
 
 # ==============================================================================
 # BACKUP AND DISASTER RECOVERY

@@ -1,14 +1,56 @@
 # ==============================================================================
 # PRODUCTION ENVIRONMENT VARIABLES
 # ==============================================================================
-# Example terraform.tfvars for the production environment
-# Copy this file to terraform.tfvars and update with actual values
+# Example terraform.tfvars for production deployment
+# Copy this file to terraform.tfvars and fill in actual values
 # ==============================================================================
 
-# GitHub Configuration (required for production)
-github_connection_arn = "arn:aws:codestar-connections:us-east-1:123456789012:connection/example-connection-id"
-github_repository     = "GauntletAI/InnerWorldApp"
+# ==============================================================================
+# PROJECT CONFIGURATION
+# ==============================================================================
 
-# Note: GitHub CodeStar connection must be created manually in AWS Console
-# Navigate to: Developer Tools > Settings > Connections
-# Create a connection to GitHub and copy the ARN here
+project_name = "innerworld"
+environment  = "prod"
+aws_region   = "us-east-1"
+
+# ==============================================================================
+# NETWORKING
+# ==============================================================================
+
+vpc_cidr           = "10.0.0.0/16"
+availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
+
+# ==============================================================================
+# APPLE SIGN-IN CONFIGURATION
+# ==============================================================================
+# Get these values from Apple Developer Console
+
+apple_team_id      = "YOUR_APPLE_TEAM_ID"
+apple_key_id       = "YOUR_APPLE_KEY_ID"
+apple_client_id    = "com.gauntletai.innerworld"
+apple_private_key  = "YOUR_APPLE_PRIVATE_KEY"
+
+# ==============================================================================
+# API KEYS
+# ==============================================================================
+# Set these to empty strings and update via AWS CLI after deployment
+
+openai_api_key = ""  # Will be updated via AWS Secrets Manager
+neo4j_uri      = ""  # Will be replaced with Neptune endpoints
+neo4j_username = ""  # Will be replaced with Neptune config
+neo4j_password = ""  # Will be replaced with Neptune config
+
+# ==============================================================================
+# MONITORING
+# ==============================================================================
+
+log_retention_days = 30
+
+# ==============================================================================
+# GITHUB INTEGRATION (if using CodePipeline)
+# ==============================================================================
+# These are optional if using GitHub Actions instead
+
+# github_connection_arn = "arn:aws:codestar-connections:us-east-1:ACCOUNT:connection/CONNECTION-ID"
+# github_repository     = "GauntletAI/InnerWorldApp"
+# github_branch         = "main"
