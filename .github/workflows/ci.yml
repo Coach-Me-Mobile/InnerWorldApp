@@ -5,7 +5,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop, feature/*, hotfix/* ]
+    branches: [ main, develop, feature/*, hotfix/*, infra/* ]
   pull_request:
     branches: [ main, develop ]
   schedule:
@@ -124,7 +124,7 @@ jobs:
     name: iOS Build & Test
     runs-on: macos-14
     needs: [security-scan, code-quality]
-    if: hashFiles('**/*.xcodeproj') != ''
+    if: hashFiles('**/*.xcodeproj') != '' || hashFiles('**/*.xcworkspace') != ''
     strategy:
       matrix:
         scheme: [InnerWorldApp]
