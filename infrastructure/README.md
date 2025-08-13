@@ -2,22 +2,22 @@
 
 This directory contains the production-ready Terraform Infrastructure as Code (IaC) for the InnerWorldApp project. The infrastructure is designed to support a secure, scalable iOS VR application with real-time teen chat, AI personas, and GraphRAG emotional intelligence.
 
-## 📋 Overview
+## Overview
 
 The infrastructure provides a complete serverless backend for teen VR conversations:
 
-- **🌐 VPC & Networking**: Multi-AZ VPC with public/private/database subnets and security groups
-- **🔒 AWS Cognito**: Teen authentication with Apple Sign-In and email/password support
-- **🗄️ Neptune GraphRAG**: Graph database for storing emotional context and conversation patterns
-- **🚀 DynamoDB**: Real-time conversation storage with TTL cleanup (24h/30min/1h)
-- **⚡ WebSocket API**: JWT-secured real-time chat with Lambda handlers
-- **🔐 Secrets Manager**: Secure storage for API keys and credentials
-- **📊 CloudWatch**: Comprehensive monitoring, logging, and alerting
-- **🎯 Cost-Optimized**: Production-ready architecture starting at $400/month for 100 teens
+- **VPC & Networking**: Multi-AZ VPC with public/private/database subnets and security groups
+- **AWS Cognito**: Teen authentication with Apple Sign-In and email/password support
+- **Neptune GraphRAG**: Graph database for storing emotional context and conversation patterns
+- **DynamoDB**: Real-time conversation storage with TTL cleanup (24h/30min/1h)
+- **WebSocket API**: JWT-secured real-time chat with Lambda handlers
+- **Secrets Manager**: Secure storage for API keys and credentials
+- **CloudWatch**: Comprehensive monitoring, logging, and alerting
+- **Cost-Optimized**: Production-ready architecture starting at $400/month for 100 teens
 
-## 🏗️ Infrastructure Architecture
+## Infrastructure Architecture
 
-### **📊 Complete Production Architecture Diagram**
+### Complete Production Architecture Diagram
 
 ```mermaid
 graph TB
@@ -122,8 +122,8 @@ graph TB
     V --> AA
     
     %% Cost Labels
-    Q -.->|$521/month<br/>Fixed Neptune| Cost1[💰 Fixed Costs]
-    T -.->|$1.25/teen/month<br/>Variable Usage| Cost2[💰 Variable Costs]
+    Q -.->|$521/month<br/>Fixed Neptune| Cost1[Fixed Costs]
+    T -.->|$1.25/teen/month<br/>Variable Usage| Cost2[Variable Costs]
     
     %% Styling
     classDef userLayer fill:#e1f5fe
@@ -149,7 +149,7 @@ graph TB
     class Cost1,Cost2 costLayer
 ```
 
-### **🔄 Terraform Module Structure**
+### Terraform Module Structure
 
 ```
 ┌─ Production Environment ─┐    ┌─ Core Modules ─┐
@@ -167,9 +167,9 @@ graph TB
 └──────────────────┘
 ```
 
-## 🎯 Teen VR Chat Flow & Data Architecture
+## Teen VR Chat Flow & Data Architecture
 
-### **🔐 Authentication & Connection Flow**
+### Authentication & Connection Flow
 ```
 1. Teen opens VR app → Apple Sign-In / Email auth
 2. AWS Cognito validates → JWT token generated  
@@ -178,7 +178,7 @@ graph TB
 5. Session context retrieved from Neptune → Cached in DynamoDB
 ```
 
-### **💬 Real-Time Conversation Flow**
+### Real-Time Conversation Flow
 ```
 1. Teen sends VR message → WebSocket API Gateway
 2. Conversation Handler Lambda processes message
@@ -190,7 +190,7 @@ graph TB
 8. Message stored in DynamoDB LiveConversations (24h TTL)
 ```
 
-### **🧠 GraphRAG Emotional Intelligence Processing**
+### GraphRAG Emotional Intelligence Processing
 ```
 1. Session ends → Conversation messages analyzed
 2. Emotional themes extracted → Graph embeddings created
@@ -205,9 +205,9 @@ graph TB
 5. TTL cleanup removes processed live conversations
 ```
 
-### **📊 Database Design Patterns**
+### Database Design Patterns
 
-#### **🗄️ Neptune GraphRAG Schema**
+#### Neptune GraphRAG Schema
 ```
 Vertices: Teen, Event, Feeling, Value, Goal, Habit, Relationship
 Edges: temporal, causal, about, supports, conflicts, felt_during
@@ -217,7 +217,7 @@ Teen --felt_during--> Anxiety --about--> SchoolStress --temporal--> MorningRouti
 Teen --supports--> SelfCare --conflicts--> SocialPressure
 ```
 
-#### **🚀 DynamoDB Table Design**
+#### DynamoDB Table Design
 ```
 LiveConversations:
   PK: conversation_id (session_date)
@@ -238,7 +238,7 @@ SessionContext:
   TTL: 1 hour (refreshed each session)
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -309,7 +309,7 @@ curl $(terraform output -raw api_endpoints | jq -r '.health_check_url')
 aws neptune describe-db-clusters --db-cluster-identifier innerworld-prod-neptune-cluster
 ```
 
-## 📁 Directory Structure
+## Directory Structure
 
 ```
 infrastructure/
@@ -354,9 +354,9 @@ infrastructure/
     └── backend.tf                  # S3 + DynamoDB for state
 ```
 
-## 💾 Database Architecture
+## Database Architecture
 
-### 🗄️ Neptune GraphRAG Cluster
+### Neptune GraphRAG Cluster
 
 **Purpose**: Stores emotional intelligence and conversation patterns
 - **Primary Instance**: `db.r5.large` (2 vCPUs, 16 GiB RAM)
@@ -365,7 +365,7 @@ infrastructure/
 - **Edges**: temporal, causal, about, supports, conflicts, felt_during
 - **Backup**: 90-day retention with point-in-time recovery
 
-### 🚀 DynamoDB Tables
+### DynamoDB Tables
 
 **LiveConversations** (Real-time message storage):
 - **Purpose**: Store messages during 20-minute VR sessions
@@ -384,7 +384,7 @@ infrastructure/
 - **Schema**: `user_id` + `session_id`
 - **TTL**: 1 hour (refreshed each session)
 
-## 🔐 Security Features
+## Security Features
 
 ### Network Security
 - **VPC**: Isolated 10.0.0.0/16 network with 3 AZ redundancy
@@ -404,7 +404,7 @@ infrastructure/
 - **Neptune IAM Auth**: No database passwords, SigV4 authentication
 - **Audit Logging**: Comprehensive CloudWatch audit trails
 
-## 📊 Monitoring & Observability
+## Monitoring & Observability
 
 ### CloudWatch Alarms
 - **Neptune**: CPU > 80%, FreeableMemory < 256MB, Connection count
@@ -422,20 +422,20 @@ infrastructure/
 - **Resource Optimization**: TTL cleanup, on-demand billing
 - **Scaling Metrics**: Per-teen cost tracking and optimization
 
-## 💰 **VERIFIED COST ANALYSIS & SCALABILITY**
+## VERIFIED COST ANALYSIS & SCALABILITY
 
-### **📊 Current AWS Pricing (January 2024, US-East-1)**
+### Current AWS Pricing (January 2024, US-East-1)
 
 **Sources**: [Neptune](https://aws.amazon.com/neptune/pricing/) | [DynamoDB](https://aws.amazon.com/dynamodb/pricing/) | [Lambda](https://aws.amazon.com/lambda/pricing/) | [API Gateway](https://aws.amazon.com/api-gateway/pricing/) | [Cognito](https://aws.amazon.com/cognito/pricing/)
 
-#### **🗄️ Neptune GraphRAG Cluster (Fixed Costs)**
+#### Neptune GraphRAG Cluster (Fixed Costs)
 - **Primary Instance (db.r5.large)**: $0.348/hour = **$250.56/month**
 - **Reader Replica (db.r5.large)**: $0.348/hour = **$250.56/month**
 - **Storage (100GB)**: $0.10/GB-month = **$10.00/month**
 - **I/O Operations (50M/month)**: $0.20/1M = **$10.00/month**
 - **Neptune Total**: **$521.12/month**
 
-#### **🚀 DynamoDB + Lambda + WebSocket (Variable Costs)**
+#### DynamoDB + Lambda + WebSocket (Variable Costs)
 **Per Active Teen (20-min sessions, 3x/week)**:
 - **DynamoDB Operations**: ~500 writes + 1,000 reads = **$0.875/teen/month**
 - **Lambda Invocations**: ~200 requests × 2-sec avg = **$0.056/teen/month**
@@ -443,12 +443,12 @@ infrastructure/
 - **Connection Time**: 60 min/month = **$0.015/teen/month**
 - **Variable Cost Total**: **$1.25/teen/month**
 
-#### **🔒 Cognito Authentication**
+#### Cognito Authentication
 - **0-50,000 MAUs**: **FREE**
 - **50,001-100,000 MAUs**: **$0.0055/teen/month**
 - **100,000+ MAUs**: **$0.0025/teen/month**
 
-### **💵 Total Monthly Costs by User Tier**
+### Total Monthly Costs by User Tier
 
 | Active Teens | Fixed Neptune | Variable Costs | Cognito | **Total** | **Cost/Teen** |
 |-------------|---------------|----------------|---------|-----------|---------------|
@@ -460,36 +460,36 @@ infrastructure/
 
 *\*Neptune cluster upgrade to db.r5.xlarge ($0.696/hour) for 100K+ users*
 
-### **📈 Scalability Architecture**
+### Scalability Architecture
 
-#### **🎯 0-1,000 Teens (MVP Launch)**
+#### 0-1,000 Teens (MVP Launch)
 - **Neptune**: Single cluster (db.r5.large)
 - **DynamoDB**: On-demand billing
 - **Lambda**: Default concurrency (1,000)
 - **Estimated Cost**: **$646-$1,771/month**
 
-#### **🚀 1,000-50,000 Teens (Growth Phase)**
+#### 1,000-50,000 Teens (Growth Phase)
 - **Neptune**: Add read replicas for query distribution
 - **DynamoDB**: Consider provisioned capacity for cost optimization
 - **Lambda**: Increase concurrency limits, add provisioned concurrency
 - **WebSocket**: Enable auto-scaling for connection management
 - **Estimated Cost**: **$1,771-$63,021/month**
 
-#### **🌐 50,000+ Teens (Scale Phase)**
+#### 50,000+ Teens (Scale Phase)
 - **Neptune**: Upgrade to db.r5.xlarge or larger instances
 - **DynamoDB**: Global Tables for multi-region deployment
 - **Lambda**: Regional deployment with traffic distribution
 - **API Gateway**: Custom domain with CloudFront CDN
 - **Estimated Cost**: **$63K+/month**
 
-### **🎯 Business Model Implications**
+### Business Model Implications
 
-#### **Freemium Strategy (Free + $4.99/month Premium)**
+#### Freemium Strategy (Free + $4.99/month Premium)
 - **Break-even at 130 teens** (assuming 100% premium conversion)
 - **Profitable at 1,000+ teens** (with 20% premium conversion rate)
 - **Target: $1.50 cost per teen** for sustainable 70% gross margins
 
-#### **Cost Optimization Strategies**
+#### Cost Optimization Strategies
 1. **Short-term (0-1K teens)**:
    - Use single Neptune cluster
    - Optimize DynamoDB with TTL cleanup
@@ -505,7 +505,7 @@ infrastructure/
    - DynamoDB Global Tables with cross-region replication
    - Neptune clustering with automated failover
 
-### **⚠️ Scalability Limits & Thresholds**
+### Scalability Limits & Thresholds
 
 | Component | Current Limit | Scaling Threshold | Solution |
 |-----------|---------------|-------------------|----------|
@@ -515,7 +515,7 @@ infrastructure/
 | **WebSocket** | 10,000 connections | 5,000 simultaneous teens | Add regions |
 | **Cognito** | 100M users | No practical limit | Unlimited scaling |
 
-## 🛠️ Common Operations
+## Common Operations
 
 ### Deploying Updates
 
@@ -571,7 +571,7 @@ terraform apply -var="neptune_instance_count=3"
 terraform apply -var="enable_dynamodb_streams=true"
 ```
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -606,7 +606,7 @@ aws cloudwatch get-metric-statistics \
   --statistics Sum
 ```
 
-## 🎯 Environment Variables for Go Backend
+## Environment Variables for Go Backend
 
 Your Lambda functions will have access to these environment variables:
 
@@ -632,7 +632,7 @@ AWS_REGION=us-east-1
 DEBUG=false
 ```
 
-## 📚 Additional Resources
+## Additional Resources
 
 - [AWS Neptune Developer Guide](https://docs.aws.amazon.com/neptune/latest/userguide/)
 - [DynamoDB Developer Guide](https://docs.aws.amazon.com/dynamodb/latest/developerguide/)
@@ -640,7 +640,7 @@ DEBUG=false
 - [Cognito Developer Guide](https://docs.aws.amazon.com/cognito/latest/developerguide/)
 - [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
 
-## 🤝 Contributing
+## Contributing
 
 1. **Infrastructure Changes**: Always test in a separate AWS account first
 2. **Security First**: Follow least-privilege IAM principles
@@ -648,7 +648,7 @@ DEBUG=false
 4. **Documentation**: Update this README for any architectural changes
 5. **Monitoring**: Add CloudWatch alarms for new components
 
-## 🆘 Support
+## Support
 
 For infrastructure issues:
 1. Check CloudWatch logs: `/aws/lambda/innerworld-prod-*`
@@ -658,4 +658,4 @@ For infrastructure issues:
 
 ---
 
-**🎯 This infrastructure is production-ready for teen VR conversations with emotional intelligence, real-time chat, and scalable cost structure. Perfect for launching your InnerWorld MVP!**
+**This infrastructure is production-ready for teen VR conversations with emotional intelligence, real-time chat, and scalable cost structure. Perfect for launching your InnerWorld MVP!**
