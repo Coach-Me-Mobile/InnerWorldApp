@@ -11,7 +11,7 @@
 
 resource "aws_s3_bucket" "artifacts" {
   bucket = "${var.name_prefix}-codepipeline-artifacts"
-  
+
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-codepipeline-artifacts"
     Type = "S3Bucket"
@@ -27,7 +27,7 @@ resource "aws_s3_bucket_versioning" "artifacts" {
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "artifacts" {
   bucket = aws_s3_bucket.artifacts.id
-  
+
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -37,7 +37,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "artifacts" {
 
 resource "aws_s3_bucket_public_access_block" "artifacts" {
   bucket = aws_s3_bucket.artifacts.id
-  
+
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -46,19 +46,19 @@ resource "aws_s3_bucket_public_access_block" "artifacts" {
 
 resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
   bucket = aws_s3_bucket.artifacts.id
-  
+
   rule {
     id     = "delete_old_artifacts"
     status = "Enabled"
-    
+
     filter {
       prefix = ""
     }
-    
+
     expiration {
       days = 30
     }
-    
+
     noncurrent_version_expiration {
       noncurrent_days = 7
     }
@@ -71,7 +71,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
 
 resource "aws_iam_role" "codepipeline_role" {
   name = "${var.name_prefix}-codepipeline-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -84,7 +84,7 @@ resource "aws_iam_role" "codepipeline_role" {
       }
     ]
   })
-  
+
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-codepipeline-role"
     Type = "IAMRole"
@@ -94,7 +94,7 @@ resource "aws_iam_role" "codepipeline_role" {
 resource "aws_iam_role_policy" "codepipeline_policy" {
   name = "${var.name_prefix}-codepipeline-policy"
   role = aws_iam_role.codepipeline_role.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -136,7 +136,7 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
 
 resource "aws_iam_role" "codebuild_role" {
   name = "${var.name_prefix}-codebuild-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -149,7 +149,7 @@ resource "aws_iam_role" "codebuild_role" {
       }
     ]
   })
-  
+
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-codebuild-role"
     Type = "IAMRole"
@@ -159,7 +159,7 @@ resource "aws_iam_role" "codebuild_role" {
 resource "aws_iam_role_policy" "codebuild_policy" {
   name = "${var.name_prefix}-codebuild-policy"
   role = aws_iam_role.codebuild_role.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -214,47 +214,47 @@ resource "aws_iam_role_policy" "codebuild_policy" {
 # ==============================================================================
 
 resource "aws_codebuild_project" "ios_build" {
-  name          = "${var.name_prefix}-ios-build"
-  description   = "Build and test iOS app for InnerWorld"
-  service_role  = aws_iam_role.codebuild_role.arn
-  
+  name         = "${var.name_prefix}-ios-build"
+  description  = "Build and test iOS app for InnerWorld"
+  service_role = aws_iam_role.codebuild_role.arn
+
   artifacts {
     type = "CODEPIPELINE"
   }
-  
+
   environment {
     compute_type                = "BUILD_GENERAL1_MEDIUM"
-    image                      = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
-    type                       = "LINUX_CONTAINER"
+    image                       = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
+    type                        = "LINUX_CONTAINER"
     image_pull_credentials_type = "CODEBUILD"
-    privileged_mode            = false
-    
+    privileged_mode             = false
+
     environment_variable {
       name  = "PROJECT_NAME"
       value = var.project_name
     }
-    
+
     environment_variable {
       name  = "ENVIRONMENT"
       value = var.environment
     }
-    
+
     environment_variable {
       name  = "AWS_REGION"
       value = var.aws_region
     }
   }
-  
+
   source {
-    type = "CODEPIPELINE"
+    type      = "CODEPIPELINE"
     buildspec = "buildspec-ios.yml"
   }
-  
+
   cache {
-    type  = "S3"
+    type     = "S3"
     location = "${aws_s3_bucket.artifacts.bucket}/cache"
   }
-  
+
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-ios-build"
     Type = "CodeBuildProject"
@@ -266,52 +266,52 @@ resource "aws_codebuild_project" "ios_build" {
 # ==============================================================================
 
 resource "aws_codebuild_project" "infrastructure_build" {
-  name          = "${var.name_prefix}-infrastructure-build"
-  description   = "Validate and deploy Terraform infrastructure"
-  service_role  = aws_iam_role.codebuild_role.arn
-  
+  name         = "${var.name_prefix}-infrastructure-build"
+  description  = "Validate and deploy Terraform infrastructure"
+  service_role = aws_iam_role.codebuild_role.arn
+
   artifacts {
     type = "CODEPIPELINE"
   }
-  
+
   environment {
     compute_type                = "BUILD_GENERAL1_SMALL"
-    image                      = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
-    type                       = "LINUX_CONTAINER"
+    image                       = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
+    type                        = "LINUX_CONTAINER"
     image_pull_credentials_type = "CODEBUILD"
-    privileged_mode            = false
-    
+    privileged_mode             = false
+
     environment_variable {
       name  = "PROJECT_NAME"
       value = var.project_name
     }
-    
+
     environment_variable {
       name  = "ENVIRONMENT"
       value = var.environment
     }
-    
+
     environment_variable {
       name  = "AWS_REGION"
       value = var.aws_region
     }
-    
+
     environment_variable {
       name  = "TF_IN_AUTOMATION"
       value = "true"
     }
   }
-  
+
   source {
-    type = "CODEPIPELINE"
+    type      = "CODEPIPELINE"
     buildspec = "buildspec-infrastructure.yml"
   }
-  
+
   cache {
-    type  = "S3"
+    type     = "S3"
     location = "${aws_s3_bucket.artifacts.bucket}/terraform-cache"
   }
-  
+
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-infrastructure-build"
     Type = "CodeBuildProject"
@@ -323,37 +323,37 @@ resource "aws_codebuild_project" "infrastructure_build" {
 # ==============================================================================
 
 resource "aws_codebuild_project" "security_scan" {
-  name          = "${var.name_prefix}-security-scan"
-  description   = "Security scanning for code and dependencies"
-  service_role  = aws_iam_role.codebuild_role.arn
-  
+  name         = "${var.name_prefix}-security-scan"
+  description  = "Security scanning for code and dependencies"
+  service_role = aws_iam_role.codebuild_role.arn
+
   artifacts {
     type = "CODEPIPELINE"
   }
-  
+
   environment {
     compute_type                = "BUILD_GENERAL1_SMALL"
-    image                      = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
-    type                       = "LINUX_CONTAINER"
+    image                       = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
+    type                        = "LINUX_CONTAINER"
     image_pull_credentials_type = "CODEBUILD"
-    privileged_mode            = false
-    
+    privileged_mode             = false
+
     environment_variable {
       name  = "PROJECT_NAME"
       value = var.project_name
     }
-    
+
     environment_variable {
       name  = "ENVIRONMENT"
       value = var.environment
     }
   }
-  
+
   source {
-    type = "CODEPIPELINE"
+    type      = "CODEPIPELINE"
     buildspec = "buildspec-security.yml"
   }
-  
+
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-security-scan"
     Type = "CodeBuildProject"
@@ -367,16 +367,16 @@ resource "aws_codebuild_project" "security_scan" {
 resource "aws_codepipeline" "main" {
   name     = "${var.name_prefix}-pipeline"
   role_arn = aws_iam_role.codepipeline_role.arn
-  
+
   artifact_store {
     location = aws_s3_bucket.artifacts.bucket
     type     = "S3"
   }
-  
+
   # Source stage
   stage {
     name = "Source"
-    
+
     action {
       name             = "Source"
       category         = "Source"
@@ -384,7 +384,7 @@ resource "aws_codepipeline" "main" {
       provider         = "CodeStarSourceConnection"
       version          = "1"
       output_artifacts = ["source_output"]
-      
+
       configuration = {
         ConnectionArn    = var.github_connection_arn
         FullRepositoryId = var.github_repository
@@ -392,11 +392,11 @@ resource "aws_codepipeline" "main" {
       }
     }
   }
-  
+
   # Security scan stage
   stage {
     name = "SecurityScan"
-    
+
     action {
       name             = "SecurityScan"
       category         = "Build"
@@ -405,17 +405,17 @@ resource "aws_codepipeline" "main" {
       input_artifacts  = ["source_output"]
       output_artifacts = ["security_output"]
       version          = "1"
-      
+
       configuration = {
         ProjectName = aws_codebuild_project.security_scan.name
       }
     }
   }
-  
+
   # Infrastructure validation stage
   stage {
     name = "InfrastructureValidation"
-    
+
     action {
       name             = "ValidateInfrastructure"
       category         = "Build"
@@ -424,17 +424,17 @@ resource "aws_codepipeline" "main" {
       input_artifacts  = ["source_output"]
       output_artifacts = ["infrastructure_output"]
       version          = "1"
-      
+
       configuration = {
         ProjectName = aws_codebuild_project.infrastructure_build.name
       }
     }
   }
-  
+
   # iOS build and test stage
   stage {
     name = "iOSBuildAndTest"
-    
+
     action {
       name             = "BuildiOS"
       category         = "Build"
@@ -443,33 +443,33 @@ resource "aws_codepipeline" "main" {
       input_artifacts  = ["source_output"]
       output_artifacts = ["ios_output"]
       version          = "1"
-      
+
       configuration = {
         ProjectName = aws_codebuild_project.ios_build.name
       }
     }
   }
-  
+
   # Manual approval for production deployments
   dynamic "stage" {
     for_each = var.environment == "prod" ? [1] : []
     content {
       name = "ManualApproval"
-      
+
       action {
         name     = "ManualApproval"
         category = "Approval"
         owner    = "AWS"
         provider = "Manual"
         version  = "1"
-        
+
         configuration = {
           CustomData = "Please review the build artifacts and approve deployment to production."
         }
       }
     }
   }
-  
+
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-pipeline"
     Type = "CodePipeline"
@@ -483,7 +483,7 @@ resource "aws_codepipeline" "main" {
 resource "aws_cloudwatch_log_group" "codebuild_ios" {
   name              = "/aws/codebuild/${aws_codebuild_project.ios_build.name}"
   retention_in_days = var.log_retention_days
-  
+
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-codebuild-ios-logs"
     Type = "CloudWatchLogGroup"
@@ -493,7 +493,7 @@ resource "aws_cloudwatch_log_group" "codebuild_ios" {
 resource "aws_cloudwatch_log_group" "codebuild_infrastructure" {
   name              = "/aws/codebuild/${aws_codebuild_project.infrastructure_build.name}"
   retention_in_days = var.log_retention_days
-  
+
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-codebuild-infrastructure-logs"
     Type = "CloudWatchLogGroup"
@@ -503,7 +503,7 @@ resource "aws_cloudwatch_log_group" "codebuild_infrastructure" {
 resource "aws_cloudwatch_log_group" "codebuild_security" {
   name              = "/aws/codebuild/${aws_codebuild_project.security_scan.name}"
   retention_in_days = var.log_retention_days
-  
+
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-codebuild-security-logs"
     Type = "CloudWatchLogGroup"
@@ -525,11 +525,11 @@ resource "aws_cloudwatch_metric_alarm" "pipeline_failed" {
   threshold           = "0"
   alarm_description   = "This metric monitors pipeline failures"
   alarm_actions       = var.sns_topic_arn != "" ? [var.sns_topic_arn] : []
-  
+
   dimensions = {
     PipelineName = aws_codepipeline.main.name
   }
-  
+
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-pipeline-failed-alarm"
     Type = "CloudWatchAlarm"
@@ -541,29 +541,29 @@ resource "aws_cloudwatch_metric_alarm" "pipeline_failed" {
 # ==============================================================================
 
 resource "aws_ssm_parameter" "build_config" {
-  name  = "/${var.name_prefix}/build/config"
-  type  = "String"
+  name = "/${var.name_prefix}/build/config"
+  type = "String"
   value = jsonencode({
-    project_name = var.project_name
-    environment  = var.environment
-    aws_region   = var.aws_region
+    project_name  = var.project_name
+    environment   = var.environment
+    aws_region    = var.aws_region
     build_version = "1.0.0"
-    
+
     ios_config = {
       xcode_version = "15.1"
       ios_version   = "17.0"
       scheme        = "InnerWorldApp"
       configuration = var.environment == "prod" ? "Release" : "Debug"
     }
-    
+
     security_config = {
-      enable_sast_scan = true
+      enable_sast_scan       = true
       enable_dependency_scan = true
-      enable_secret_scan = true
-      fail_on_high_severity = var.environment == "prod"
+      enable_secret_scan     = true
+      fail_on_high_severity  = var.environment == "prod"
     }
   })
-  
+
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-build-config"
     Type = "SSMParameter"

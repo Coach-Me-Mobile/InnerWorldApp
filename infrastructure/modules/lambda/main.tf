@@ -87,13 +87,25 @@ resource "aws_iam_role_policy" "lambda_services_policy" {
 # ==============================================================================
 
 resource "aws_cloudwatch_log_group" "conversation_handler" {
-  name              = "/aws/lambda/${aws_lambda_function.conversation_handler.function_name}"
+  name              = "/aws/lambda/${var.name_prefix}-conversation-handler"
   retention_in_days = var.log_retention_days
   tags              = var.tags
 }
 
 resource "aws_cloudwatch_log_group" "health_check" {
-  name              = "/aws/lambda/${aws_lambda_function.health_check.function_name}"
+  name              = "/aws/lambda/${var.name_prefix}-health-check"
+  retention_in_days = var.log_retention_days
+  tags              = var.tags
+}
+
+resource "aws_cloudwatch_log_group" "websocket_connect_handler" {
+  name              = "/aws/lambda/${var.name_prefix}-websocket-connect"
+  retention_in_days = var.log_retention_days
+  tags              = var.tags
+}
+
+resource "aws_cloudwatch_log_group" "websocket_disconnect_handler" {
+  name              = "/aws/lambda/${var.name_prefix}-websocket-disconnect"
   retention_in_days = var.log_retention_days
   tags              = var.tags
 }
@@ -104,13 +116,13 @@ resource "aws_cloudwatch_log_group" "health_check" {
 
 # Conversation Handler Lambda
 resource "aws_lambda_function" "conversation_handler" {
-  filename         = var.conversation_handler_zip
-  function_name    = "${var.name_prefix}-conversation-handler"
-  role            = aws_iam_role.lambda_execution_role.arn
-  handler         = "bootstrap"
-  runtime         = "provided.al2"
-  timeout         = 30
-  memory_size     = 512
+  filename      = var.conversation_handler_zip
+  function_name = "${var.name_prefix}-conversation-handler"
+  role          = aws_iam_role.lambda_execution_role.arn
+  handler       = "bootstrap"
+  runtime       = "provided.al2"
+  timeout       = 30
+  memory_size   = 512
 
   vpc_config {
     subnet_ids         = var.private_subnet_ids
@@ -135,13 +147,13 @@ resource "aws_lambda_function" "conversation_handler" {
 
 # Health Check Lambda
 resource "aws_lambda_function" "health_check" {
-  filename         = var.health_check_zip
-  function_name    = "${var.name_prefix}-health-check"
-  role            = aws_iam_role.lambda_execution_role.arn
-  handler         = "bootstrap"
-  runtime         = "provided.al2"
-  timeout         = 30
-  memory_size     = 256
+  filename      = var.health_check_zip
+  function_name = "${var.name_prefix}-health-check"
+  role          = aws_iam_role.lambda_execution_role.arn
+  handler       = "bootstrap"
+  runtime       = "provided.al2"
+  timeout       = 30
+  memory_size   = 256
 
   vpc_config {
     subnet_ids         = var.private_subnet_ids
@@ -199,8 +211,8 @@ resource "aws_api_gateway_integration" "health_integration" {
   http_method = aws_api_gateway_method.health_get.http_method
 
   integration_http_method = "POST"
-  type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.health_check.invoke_arn
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.health_check.invoke_arn
 }
 
 # Lambda permissions for API Gateway
@@ -270,13 +282,13 @@ resource "aws_apigatewayv2_authorizer" "jwt_authorizer" {
 
 # Separate Lambda functions for connection management
 resource "aws_lambda_function" "websocket_connect_handler" {
-  filename         = var.conversation_handler_zip
-  function_name    = "${var.name_prefix}-websocket-connect"
-  role            = aws_iam_role.lambda_execution_role.arn
-  handler         = "bootstrap"
-  runtime         = "provided.al2"
-  timeout         = 30
-  memory_size     = 256
+  filename      = var.conversation_handler_zip
+  function_name = "${var.name_prefix}-websocket-connect"
+  role          = aws_iam_role.lambda_execution_role.arn
+  handler       = "bootstrap"
+  runtime       = "provided.al2"
+  timeout       = 30
+  memory_size   = 256
 
   vpc_config {
     subnet_ids         = var.private_subnet_ids
@@ -293,19 +305,20 @@ resource "aws_lambda_function" "websocket_connect_handler" {
   depends_on = [
     aws_iam_role_policy_attachment.lambda_basic_execution,
     aws_iam_role_policy_attachment.lambda_vpc_access,
+    aws_cloudwatch_log_group.websocket_connect_handler,
   ]
 
   tags = var.tags
 }
 
 resource "aws_lambda_function" "websocket_disconnect_handler" {
-  filename         = var.conversation_handler_zip
-  function_name    = "${var.name_prefix}-websocket-disconnect"
-  role            = aws_iam_role.lambda_execution_role.arn
-  handler         = "bootstrap"
-  runtime         = "provided.al2"
-  timeout         = 30
-  memory_size     = 256
+  filename      = var.conversation_handler_zip
+  function_name = "${var.name_prefix}-websocket-disconnect"
+  role          = aws_iam_role.lambda_execution_role.arn
+  handler       = "bootstrap"
+  runtime       = "provided.al2"
+  timeout       = 30
+  memory_size   = 256
 
   vpc_config {
     subnet_ids         = var.private_subnet_ids
@@ -322,6 +335,7 @@ resource "aws_lambda_function" "websocket_disconnect_handler" {
   depends_on = [
     aws_iam_role_policy_attachment.lambda_basic_execution,
     aws_iam_role_policy_attachment.lambda_vpc_access,
+    aws_cloudwatch_log_group.websocket_disconnect_handler,
   ]
 
   tags = var.tags
@@ -351,7 +365,7 @@ resource "aws_apigatewayv2_route" "connect" {
   api_id    = aws_apigatewayv2_api.websocket.id
   route_key = "$connect"
   target    = "integrations/${aws_apigatewayv2_integration.connect_integration.id}"
-  
+
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt_authorizer.id
 }
@@ -413,23 +427,19 @@ resource "aws_apigatewayv2_stage" "websocket" {
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.websocket_access_logs.arn
     format = jsonencode({
-      requestId      = "$context.requestId"
-      ip             = "$context.identity.sourceIp"
-      caller         = "$context.identity.caller"
-      user           = "$context.identity.user"
-      requestTime    = "$context.requestTime"
-      routeKey       = "$context.routeKey"
-      status         = "$context.status"
-      error          = "$context.error.message"
-      error_type     = "$context.error.messageString"
+      requestId   = "$context.requestId"
+      ip          = "$context.identity.sourceIp"
+      caller      = "$context.identity.caller"
+      user        = "$context.identity.user"
+      requestTime = "$context.requestTime"
+      routeKey    = "$context.routeKey"
+      status      = "$context.status"
+      error       = "$context.error.message"
+      error_type  = "$context.error.messageString"
     })
   }
 
-  # Throttling
-  throttle_settings {
-    rate_limit  = var.websocket_throttle_rate_limit
-    burst_limit = var.websocket_throttle_burst_limit
-  }
+  # Note: WebSocket API throttling is configured at the route level if needed
 
   tags = var.tags
 }

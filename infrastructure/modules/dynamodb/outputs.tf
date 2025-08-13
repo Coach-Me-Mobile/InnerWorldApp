@@ -88,27 +88,27 @@ output "table_configuration_summary" {
   description = "Summary of DynamoDB table configurations"
   value = {
     live_conversations = {
-      name         = aws_dynamodb_table.live_conversations.name
-      billing_mode = aws_dynamodb_table.live_conversations.billing_mode
-      hash_key     = aws_dynamodb_table.live_conversations.hash_key
-      range_key    = aws_dynamodb_table.live_conversations.range_key
-      ttl_enabled  = aws_dynamodb_table.live_conversations.ttl[0].enabled
-      ttl_attribute = aws_dynamodb_table.live_conversations.ttl[0].attribute_name
+      name           = aws_dynamodb_table.live_conversations.name
+      billing_mode   = aws_dynamodb_table.live_conversations.billing_mode
+      hash_key       = aws_dynamodb_table.live_conversations.hash_key
+      range_key      = aws_dynamodb_table.live_conversations.range_key
+      ttl_enabled    = aws_dynamodb_table.live_conversations.ttl[0].enabled
+      ttl_attribute  = aws_dynamodb_table.live_conversations.ttl[0].attribute_name
       stream_enabled = var.enable_streams
     }
     websocket_connections = {
-      name         = aws_dynamodb_table.websocket_connections.name
-      billing_mode = aws_dynamodb_table.websocket_connections.billing_mode
-      hash_key     = aws_dynamodb_table.websocket_connections.hash_key
-      ttl_enabled  = aws_dynamodb_table.websocket_connections.ttl[0].enabled
+      name          = aws_dynamodb_table.websocket_connections.name
+      billing_mode  = aws_dynamodb_table.websocket_connections.billing_mode
+      hash_key      = aws_dynamodb_table.websocket_connections.hash_key
+      ttl_enabled   = aws_dynamodb_table.websocket_connections.ttl[0].enabled
       ttl_attribute = aws_dynamodb_table.websocket_connections.ttl[0].attribute_name
     }
     session_context = {
-      name         = aws_dynamodb_table.session_context.name
-      billing_mode = aws_dynamodb_table.session_context.billing_mode
-      hash_key     = aws_dynamodb_table.session_context.hash_key
-      range_key    = aws_dynamodb_table.session_context.range_key
-      ttl_enabled  = aws_dynamodb_table.session_context.ttl[0].enabled
+      name          = aws_dynamodb_table.session_context.name
+      billing_mode  = aws_dynamodb_table.session_context.billing_mode
+      hash_key      = aws_dynamodb_table.session_context.hash_key
+      range_key     = aws_dynamodb_table.session_context.range_key
+      ttl_enabled   = aws_dynamodb_table.session_context.ttl[0].enabled
       ttl_attribute = aws_dynamodb_table.session_context.ttl[0].attribute_name
     }
   }

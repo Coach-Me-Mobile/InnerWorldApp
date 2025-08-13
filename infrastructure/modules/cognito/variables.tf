@@ -71,7 +71,7 @@ variable "password_policy_min_length" {
   description = "Minimum password length"
   type        = number
   default     = 12
-  
+
   validation {
     condition     = var.password_policy_min_length >= 8 && var.password_policy_min_length <= 128
     error_message = "Password minimum length must be between 8 and 128 characters."
@@ -110,7 +110,7 @@ variable "mfa_configuration" {
   description = "MFA configuration (OFF, ON, OPTIONAL)"
   type        = string
   default     = "OPTIONAL"
-  
+
   validation {
     condition     = contains(["OFF", "ON", "OPTIONAL"], var.mfa_configuration)
     error_message = "MFA configuration must be one of: OFF, ON, OPTIONAL."

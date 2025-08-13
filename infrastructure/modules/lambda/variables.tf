@@ -64,7 +64,7 @@ variable "conversation_handler_zip" {
 }
 
 variable "health_check_zip" {
-  description = "Path to health check zip file"  
+  description = "Path to health check zip file"
   type        = string
   default     = "../../backend/bin/health-check.zip"
 }
@@ -72,7 +72,7 @@ variable "health_check_zip" {
 variable "lambda_environment_variables" {
   description = "Environment variables for Lambda functions"
   type        = map(string)
-  default     = {
+  default = {
     ENVIRONMENT = "development"
     DEBUG       = "true"
   }

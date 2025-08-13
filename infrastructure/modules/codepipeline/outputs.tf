@@ -110,14 +110,14 @@ output "pipeline_config" {
     github_repository = var.github_repository
     github_branch     = var.github_branch
     environment       = var.environment
-    
+
     stages = [
       "Source",
       "SecurityScan",
       "InfrastructureValidation",
       "iOSBuildAndTest"
     ]
-    
+
     codebuild_projects = {
       ios_build      = aws_codebuild_project.ios_build.name
       infrastructure = aws_codebuild_project.infrastructure_build.name
