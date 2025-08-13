@@ -2,7 +2,7 @@
 # NEPTUNE MODULE
 # ==============================================================================
 # AWS Neptune Graph Database for InnerWorld GraphRAG storage
-# Manages user conversation history, emotional context, and relationship graphs
+# Manages user conversation history, user context, and relationship graphs
 # ==============================================================================
 
 # ==============================================================================

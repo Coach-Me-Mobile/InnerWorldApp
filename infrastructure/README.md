@@ -1,6 +1,6 @@
 # InnerWorldApp Infrastructure
 
-This directory contains the production-ready Terraform Infrastructure as Code (IaC) for the InnerWorldApp project. The infrastructure is designed to support a secure, scalable iOS VR application with real-time teen chat, AI personas, and GraphRAG emotional intelligence.
+This directory contains the production-ready Terraform Infrastructure as Code (IaC) for the InnerWorldApp project. The infrastructure is designed to support a secure, scalable iOS VR application with real-time teen chat, AI personas, and GraphRAG user context intelligence.
 
 ## Overview
 
@@ -121,7 +121,7 @@ WebSocketConnections:
 SessionContext:
   PK: user_id
   SK: session_id
-  Attributes: cached_context, emotional_state, conversation_history
+  Attributes: cached_context, user_state, conversation_history
   TTL: 1 hour (refreshed each session)
 ```
 
@@ -558,4 +558,4 @@ For infrastructure issues:
 
 ---
 
-**This infrastructure is production-ready for teen VR conversations with emotional intelligence, real-time chat, and optimized cost structure. Scales efficiently from MVP ($2.3K/month) to enterprise deployment ($182K/month) with excellent economies of scale.**
+**This infrastructure is production-ready for teen VR conversations with user context intelligence, real-time chat, and optimized cost structure. Scales efficiently from MVP ($2.3K/month) to enterprise deployment ($182K/month) with excellent economies of scale.**
