@@ -8,7 +8,7 @@ The infrastructure provides a complete serverless backend for teen VR conversati
 
 - **VPC & Networking**: Multi-AZ VPC with public/private/database subnets and security groups
 - **AWS Cognito**: Teen authentication with Apple Sign-In and email/password support
-- **Neptune GraphRAG**: Graph database for storing emotional context and conversation patterns
+- **Neptune GraphRAG**: Graph database for storing user context and conversation patterns
 - **DynamoDB**: Real-time conversation storage with TTL cleanup (24h/30min/1h)
 - **WebSocket API**: JWT-secured real-time chat with Lambda handlers
 - **Secrets Manager**: Secure storage for API keys and credentials
@@ -75,31 +75,33 @@ The infrastructure provides a complete serverless backend for teen VR conversati
 8. Message stored in DynamoDB LiveConversations (24h TTL)
 ```
 
-### GraphRAG Emotional Intelligence Processing
+### GraphRAG User Context Processing
 ```
 1. Session ends → Conversation messages analyzed
-2. Emotional themes extracted → Graph embeddings created
-3. Neptune graph updated with new emotional patterns:
-   - Events (conversation topics, triggers)
-   - Feelings (emotional states, intensity)
-   - Values (personal beliefs, priorities)
-   - Goals (aspirations, achievements)
-   - Habits (behavioral patterns)
-   - Relationships (social connections, dynamics)
-4. Context cache refreshed in DynamoDB SessionContext
-5. TTL cleanup removes processed live conversations
+2. NER (Named Entity Recognition) processes user messages post-chat
+3. User context themes extracted → Graph embeddings created
+4. Neptune graph updated with new context patterns:
+   - People (individuals mentioned, relationships)
+   - Places (locations, environments)
+   - Things (objects, items of significance)
+   - Topics (subjects of conversation, interests)
+   - Events (experiences, activities, milestones)
+   - Activities (actions, behaviors, routines)
+   - Goals (aspirations, objectives, achievements)
+5. Context cache refreshed in DynamoDB SessionContext
+6. TTL cleanup removes processed live conversations
 ```
 
 ### Database Design Patterns
 
 #### Neptune GraphRAG Schema
 ```
-Vertices: Teen, Event, Feeling, Value, Goal, Habit, Relationship
-Edges: temporal, causal, about, supports, conflicts, felt_during
+Vertices: Teen, Person, Place, Thing, Topic, Event, Activity, Goal
+Edges: temporal, causal, about, supports, conflicts, relates_to, involves, mentions
 
 Example Graph Pattern:
-Teen --felt_during--> Anxiety --about--> SchoolStress --temporal--> MorningRoutine
-Teen --supports--> SelfCare --conflicts--> SocialPressure
+Teen --mentions--> Person --relates_to--> SchoolStress --temporal--> MorningRoutine
+Teen --involves--> Activity --supports--> Goal --about--> Topic
 ```
 
 #### DynamoDB Table Design
@@ -243,11 +245,11 @@ infrastructure/
 
 ### Neptune GraphRAG Cluster
 
-**Purpose**: Stores emotional intelligence and conversation patterns
+**Purpose**: Stores user context and conversation patterns
 - **Primary Instance**: `db.r5.large` (2 vCPUs, 16 GiB RAM)
 - **Reader Instance**: `db.r5.large` (read-only replica)
-- **Schema**: Events, Feelings, Values, Goals, Habits, Relationships
-- **Edges**: temporal, causal, about, supports, conflicts, felt_during
+- **Schema**: People, Places, Things, Topics, Events, Activities, Goals
+- **Edges**: temporal, causal, about, supports, conflicts, relates_to, involves, mentions
 - **Backup**: 90-day retention with point-in-time recovery
 
 ### DynamoDB Tables
@@ -307,97 +309,110 @@ infrastructure/
 - **Resource Optimization**: TTL cleanup, on-demand billing
 - **Scaling Metrics**: Per-teen cost tracking and optimization
 
-## VERIFIED COST ANALYSIS & SCALABILITY
+## COST ANALYSIS & SCALABILITY
 
-### Current AWS Pricing (January 2024, US-East-1)
+### Infrastructure Cost Summary (December 2024)
 
-**Sources**: [Neptune](https://aws.amazon.com/neptune/pricing/) | [DynamoDB](https://aws.amazon.com/dynamodb/pricing/) | [Lambda](https://aws.amazon.com/lambda/pricing/) | [API Gateway](https://aws.amazon.com/api-gateway/pricing/) | [Cognito](https://aws.amazon.com/cognito/pricing/)
+**Comprehensive Analysis**: See [Infrastructure Cost Analysis Report](../docs/InnerWorld_Infrastructure_Cost_Analysis_Report.md) for detailed breakdown.
+
+**Key Cost Insights**:
+- **LLM API calls represent 60-70% of total operational costs** (OpenRouter Claude 3.5 Sonnet)
+- **Infrastructure costs scale efficiently** with excellent economies of scale
+- **Cost per user drops from $44 to $1.22** as platform scales from 10 to 100K concurrent users
+
+### Monthly Cost Overview by User Scale
+
+| Concurrent Users | Monthly Infrastructure Cost | Cost per User | Primary Cost Drivers |
+|-----------------|----------------------------|---------------|---------------------|
+| 1,000 | $2,309 | $1.93 | LLM API (52%), Neptune (22%), WebSocket (18%) |
+| 10,000 | $18,504 | $1.23 | LLM API (66%), WebSocket (22%), DynamoDB (8%) |
+| 50,000 | $91,630 | $1.22 | LLM API (67%), WebSocket (22%), DynamoDB (8%) |
+| 100,000 | $182,556 | $1.22 | LLM API (68%), WebSocket (22%), DynamoDB (8%) |
+
+### Key Infrastructure Costs
 
 #### Neptune GraphRAG Cluster (Fixed Costs)
-- **Primary Instance (db.r5.large)**: $0.348/hour = **$250.56/month**
-- **Reader Replica (db.r5.large)**: $0.348/hour = **$250.56/month**
-- **Storage (100GB)**: $0.10/GB-month = **$10.00/month**
-- **I/O Operations (50M/month)**: $0.20/1M = **$10.00/month**
-- **Neptune Total**: **$521.12/month**
+- **Primary Instance (db.r5.large)**: $254/month
+- **Reader Replica (db.r5.large)**: $254/month  
+- **Storage & I/O**: $18/month
+- **Neptune Total**: **$526/month** (scales to $1,543/month at 100K users)
 
-#### DynamoDB + Lambda + WebSocket (Variable Costs)
-**Per Active Teen (20-min sessions, 3x/week)**:
-- **DynamoDB Operations**: ~500 writes + 1,000 reads = **$0.875/teen/month**
-- **Lambda Invocations**: ~200 requests × 2-sec avg = **$0.056/teen/month**
-- **WebSocket Messages**: ~300 messages = **$0.30/teen/month**
-- **Connection Time**: 60 min/month = **$0.015/teen/month**
-- **Variable Cost Total**: **$1.25/teen/month**
+#### LLM API Services (Variable Costs - Primary Driver)
+- **OpenRouter Claude 3.5 Sonnet**: $3/1M input + $15/1M output tokens
+- **OpenAI Text Embeddings**: $0.02/1M tokens
+- **Monthly LLM Costs**: $1,209 (1K users) → $123,925 (100K users)
 
-#### Cognito Authentication
-- **0-50,000 MAUs**: **FREE**
-- **50,001-100,000 MAUs**: **$0.0055/teen/month**
-- **100,000+ MAUs**: **$0.0025/teen/month**
-
-### Total Monthly Costs by User Tier
-
-| Active Teens | Fixed Neptune | Variable Costs | Cognito | **Total** | **Cost/Teen** |
-|-------------|---------------|----------------|---------|-----------|---------------|
-| 100         | $521          | $125           | $0      | **$646**  | **$6.46**     |
-| 1,000       | $521          | $1,250         | $0      | **$1,771** | **$1.77**     |
-| 10,000      | $521          | $12,500        | $0      | **$13,021** | **$1.30**    |
-| 50,000      | $521          | $62,500        | $0      | **$63,021** | **$1.26**    |
-| 100,000     | $1,042*       | $125,000       | $550    | **$126,592** | **$1.27**   |
-
-*\*Neptune cluster upgrade to db.r5.xlarge ($0.696/hour) for 100K+ users*
+#### AWS Infrastructure (Variable Costs)
+- **DynamoDB Tables**: On-demand → Provisioned at scale
+- **Lambda Functions**: Serverless conversation processing
+- **WebSocket API Gateway**: Real-time chat infrastructure
+- **AWS Cognito**: Free up to 50K MAUs, then $0.0055/MAU
 
 ### Scalability Architecture
 
-#### 0-1,000 Teens (MVP Launch)
+#### 0-1,000 Users (MVP Launch)
 - **Neptune**: Single cluster (db.r5.large)
 - **DynamoDB**: On-demand billing
 - **Lambda**: Default concurrency (1,000)
-- **Estimated Cost**: **$646-$1,771/month**
+- **LLM Strategy**: Claude 3.5 Sonnet with basic optimization
+- **Estimated Cost**: **$528-$2,309/month**
 
-#### 1,000-50,000 Teens (Growth Phase)
+#### 1,000-10,000 Users (Growth Phase)
 - **Neptune**: Add read replicas for query distribution
 - **DynamoDB**: Consider provisioned capacity for cost optimization
 - **Lambda**: Increase concurrency limits, add provisioned concurrency
+- **LLM Strategy**: Multi-model approach (Haiku for safety, Sonnet for conversations)
 - **WebSocket**: Enable auto-scaling for connection management
-- **Estimated Cost**: **$1,771-$63,021/month**
+- **Estimated Cost**: **$2,309-$18,504/month**
 
-#### 50,000+ Teens (Scale Phase)
-- **Neptune**: Upgrade to db.r5.xlarge or larger instances
-- **DynamoDB**: Global Tables for multi-region deployment
+#### 10,000-50,000 Users (Scale Phase)
+- **Neptune**: Upgrade to db.r5.xlarge instances
+- **DynamoDB**: Provisioned capacity with DAX caching
 - **Lambda**: Regional deployment with traffic distribution
+- **LLM Strategy**: Advanced caching and prompt optimization
 - **API Gateway**: Custom domain with CloudFront CDN
-- **Estimated Cost**: **$63K+/month**
+- **Estimated Cost**: **$18,504-$91,630/month**
+
+#### 50,000+ Users (Enterprise Phase)
+- **Neptune**: Multi-AZ cluster with multiple read replicas
+- **DynamoDB**: Global Tables for multi-region deployment
+- **Lambda**: Reserved concurrency and regional distribution
+- **LLM Strategy**: Custom model hosting consideration
+- **ElastiCache**: Redis clusters for response caching
+- **Estimated Cost**: **$91,630+/month**
 
 ### Business Model Implications
 
-#### Freemium Strategy (Free + $4.99/month Premium)
-- **Break-even at 130 teens** (assuming 100% premium conversion)
-- **Profitable at 1,000+ teens** (with 20% premium conversion rate)
-- **Target: $1.50 cost per teen** for sustainable 70% gross margins
+#### Revenue Requirements Analysis
+- **Break-even Conversion Rate**: 42% premium subscriptions at $4.99/month
+- **Target Cost per User**: $1.22-1.30 at scale (10,000+ users)
+- **Primary Optimization**: LLM cost reduction (60-70% of total costs)
 
-#### Cost Optimization Strategies
-1. **Short-term (0-1K teens)**:
-   - Use single Neptune cluster
-   - Optimize DynamoDB with TTL cleanup
-   - Implement efficient Lambda memory allocation
+#### Cost Optimization Priorities
+1. **Immediate (0-1K users)**:
+   - **Multi-Model LLM Strategy**: Use Claude 3 Haiku for safety checks (75% cost reduction)
+   - **Response Caching**: Cache common persona responses and safety moderation
+   - **Prompt Optimization**: Reduce token usage through efficient prompt engineering
 
-2. **Medium-term (1K-10K teens)**:
-   - Add Neptune read replicas during peak hours only
-   - Switch DynamoDB to provisioned capacity
-   - Enable Lambda provisioned concurrency for consistent performance
+2. **Growth Phase (1K-10K users)**:
+   - **Provisioned DynamoDB**: Switch from on-demand to provisioned capacity (40-60% savings)
+   - **Neptune Read Replicas**: Add during peak hours only
+   - **Lambda Optimization**: Provisioned concurrency for consistent performance
 
-3. **Long-term (10K+ teens)**:
-   - Multi-region deployment for global scale
-   - DynamoDB Global Tables with cross-region replication
-   - Neptune clustering with automated failover
+3. **Scale Phase (10K+ users)**:
+   - **Advanced Caching**: ElastiCache for Neptune context and LLM responses
+   - **Multi-Region**: Deploy across regions for performance and cost optimization
+   - **Reserved Instances**: Neptune reserved instances for 60% cost reduction
 
 ### Scalability Limits & Thresholds
 
 | Component | Current Limit | Scaling Threshold | Solution |
 |-----------|---------------|-------------------|----------|
-| **Neptune** | 40,000 concurrent connections | 10,000 teens | Add read replicas |
-| **DynamoDB** | Unlimited (on-demand) | Cost optimization at 5,000 teens | Switch to provisioned |
-| **Lambda** | 1,000 concurrent executions | 2,000 teens | Increase limits |
-| **WebSocket** | 10,000 connections | 5,000 simultaneous teens | Add regions |
+| **Neptune** | 40,000 concurrent connections | 10,000 users | Add read replicas |
+| **DynamoDB** | Unlimited (on-demand) | Cost optimization at 1,000 users | Switch to provisioned |
+| **Lambda** | 1,000 concurrent executions | 2,000 users | Increase limits |
+| **WebSocket** | 10,000 connections | 5,000 simultaneous users | Add regions |
+| **LLM API** | Rate limits vary by provider | Monitor at 10,000 users | Multi-provider strategy |
 | **Cognito** | 100M users | No practical limit | Unlimited scaling |
 
 ## Common Operations
@@ -543,4 +558,4 @@ For infrastructure issues:
 
 ---
 
-**This infrastructure is production-ready for teen VR conversations with emotional intelligence, real-time chat, and scalable cost structure. Perfect for launching your InnerWorld MVP!**
+**This infrastructure is production-ready for teen VR conversations with emotional intelligence, real-time chat, and optimized cost structure. Scales efficiently from MVP ($2.3K/month) to enterprise deployment ($182K/month) with excellent economies of scale.**
