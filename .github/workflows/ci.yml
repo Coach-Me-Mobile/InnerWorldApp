@@ -133,7 +133,7 @@ jobs:
     name: iOS Build & Test
     runs-on: macos-14
     needs: [security-scan, code-quality]
-    if: hashFiles('**/*.xcodeproj') != '' || hashFiles('**/*.xcworkspace') != ''
+    if: false  # Disabled until iOS project exists
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
