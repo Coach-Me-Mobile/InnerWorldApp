@@ -153,11 +153,11 @@ output "apple_identity_provider_name" {
 output "lambda_trigger_arns" {
   description = "ARNs of Lambda trigger functions"
   value = var.enable_lambda_triggers ? {
-    pre_signup         = aws_lambda_function.pre_signup[0].arn
-    post_confirmation  = aws_lambda_function.post_confirmation[0].arn
-    pre_authentication = aws_lambda_function.pre_authentication[0].arn
+    pre_signup          = aws_lambda_function.pre_signup[0].arn
+    post_confirmation   = aws_lambda_function.post_confirmation[0].arn
+    pre_authentication  = aws_lambda_function.pre_authentication[0].arn
     post_authentication = aws_lambda_function.post_authentication[0].arn
-    custom_message     = aws_lambda_function.custom_message[0].arn
+    custom_message      = aws_lambda_function.custom_message[0].arn
   } : null
   sensitive = false
 }
@@ -169,30 +169,30 @@ output "lambda_trigger_arns" {
 output "cognito_config" {
   description = "Summary of Cognito configuration"
   value = {
-    user_pool_id          = aws_cognito_user_pool.main.id
-    identity_pool_id      = aws_cognito_identity_pool.main.id
-    client_id            = aws_cognito_user_pool_client.ios_app.id
-    domain               = aws_cognito_user_pool_domain.main.domain
-    apple_signin_enabled = var.enable_apple_signin
-    mfa_configuration    = var.mfa_configuration
+    user_pool_id            = aws_cognito_user_pool.main.id
+    identity_pool_id        = aws_cognito_identity_pool.main.id
+    client_id               = aws_cognito_user_pool_client.ios_app.id
+    domain                  = aws_cognito_user_pool_domain.main.domain
+    apple_signin_enabled    = var.enable_apple_signin
+    mfa_configuration       = var.mfa_configuration
     lambda_triggers_enabled = var.enable_lambda_triggers
-    
+
     # Client configuration for iOS app
     ios_client_config = {
       user_pool_id     = aws_cognito_user_pool.main.id
       client_id        = aws_cognito_user_pool_client.ios_app.id
       identity_pool_id = aws_cognito_identity_pool.main.id
-      region          = var.aws_region
-      
+      region           = var.aws_region
+
       # OAuth configuration
-      oauth_flows     = aws_cognito_user_pool_client.ios_app.allowed_oauth_flows
-      oauth_scopes    = aws_cognito_user_pool_client.ios_app.allowed_oauth_scopes
-      callback_urls   = aws_cognito_user_pool_client.ios_app.callback_urls
-      logout_urls     = aws_cognito_user_pool_client.ios_app.logout_urls
-      
+      oauth_flows   = aws_cognito_user_pool_client.ios_app.allowed_oauth_flows
+      oauth_scopes  = aws_cognito_user_pool_client.ios_app.allowed_oauth_scopes
+      callback_urls = aws_cognito_user_pool_client.ios_app.callback_urls
+      logout_urls   = aws_cognito_user_pool_client.ios_app.logout_urls
+
       # Token configuration
       access_token_validity  = aws_cognito_user_pool_client.ios_app.access_token_validity
-      id_token_validity     = aws_cognito_user_pool_client.ios_app.id_token_validity
+      id_token_validity      = aws_cognito_user_pool_client.ios_app.id_token_validity
       refresh_token_validity = aws_cognito_user_pool_client.ios_app.refresh_token_validity
     }
   }

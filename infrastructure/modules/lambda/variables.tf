@@ -64,7 +64,7 @@ variable "conversation_handler_zip" {
 }
 
 variable "health_check_zip" {
-  description = "Path to health check zip file"  
+  description = "Path to health check zip file"
   type        = string
   default     = "../../backend/bin/health-check.zip"
 }
@@ -72,7 +72,7 @@ variable "health_check_zip" {
 variable "lambda_environment_variables" {
   description = "Environment variables for Lambda functions"
   type        = map(string)
-  default     = {
+  default = {
     ENVIRONMENT = "development"
     DEBUG       = "true"
   }
@@ -125,4 +125,36 @@ variable "cors_allowed_methods" {
   description = "Allowed methods for CORS"
   type        = list(string)
   default     = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+}
+
+# ==============================================================================
+# COGNITO CONFIGURATION
+# ==============================================================================
+
+variable "cognito_user_pool_id" {
+  description = "Cognito User Pool ID for JWT authorization"
+  type        = string
+  default     = ""
+}
+
+variable "cognito_user_pool_client_id" {
+  description = "Cognito User Pool Client ID for JWT authorization"
+  type        = string
+  default     = ""
+}
+
+# ==============================================================================
+# WEBSOCKET CONFIGURATION
+# ==============================================================================
+
+variable "websocket_throttle_rate_limit" {
+  description = "WebSocket API throttle rate limit (requests per second)"
+  type        = number
+  default     = 1000
+}
+
+variable "websocket_throttle_burst_limit" {
+  description = "WebSocket API throttle burst limit"
+  type        = number
+  default     = 2000
 }

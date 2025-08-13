@@ -87,13 +87,25 @@ resource "aws_iam_role_policy" "lambda_services_policy" {
 # ==============================================================================
 
 resource "aws_cloudwatch_log_group" "conversation_handler" {
-  name              = "/aws/lambda/${aws_lambda_function.conversation_handler.function_name}"
+  name              = "/aws/lambda/${var.name_prefix}-conversation-handler"
   retention_in_days = var.log_retention_days
   tags              = var.tags
 }
 
 resource "aws_cloudwatch_log_group" "health_check" {
-  name              = "/aws/lambda/${aws_lambda_function.health_check.function_name}"
+  name              = "/aws/lambda/${var.name_prefix}-health-check"
+  retention_in_days = var.log_retention_days
+  tags              = var.tags
+}
+
+resource "aws_cloudwatch_log_group" "websocket_connect_handler" {
+  name              = "/aws/lambda/${var.name_prefix}-websocket-connect"
+  retention_in_days = var.log_retention_days
+  tags              = var.tags
+}
+
+resource "aws_cloudwatch_log_group" "websocket_disconnect_handler" {
+  name              = "/aws/lambda/${var.name_prefix}-websocket-disconnect"
   retention_in_days = var.log_retention_days
   tags              = var.tags
 }
@@ -104,13 +116,13 @@ resource "aws_cloudwatch_log_group" "health_check" {
 
 # Conversation Handler Lambda
 resource "aws_lambda_function" "conversation_handler" {
-  filename         = var.conversation_handler_zip
-  function_name    = "${var.name_prefix}-conversation-handler"
-  role            = aws_iam_role.lambda_execution_role.arn
-  handler         = "bootstrap"
-  runtime         = "provided.al2"
-  timeout         = 30
-  memory_size     = 512
+  filename      = var.conversation_handler_zip
+  function_name = "${var.name_prefix}-conversation-handler"
+  role          = aws_iam_role.lambda_execution_role.arn
+  handler       = "bootstrap"
+  runtime       = "provided.al2"
+  timeout       = 30
+  memory_size   = 512
 
   vpc_config {
     subnet_ids         = var.private_subnet_ids
@@ -135,13 +147,13 @@ resource "aws_lambda_function" "conversation_handler" {
 
 # Health Check Lambda
 resource "aws_lambda_function" "health_check" {
-  filename         = var.health_check_zip
-  function_name    = "${var.name_prefix}-health-check"
-  role            = aws_iam_role.lambda_execution_role.arn
-  handler         = "bootstrap"
-  runtime         = "provided.al2"
-  timeout         = 30
-  memory_size     = 256
+  filename      = var.health_check_zip
+  function_name = "${var.name_prefix}-health-check"
+  role          = aws_iam_role.lambda_execution_role.arn
+  handler       = "bootstrap"
+  runtime       = "provided.al2"
+  timeout       = 30
+  memory_size   = 256
 
   vpc_config {
     subnet_ids         = var.private_subnet_ids
@@ -199,8 +211,8 @@ resource "aws_api_gateway_integration" "health_integration" {
   http_method = aws_api_gateway_method.health_get.http_method
 
   integration_http_method = "POST"
-  type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.health_check.invoke_arn
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.health_check.invoke_arn
 }
 
 # Lambda permissions for API Gateway
@@ -255,29 +267,124 @@ resource "aws_apigatewayv2_api" "websocket" {
   tags = var.tags
 }
 
-# WebSocket Lambda integration
+# JWT Authorizer for WebSocket connections
+resource "aws_apigatewayv2_authorizer" "jwt_authorizer" {
+  api_id           = aws_apigatewayv2_api.websocket.id
+  authorizer_type  = "JWT"
+  identity_sources = ["route.request.header.Authorization"]
+  name             = "${var.name_prefix}-jwt-authorizer"
+
+  jwt_configuration {
+    audience = [var.cognito_user_pool_client_id]
+    issuer   = "https://cognito-idp.${var.aws_region}.amazonaws.com/${var.cognito_user_pool_id}"
+  }
+}
+
+# Separate Lambda functions for connection management
+resource "aws_lambda_function" "websocket_connect_handler" {
+  filename      = var.conversation_handler_zip
+  function_name = "${var.name_prefix}-websocket-connect"
+  role          = aws_iam_role.lambda_execution_role.arn
+  handler       = "bootstrap"
+  runtime       = "provided.al2"
+  timeout       = 30
+  memory_size   = 256
+
+  vpc_config {
+    subnet_ids         = var.private_subnet_ids
+    security_group_ids = [var.lambda_security_group_id]
+  }
+
+  environment {
+    variables = merge(var.lambda_environment_variables, {
+      FUNCTION_NAME = "websocket-connect"
+      HANDLER_TYPE  = "connect"
+    })
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_basic_execution,
+    aws_iam_role_policy_attachment.lambda_vpc_access,
+    aws_cloudwatch_log_group.websocket_connect_handler,
+  ]
+
+  tags = var.tags
+}
+
+resource "aws_lambda_function" "websocket_disconnect_handler" {
+  filename      = var.conversation_handler_zip
+  function_name = "${var.name_prefix}-websocket-disconnect"
+  role          = aws_iam_role.lambda_execution_role.arn
+  handler       = "bootstrap"
+  runtime       = "provided.al2"
+  timeout       = 30
+  memory_size   = 256
+
+  vpc_config {
+    subnet_ids         = var.private_subnet_ids
+    security_group_ids = [var.lambda_security_group_id]
+  }
+
+  environment {
+    variables = merge(var.lambda_environment_variables, {
+      FUNCTION_NAME = "websocket-disconnect"
+      HANDLER_TYPE  = "disconnect"
+    })
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_basic_execution,
+    aws_iam_role_policy_attachment.lambda_vpc_access,
+    aws_cloudwatch_log_group.websocket_disconnect_handler,
+  ]
+
+  tags = var.tags
+}
+
+# WebSocket Lambda integrations
+resource "aws_apigatewayv2_integration" "connect_integration" {
+  api_id           = aws_apigatewayv2_api.websocket.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.websocket_connect_handler.invoke_arn
+}
+
+resource "aws_apigatewayv2_integration" "disconnect_integration" {
+  api_id           = aws_apigatewayv2_api.websocket.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.websocket_disconnect_handler.invoke_arn
+}
+
 resource "aws_apigatewayv2_integration" "conversation_websocket" {
   api_id           = aws_apigatewayv2_api.websocket.id
   integration_type = "AWS_PROXY"
   integration_uri  = aws_lambda_function.conversation_handler.invoke_arn
 }
 
-# WebSocket routes
+# WebSocket routes with authentication
 resource "aws_apigatewayv2_route" "connect" {
   api_id    = aws_apigatewayv2_api.websocket.id
   route_key = "$connect"
-  target    = "integrations/${aws_apigatewayv2_integration.conversation_websocket.id}"
+  target    = "integrations/${aws_apigatewayv2_integration.connect_integration.id}"
+
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt_authorizer.id
 }
 
 resource "aws_apigatewayv2_route" "disconnect" {
   api_id    = aws_apigatewayv2_api.websocket.id
   route_key = "$disconnect"
-  target    = "integrations/${aws_apigatewayv2_integration.conversation_websocket.id}"
+  target    = "integrations/${aws_apigatewayv2_integration.disconnect_integration.id}"
 }
 
 resource "aws_apigatewayv2_route" "default" {
   api_id    = aws_apigatewayv2_api.websocket.id
   route_key = "$default"
+  target    = "integrations/${aws_apigatewayv2_integration.conversation_websocket.id}"
+}
+
+resource "aws_apigatewayv2_route" "sendmessage" {
+  api_id    = aws_apigatewayv2_api.websocket.id
+  route_key = "sendmessage"
   target    = "integrations/${aws_apigatewayv2_integration.conversation_websocket.id}"
 }
 
@@ -304,10 +411,35 @@ resource "aws_apigatewayv2_deployment" "websocket" {
   }
 }
 
+# CloudWatch Log Group for WebSocket API access logs
+resource "aws_cloudwatch_log_group" "websocket_access_logs" {
+  name              = "/aws/apigateway/${aws_apigatewayv2_api.websocket.name}"
+  retention_in_days = var.log_retention_days
+  tags              = var.tags
+}
+
 resource "aws_apigatewayv2_stage" "websocket" {
   api_id        = aws_apigatewayv2_api.websocket.id
   deployment_id = aws_apigatewayv2_deployment.websocket.id
   name          = var.environment
+
+  # Access logging
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.websocket_access_logs.arn
+    format = jsonencode({
+      requestId   = "$context.requestId"
+      ip          = "$context.identity.sourceIp"
+      caller      = "$context.identity.caller"
+      user        = "$context.identity.user"
+      requestTime = "$context.requestTime"
+      routeKey    = "$context.routeKey"
+      status      = "$context.status"
+      error       = "$context.error.message"
+      error_type  = "$context.error.messageString"
+    })
+  }
+
+  # Note: WebSocket API throttling is configured at the route level if needed
 
   tags = var.tags
 }
@@ -317,6 +449,22 @@ resource "aws_lambda_permission" "conversation_websocket" {
   statement_id  = "AllowExecutionFromWebSocketAPI"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.conversation_handler.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.websocket.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "websocket_connect" {
+  statement_id  = "AllowExecutionFromWebSocketAPIConnect"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.websocket_connect_handler.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.websocket.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "websocket_disconnect" {
+  statement_id  = "AllowExecutionFromWebSocketAPIDisconnect"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.websocket_disconnect_handler.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.websocket.execution_arn}/*/*"
 }
