@@ -128,7 +128,7 @@ jobs:
     strategy:
       matrix:
         scheme: [InnerWorldApp]
-        destination: 
+        destination:
           - 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.0'
           - 'platform=iOS Simulator,name=iPad Pro (12.9-inch) (6th generation),OS=17.0'
     
@@ -318,4 +318,3 @@ jobs:
       - name: Send failure notification
         run: |
           echo "::error::CI/CD Pipeline failed. Check the logs for details."
-          echo "Failed jobs: ${{ needs.*.result }}"
