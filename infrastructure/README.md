@@ -19,135 +19,20 @@ The infrastructure provides a complete serverless backend for teen VR conversati
 
 ### Complete Production Architecture Diagram
 
-```mermaid
-graph TB
-    subgraph "iOS VR App"
-        A[Teen User] --> B[InnerWorld VR App]
-        B --> C[Apple Sign-In / Email Auth]
-    end
-    
-    subgraph "AWS Cloud Infrastructure"
-        subgraph "Authentication Layer"
-            C --> D[AWS Cognito User Pool]
-            D --> E[JWT Token Generation]
-        end
-        
-        subgraph "API Gateway Layer"
-            E --> F[WebSocket API Gateway]
-            F --> G[JWT Authorizer]
-            G --> H[Connection Routes]
-            H --> I[$connect Route]
-            H --> J[$disconnect Route]
-            H --> K[sendmessage Route]
-        end
-        
-        subgraph "Lambda Functions"
-            I --> L[Connect Handler Lambda]
-            J --> M[Disconnect Handler Lambda]
-            K --> N[Conversation Handler Lambda]
-            O[Health Check Lambda] --> P[REST API Gateway]
-        end
-        
-        subgraph "Database Layer"
-            subgraph "Neptune GraphRAG Cluster"
-                Q[Primary Instance<br/>db.r5.large<br/>$250.56/month]
-                R[Reader Replica<br/>db.r5.large<br/>$250.56/month]
-                S[Graph Storage<br/>100GB @ $10/month]
-                Q --> R
-            end
-            
-            subgraph "DynamoDB Tables"
-                T[LiveConversations<br/>TTL: 24h<br/>Real-time messages]
-                U[WebSocketConnections<br/>TTL: 30min<br/>Connection tracking]
-                V[SessionContext<br/>TTL: 1h<br/>Context cache]
-            end
-        end
-        
-        subgraph "External APIs"
-            W[OpenRouter API<br/>Claude 3.5 Sonnet]
-            X[OpenAI API<br/>Text Embeddings]
-        end
-        
-        subgraph "Security & Secrets"
-            Y[AWS Secrets Manager]
-            Y --> Y1[OpenRouter API Keys]
-            Y --> Y2[Apple Sign-In Config]
-            Y --> Y3[JWT Secrets]
-            Y --> Y4[Neptune Config]
-        end
-        
-        subgraph "Monitoring & Logging"
-            Z[CloudWatch Logs]
-            AA[CloudWatch Alarms]
-            BB[X-Ray Tracing]
-        end
-        
-        subgraph "Networking"
-            CC[VPC 10.0.0.0/16]
-            CC --> DD[Public Subnets<br/>NAT Gateway]
-            CC --> EE[Private Subnets<br/>Lambda Functions]
-            CC --> FF[Database Subnets<br/>Neptune Cluster]
-            
-            GG[Security Groups]
-            GG --> HH[Lambda SG<br/>HTTPS + Neptune]
-            GG --> II[Neptune SG<br/>Port 8182 from Lambda]
-        end
-    end
-    
-    %% Data Flow Connections
-    L --> U
-    L --> V
-    M --> U
-    N --> T
-    N --> U
-    N --> V
-    N --> Q
-    N --> R
-    N --> W
-    N --> X
-    
-    %% Secrets Access
-    L --> Y
-    M --> Y
-    N --> Y
-    
-    %% Monitoring
-    L --> Z
-    M --> Z
-    N --> Z
-    O --> Z
-    Q --> AA
-    T --> AA
-    U --> AA
-    V --> AA
-    
-    %% Cost Labels
-    Q -.->|$521/month<br/>Fixed Neptune| Cost1[Fixed Costs]
-    T -.->|$1.25/teen/month<br/>Variable Usage| Cost2[Variable Costs]
-    
-    %% Styling
-    classDef userLayer fill:#e1f5fe
-    classDef authLayer fill:#f3e5f5
-    classDef apiLayer fill:#e8f5e8
-    classDef lambdaLayer fill:#fff3e0
-    classDef dbLayer fill:#fce4ec
-    classDef externalLayer fill:#f1f8e9
-    classDef securityLayer fill:#fff8e1
-    classDef monitoringLayer fill:#e3f2fd
-    classDef networkLayer fill:#f9fbe7
-    classDef costLayer fill:#ffebee
-    
-    class A,B,C userLayer
-    class D,E authLayer
-    class F,G,H,I,J,K apiLayer
-    class L,M,N,O,P lambdaLayer
-    class Q,R,S,T,U,V dbLayer
-    class W,X externalLayer
-    class Y,Y1,Y2,Y3,Y4 securityLayer
-    class Z,AA,BB monitoringLayer
-    class CC,DD,EE,FF,GG,HH,II networkLayer
-    class Cost1,Cost2 costLayer
-```
+![InnerWorld Infrastructure Architecture](../docs/images/infrastructure-architecture.png)
+
+**Architecture Overview:**
+- **Client Layer**: iOS VR App with RealityKit, Livestream, Teen Chat, Sessions
+- **Authentication**: AWS Cognito User Pool with Apple Sign-In integration
+- **API Gateway**: WebSocket API with JWT authentication for real-time chat
+- **Compute Layer**: Go Lambda Functions (Connect, Disconnect, Conversation, Health Check)
+- **Database Layer**: 
+  - **Neptune GraphRAG Cluster**: Primary + Reader instances (db.r5.large) with replication
+  - **DynamoDB Tables**: LiveConversations (24h TTL), WebSocketConnections (30min TTL), SessionContext (1h TTL)
+- **External Services**: OpenRouter API (Claude 3.5 Sonnet), Apple Authentication
+- **Security**: AWS Secrets Manager for API keys and configuration
+- **Monitoring**: CloudWatch Alarms, Logs, and Lambda Errors tracking
+- **Networking**: VPC with Public/Private subnets, NAT Gateways, Internet Gateway
 
 ### Terraform Module Structure
 
