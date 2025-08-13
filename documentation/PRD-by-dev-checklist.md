@@ -47,14 +47,14 @@
 
 ### **Trevor – Frontend (iOS VR)**
 
-[ ] **Set up Swift/RealityKit project scaffold**
-[ ] Create base iOS app project in Xcode.
-[ ] Integrate RealityKit scene rendering.
-[ ] Test rendering of placeholder assets in VR.
+[x] **Set up Swift/RealityKit project scaffold**
+[x] Create base iOS app project in Xcode.
+[x] Integrate RealityKit scene rendering.
+[x] Test rendering of placeholder assets in VR.
 
 [ ] **Implement privacy controls**
 [ ] Add FaceID/Passcode lock functionality.
-[ ] Create encrypted local storage for session cache.
+[x] Create encrypted local storage for session cache.
 
 ---
 
