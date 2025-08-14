@@ -45,7 +45,7 @@ variable "aws_region" {
 variable "environments" {
   description = "List of environments to create backend for"
   type        = list(string)
-  default     = ["dev", "staging", "prod"]
+  default     = ["prod"]
 }
 
 # ==============================================================================

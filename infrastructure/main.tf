@@ -170,108 +170,97 @@ module "codepipeline" {
 }
 
 # Neptune module - Graph database for GraphRAG
-module "neptune" {
-  source = "./modules/neptune"
-
-  name_prefix = local.name_prefix
-  environment = var.environment
-
-  # Networking configuration
-  subnet_ids         = module.networking.database_subnet_ids
-  security_group_ids = [module.networking.neptune_security_group_id]
-
-  # Neptune configuration
-  instance_class               = var.environment == "prod" ? "db.r5.large" : "db.t3.medium"
-  instance_count               = var.environment == "prod" ? 2 : 1
-  backup_retention_period      = var.backup_config.backup_retention_days
-  deletion_protection          = var.environment == "prod" ? true : false
-  iam_auth_enabled             = true
-  enable_audit_log             = true
-  performance_insights_enabled = var.environment == "prod" ? true : false
-
-  log_retention_days = var.log_retention_days
-  alarm_actions      = [] # Add SNS topic ARNs if needed
-
-  tags = local.common_tags
-}
+# COMMENTED OUT FOR MINIMAL TESTFLIGHT DEPLOYMENT
+# Uncomment this when you need GraphRAG functionality
+# module "neptune" {
+#   source = "./modules/neptune"
+#
+#   name_prefix = local.name_prefix
+#   environment = var.environment
+#
+#   # Networking configuration
+#   subnet_ids         = module.networking.database_subnet_ids
+#   security_group_ids = [module.networking.neptune_security_group_id]
+#
+#   # Neptune configuration
+#   instance_class               = var.environment == "prod" ? "db.r5.large" : "db.t3.medium"
+#   instance_count               = var.environment == "prod" ? 2 : 1
+#   backup_retention_period      = var.backup_config.backup_retention_days
+#   deletion_protection          = var.environment == "prod" ? true : false
+#   iam_auth_enabled             = true
+#   enable_audit_log             = true
+#   performance_insights_enabled = var.environment == "prod" ? true : false
+#
+#   log_retention_days = var.log_retention_days
+#   alarm_actions      = [] # Add SNS topic ARNs if needed
+#
+#   tags = local.common_tags
+# }
 
 # DynamoDB module - Real-time conversation storage
-module "dynamodb" {
-  source = "./modules/dynamodb"
-
-  name_prefix = local.name_prefix
-  environment = var.environment
-
-  # DynamoDB configuration
-  billing_mode                  = "ON_DEMAND"
-  enable_streams                = true # For post-session processing
-  enable_point_in_time_recovery = var.environment == "prod" ? true : false
-
-  # TTL configuration
-  live_conversations_ttl_hours      = 24 # 24 hours for processing
-  websocket_connections_ttl_minutes = 30 # 30 minutes for connection cleanup
-  session_context_ttl_hours         = 1  # 1 hour for context cache
-
-  alarm_actions = [] # Add SNS topic ARNs if needed
-
-  tags = local.common_tags
-}
+# COMMENTED OUT FOR MINIMAL TESTFLIGHT DEPLOYMENT
+# Uncomment this when you need conversation storage functionality
+# module "dynamodb" {
+#   source = "./modules/dynamodb"
+#
+#   name_prefix = local.name_prefix
+#   environment = var.environment
+#
+#   # DynamoDB configuration
+#   billing_mode                  = "ON_DEMAND"
+#   enable_streams                = true # For post-session processing
+#   enable_point_in_time_recovery = var.environment == "prod" ? true : false
+#
+#   # TTL configuration
+#   live_conversations_ttl_hours      = 24 # 24 hours for processing
+#   websocket_connections_ttl_minutes = 30 # 30 minutes for connection cleanup
+#   session_context_ttl_hours         = 1  # 1 hour for context cache
+#
+#   alarm_actions = [] # Add SNS topic ARNs if needed
+#
+#   tags = local.common_tags
+# }
 
 # Lambda module - Lambda functions with API Gateway
-module "lambda" {
-  source = "./modules/lambda"
-
-  name_prefix = local.name_prefix
-  environment = var.environment
-  aws_region  = var.aws_region
-  account_id  = local.account_id
-
-  # Networking configuration - use existing VPC resources
-  vpc_id                   = module.networking.vpc_id
-  private_subnet_ids       = module.networking.private_subnet_ids
-  lambda_security_group_id = module.networking.lambda_security_group_id
-
-  # Secrets Manager ARNs for Lambda permissions
-  secrets_manager_arns = [
-    module.secrets.openai_api_key_arn,
-    module.secrets.apple_signin_key_arn,
-    module.secrets.jwt_secret_arn
-  ]
-
-  # Cognito configuration for JWT authentication
-  cognito_user_pool_id        = module.cognito.user_pool_id
-  cognito_user_pool_client_id = module.cognito.user_pool_client_id
-
-  # Lambda configuration with database table names
-  lambda_environment_variables = merge({
-    ENVIRONMENT = var.environment
-    DEBUG       = var.environment == "prod" ? "false" : "true"
-    AWS_REGION  = var.aws_region
-
-    # Neptune configuration
-    NEPTUNE_ENDPOINT        = module.neptune.cluster_endpoint
-    NEPTUNE_READER_ENDPOINT = module.neptune.cluster_reader_endpoint
-    NEPTUNE_PORT            = "8182"
-    NEPTUNE_IAM_AUTH        = "true"
-
-    # DynamoDB table names
-    LIVE_CONVERSATIONS_TABLE    = module.dynamodb.live_conversations_table_name
-    WEBSOCKET_CONNECTIONS_TABLE = module.dynamodb.websocket_connections_table_name
-    SESSION_CONTEXT_TABLE       = module.dynamodb.session_context_table_name
-
-    # Cognito configuration
-    COGNITO_USER_POOL_ID        = module.cognito.user_pool_id
-    COGNITO_USER_POOL_CLIENT_ID = module.cognito.user_pool_client_id
-  }, var.lambda_environment_variables)
-
-  log_retention_days  = var.log_retention_days
-  enable_xray_tracing = var.enable_xray_tracing
-
-  tags = local.common_tags
-
-  # Ensure databases are created before Lambda
-  depends_on = [
-    module.neptune,
-    module.dynamodb
-  ]
-}
+# COMMENTED OUT FOR MINIMAL TESTFLIGHT DEPLOYMENT
+# Uncomment this when you need backend API functionality
+# module "lambda" {
+#   source = "./modules/lambda"
+#
+#   name_prefix = local.name_prefix
+#   environment = var.environment
+#   aws_region  = var.aws_region
+#   account_id  = local.account_id
+#
+#   # Networking configuration - use existing VPC resources
+#   vpc_id                   = module.networking.vpc_id
+#   private_subnet_ids       = module.networking.private_subnet_ids
+#   lambda_security_group_id = module.networking.lambda_security_group_id
+#
+#   # Secrets Manager ARNs for Lambda permissions
+#   secrets_manager_arns = [
+#     module.secrets.openai_api_key_arn,
+#     module.secrets.apple_signin_key_arn,
+#     module.secrets.jwt_secret_arn
+#   ]
+#
+#   # Cognito configuration for JWT authentication
+#   cognito_user_pool_id        = module.cognito.user_pool_id
+#   cognito_user_pool_client_id = module.cognito.user_pool_client_id
+#
+#   # Lambda configuration with database table names
+#   lambda_environment_variables = merge({
+#     ENVIRONMENT = var.environment
+#     DEBUG       = var.environment == "prod" ? "false" : "true"
+#     AWS_REGION  = var.aws_region
+#
+#     # Cognito configuration
+#     COGNITO_USER_POOL_ID        = module.cognito.user_pool_id
+#     COGNITO_USER_POOL_CLIENT_ID = module.cognito.user_pool_client_id
+#   }, var.lambda_environment_variables)
+#
+#   log_retention_days  = var.log_retention_days
+#   enable_xray_tracing = var.enable_xray_tracing
+#
+#   tags = local.common_tags
+# }

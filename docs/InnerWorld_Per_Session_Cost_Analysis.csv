@@ -1,0 +1,105 @@
+Category,Parameter,Value,Unit,Calculation,Notes
+,,,,,,
+SESSION PARAMETERS,,,,,,
+Session Duration,Max time per session,20,minutes,Given from specs,
+Messages per Session,Total messages,75,messages,Given from specs,
+User Messages,User input messages,37,messages,~50% of total,
+AI Response Messages,AI output messages,38,messages,~50% of total,
+Daily Sessions per User,Average usage,1,sessions/day,Typical engagement,
+,,,,,,
+TOKEN USAGE PER SESSION,,,,,,
+User Message Length,Avg tokens per user message,20,tokens/message,Estimated based on teen chat,
+AI Response Length,Avg tokens per AI response,80,tokens/response,Conversational responses,
+Context Prompt Length,System + GraphRAG context,800,tokens,Persona + user context,
+,,,,,,
+Input Tokens per Session,User messages,740,tokens,37 * 20,
+Input Tokens per Session,Context prompts,800,tokens,Fixed per session,
+Total Input Tokens,Per session total,1540,tokens,740 + 800,
+,,,,,,
+Output Tokens per Session,AI responses,3040,tokens,38 * 80,
+Total Output Tokens,Per session total,3040,tokens,AI responses only,
+,,,,,,
+LLM API PRICING,,,,,,
+GPT-4o Mini,Input token price,0.00000015,$/token,$0.15 per 1M tokens,
+GPT-4o Mini,Output token price,0.0000006,$/token,$0.60 per 1M tokens,
+Claude 3.5 Sonnet,Input token price,0.000003,$/token,$3.00 per 1M tokens,
+Claude 3.5 Sonnet,Output token price,0.000015,$/token,$15.00 per 1M tokens,
+,,,,,,
+LLM COST PER SESSION,,,,,,
+GPT-4o Mini,Input cost per session,0.000231,$,1540 * 0.00000015,
+GPT-4o Mini,Output cost per session,0.001824,$,3040 * 0.0000006,
+GPT-4o Mini,Total LLM cost per session,0.002055,$,0.000231 + 0.001824,
+,,,,,,
+Claude 3.5 Sonnet,Input cost per session,0.00462,$,1540 * 0.000003,
+Claude 3.5 Sonnet,Output cost per session,0.0456,$,3040 * 0.000015,
+Claude 3.5 Sonnet,Total LLM cost per session,0.05022,$,0.00462 + 0.0456,
+,,,,,,
+USER SCALE SCENARIOS,,,,,,
+Scenario,Concurrent Users,Total Registered,Daily Active Users,Monthly Sessions,Notes
+Small,1000,4000,600,18000,15% daily active rate
+Medium,10000,40000,6000,180000,15% daily active rate
+Large,50000,200000,30000,900000,15% daily active rate
+Enterprise,100000,400000,60000,1800000,15% daily active rate
+,,,,,,
+AWS INFRASTRUCTURE COSTS (Monthly),,,,,,
+User Scale,Neptune,DynamoDB,Lambda,WebSocket API,Other,Total AWS
+1000,$516,$150,$28,$403,$3,$1100
+10000,$521,$1500,$203,$4025,$15,$6264
+50000,$1042,$7500,$850,$20125,$838,$30355
+100000,$1543,$15000,$1653,$40250,$2185,$60631
+,,,,,,
+AWS COST PER SESSION,,,,,,
+User Scale,Monthly AWS Cost,Monthly Sessions,AWS Cost per Session,Calculation,
+1000,$1100,18000,$0.0611,$1100 / 18000,
+10000,$6264,180000,$0.0348,$6264 / 180000,
+50000,$30355,900000,$0.0373,$30355 / 900000,
+100000,$60631,1800000,$0.0337,$60631 / 1800000,
+,,,,,,
+TOTAL COST PER SESSION,,,,,,
+User Scale,AWS per Session,GPT-4o Mini LLM,GPT-4o Total,Claude 3.5 LLM,Claude 3.5 Total,Difference
+1000,$0.0611,$0.0021,$0.0632,$0.0502,$0.1113,$0.0481
+10000,$0.0348,$0.0021,$0.0369,$0.0502,$0.0850,$0.0481
+50000,$0.0373,$0.0021,$0.0394,$0.0502,$0.0875,$0.0481
+100000,$0.0337,$0.0021,$0.0358,$0.0502,$0.0839,$0.0481
+,,,,,,
+COST BREAKDOWN BY COMPONENT (%),,,,,,
+User Scale,Model,AWS Infrastructure,LLM API,Total Check,
+1000,GPT-4o Mini,96.7%,3.3%,100.0%,
+1000,Claude 3.5,54.9%,45.1%,100.0%,
+10000,GPT-4o Mini,94.3%,5.7%,100.0%,
+10000,Claude 3.5,40.9%,59.1%,100.0%,
+50000,GPT-4o Mini,94.7%,5.3%,100.0%,
+50000,Claude 3.5,42.6%,57.4%,100.0%,
+100000,GPT-4o Mini,94.1%,5.9%,100.0%,
+100000,Claude 3.5,40.2%,59.8%,100.0%,
+,,,,,,
+REVENUE ANALYSIS,,,,,,
+Premium Subscription,Monthly price,$4.99,/month,Business model assumption,
+Sessions per Month,Per premium user,30,sessions,1 session/day * 30 days,
+Revenue per Session,Premium users,$0.1663,/session,$4.99 / 30,
+,,,,,,
+PROFIT MARGIN PER SESSION,,,,,,
+User Scale,Revenue,GPT-4o Cost,GPT-4o Profit,GPT-4o Margin,Claude Cost,Claude Profit,Claude Margin
+1000,$0.1663,$0.0632,$0.1031,62.0%,$0.1113,$0.0550,33.1%
+10000,$0.1663,$0.0369,$0.1294,77.8%,$0.0850,$0.0813,48.9%
+50000,$0.1663,$0.0394,$0.1269,76.3%,$0.0875,$0.0788,47.4%
+100000,$0.1663,$0.0358,$0.1305,78.5%,$0.0839,$0.0824,49.5%
+,,,,,,
+BREAK-EVEN ANALYSIS,,,,,,
+Required Premium Conversion Rate,,,,,,,
+User Scale,GPT-4o Cost,Premium Revenue,Conversion Needed,Claude Cost,Premium Revenue,Conversion Needed,Difference
+1000,$0.0632,$0.1663,38.0%,$0.1113,$0.1663,66.9%,28.9%
+10000,$0.0369,$0.1663,22.2%,$0.0850,$0.1663,51.1%,28.9%
+50000,$0.0394,$0.1663,23.7%,$0.0875,$0.1663,52.6%,28.9%
+100000,$0.0358,$0.1663,21.5%,$0.0839,$0.1663,50.5%,28.9%
+,,,,,,
+VALIDATION FORMULAS,,,,,,
+Check,Description,Formula,Expected Result,Actual Result,Status
+1,Input tokens calculation,37 * 20 + 800,1540,1540,PASS
+2,Output tokens calculation,38 * 80,3040,3040,PASS
+3,GPT-4o Mini session cost,1540*0.00000015 + 3040*0.0000006,0.002055,0.002055,PASS
+4,Claude session cost,1540*0.000003 + 3040*0.000015,0.05022,0.05022,PASS
+5,Cost difference,0.05022 - 0.002055,0.048165,0.048165,PASS
+6,1K users monthly sessions,4000*0.15*30,18000,18000,PASS
+7,AWS cost per session (1K),1100/18000,0.0611,0.0611,PASS
+8,Total session cost difference,0.1113 - 0.0632,0.0481,0.0481,PASS

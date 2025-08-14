@@ -1,0 +1,46 @@
+# ==============================================================================
+# DEVELOPMENT ENVIRONMENT VARIABLES
+# ==============================================================================
+# Example terraform.tfvars for development/testing deployment
+# Copy this file to terraform.tfvars and fill in actual values
+# ==============================================================================
+
+# ==============================================================================
+# PROJECT CONFIGURATION
+# ==============================================================================
+
+project_name = "innerworld"
+environment  = "dev"
+aws_region   = "us-east-1"
+
+# ==============================================================================
+# NETWORKING (MINIMAL)
+# ==============================================================================
+
+vpc_cidr           = "10.0.0.0/16"
+availability_zones = ["us-east-1a"] # Single AZ for cost optimization
+
+# ==============================================================================
+# APPLE SIGN-IN CONFIGURATION (OPTIONAL FOR DEV)
+# ==============================================================================
+# Leave these empty for initial testing without Apple Sign-In
+# Uncomment and fill when ready to test Apple Sign-In
+
+# apple_team_id      = "YOUR_APPLE_TEAM_ID"
+# apple_key_id       = "YOUR_APPLE_KEY_ID"
+# apple_client_id    = "com.gauntletai.innerworld.dev"
+# apple_private_key  = "YOUR_APPLE_PRIVATE_KEY"
+
+# ==============================================================================
+# MONITORING (MINIMAL)
+# ==============================================================================
+
+log_retention_days = 7
+
+# ==============================================================================
+# GITHUB INTEGRATION (OPTIONAL)
+# ==============================================================================
+# We'll use GitHub Actions instead of CodePipeline
+
+# github_repository = "GauntletAI/InnerWorldApp"
+# github_branch     = "main"
