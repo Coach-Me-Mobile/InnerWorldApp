@@ -101,12 +101,12 @@
 
 [ ] **Implement real-time conversation pipeline with WebSocket + LangGraph**
 [ ] Create WebSocket Lambda functions: $connect, $disconnect, $default, sendmessage.
-[ ] Build LangGraph workflow: safety_check → persona_prompt → llm_generation → live_storage.
+[X] Build LangGraph workflow: safety_check → persona_prompt → llm_generation → live_storage.
 [ ] Implement login context caching: Neptune context retrieval on authentication and cache in session store.
-[ ] Create real-time message handling: retrieve cached context → LangGraph processing → WebSocket response.
+[X] Create real-time message handling: retrieve cached context → LangGraph processing → WebSocket response.
 [ ] Build session end processing: DynamoDB → Neptune graph update → refresh cached context.
-[ ] Call OpenRouter API (Claude/GPT models) through LangGraph generation node.
-[ ] Add conversation state persistence and persona-specific prompt templates.
+[X] Call OpenRouter API (Claude/GPT models) through LangGraph generation node.
+[X] Add conversation state persistence and persona-specific prompt templates.
 
 ---
 
