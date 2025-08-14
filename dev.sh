@@ -29,7 +29,7 @@ cleanup() {
         local running_devices=$(xcrun simctl list devices booted | grep "iPhone" | wc -l)
         if [ "$running_devices" -gt 0 ]; then
             print_status "Shutting down iOS simulators..."
-            xcrun simctl shutdown booted
+            xcrun simctl shutdown booted >/dev/null 2>&1 || true
         fi
     fi
     
@@ -267,7 +267,14 @@ start_dev() {
     fi
     echo ""
     echo "🛑 Stop:"
-    echo "   • ./dev.sh stop"
+    echo "   • Press Ctrl+C to stop all services"
+    echo ""
+    print_status "Development environment is running. Press Ctrl+C to stop all services..."
+    
+    # Keep the script running and wait for signals
+    while true; do
+        sleep 1
+    done
 }
 
 # Stop development environment  
@@ -282,11 +289,12 @@ stop_dev() {
         print_status "No Docker containers running"
     fi
     
-    # Note about iOS simulator (don't auto-stop as user might want to keep it running)
+    # Stop iOS simulator if running
     if check_ios_tools; then
         local running_devices=$(xcrun simctl list devices booted | grep "iPhone" | wc -l)
         if [ "$running_devices" -gt 0 ]; then
-            print_status "iOS simulator still running (use Ctrl+C for full cleanup)"
+            print_status "Shutting down iOS simulators..."
+            xcrun simctl shutdown booted >/dev/null 2>&1 || true
         fi
     fi
     
