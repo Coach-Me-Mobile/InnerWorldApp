@@ -24,8 +24,8 @@ func TestLoadConfig(t *testing.T) {
 		t.Errorf("Expected OpenRouter BaseURL to be 'https://openrouter.ai/api/v1', got '%s'", config.OpenRouter.BaseURL)
 	}
 
-	if config.Neptune.Port != 8182 {
-		t.Errorf("Expected Neptune Port to be 8182, got %d", config.Neptune.Port)
+	if config.S3.Bucket != "innerworld-dev-bucket" {
+		t.Errorf("Expected S3 Bucket to be 'innerworld-dev-bucket', got %s", config.S3.Bucket)
 	}
 }
 
@@ -34,13 +34,13 @@ func TestLoadConfigWithEnvironmentVariables(t *testing.T) {
 	_ = os.Setenv("ENVIRONMENT", "test")
 	_ = os.Setenv("DEBUG", "true")
 	_ = os.Setenv("OPENROUTER_API_KEY", "test-key")
-	_ = os.Setenv("NEPTUNE_PORT", "9999")
+	_ = os.Setenv("S3_BUCKET", "test-bucket")
 
 	defer func() {
 		_ = os.Unsetenv("ENVIRONMENT")
 		_ = os.Unsetenv("DEBUG")
 		_ = os.Unsetenv("OPENROUTER_API_KEY")
-		_ = os.Unsetenv("NEPTUNE_PORT")
+		_ = os.Unsetenv("S3_BUCKET")
 	}()
 
 	config, err := LoadConfig()
@@ -60,8 +60,8 @@ func TestLoadConfigWithEnvironmentVariables(t *testing.T) {
 		t.Errorf("Expected OpenRouter APIKey to be 'test-key', got '%s'", config.OpenRouter.APIKey)
 	}
 
-	if config.Neptune.Port != 9999 {
-		t.Errorf("Expected Neptune Port to be 9999, got %d", config.Neptune.Port)
+	if config.S3.Bucket != "test-bucket" {
+		t.Errorf("Expected S3 Bucket to be 'test-bucket', got %s", config.S3.Bucket)
 	}
 }
 
@@ -75,8 +75,9 @@ func TestValidateConfigProduction(t *testing.T) {
 		OpenAI: OpenAIConfig{
 			APIKey: "",
 		},
-		Neptune: NeptuneConfig{
-			Port: 8182,
+		S3: S3Config{
+			Bucket: "",
+			Region: "us-west-2",
 		},
 	}
 
@@ -96,8 +97,9 @@ func TestValidateConfigDevelopment(t *testing.T) {
 		OpenAI: OpenAIConfig{
 			APIKey: "",
 		},
-		Neptune: NeptuneConfig{
-			Port: 8182,
+		S3: S3Config{
+			Bucket: "dev-bucket",
+			Region: "us-west-2", 
 		},
 	}
 
@@ -107,17 +109,18 @@ func TestValidateConfigDevelopment(t *testing.T) {
 	}
 }
 
-func TestValidateConfigInvalidPort(t *testing.T) {
+func TestValidateConfigInvalidS3(t *testing.T) {
 	config := &Config{
 		Environment: "development",
-		Neptune: NeptuneConfig{
-			Port: -1, // Invalid port
+		S3: S3Config{
+			Bucket: "", // Invalid - empty bucket
+			Region: "", // Invalid - empty region
 		},
 	}
 
 	err := validateConfig(config)
 	if err == nil {
-		t.Error("Expected validation to fail for invalid port")
+		t.Error("Expected validation to fail for empty S3 bucket and region")
 	}
 }
 

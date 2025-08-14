@@ -60,12 +60,12 @@ echo ""
 
 # Check individual services
 echo "🔧 Service Health:"
-NEPTUNE_STATUS=$(echo "$RESPONSE" | jq -r '.services.neptune.status' 2>/dev/null || echo "unknown")
-NEPTUNE_TIME=$(echo "$RESPONSE" | jq -r '.services.neptune.responseTime' 2>/dev/null || echo "unknown")
+S3_STATUS=$(echo "$RESPONSE" | jq -r '.services.s3.status' 2>/dev/null || echo "unknown")
+S3_TIME=$(echo "$RESPONSE" | jq -r '.services.s3.responseTime' 2>/dev/null || echo "unknown")
 OPENROUTER_STATUS=$(echo "$RESPONSE" | jq -r '.services.openrouter.status' 2>/dev/null || echo "unknown")
 OPENAI_STATUS=$(echo "$RESPONSE" | jq -r '.services.openai.status' 2>/dev/null || echo "unknown")
 
-echo "   • Neptune (Mock): $NEPTUNE_STATUS ($NEPTUNE_TIME)"
+echo "   • S3 (Mock): $S3_STATUS ($S3_TIME)"
 echo "   • OpenRouter API: $OPENROUTER_STATUS (cost optimization)"
 echo "   • OpenAI API: $OPENAI_STATUS (cost optimization)"
 echo ""

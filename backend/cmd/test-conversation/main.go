@@ -45,16 +45,16 @@ func main() {
 		log.Println("OpenRouter API key not provided - will use mock responses")
 	}
 
-	// Note: We don't need OpenAI or Neptune for this basic conversation test
+	// Note: We don't need OpenAI or S3 for this basic conversation test
 	if cfg.OpenAI.APIKey != "" && cfg.OpenAI.APIKey != "your-openai-api-key-here" {
 		log.Println("OpenAI API key found (embeddings available)")
 	} else {
 		log.Println("OpenAI API key not provided - embeddings disabled")
 	}
 
-	// Mock Neptune client is available but not used in this test
-	_ = graph.NewMockNeptuneClient()
-	log.Println("Mock Neptune client available")
+	// Mock S3 client is available but not used in this test
+	_ = graph.NewMockS3Client()
+	log.Println("Mock S3 client available")
 
 	// Read JSON from stdin
 	var req ConversationRequest

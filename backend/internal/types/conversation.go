@@ -53,10 +53,10 @@ type LiveConversationItem struct {
 	MessageSequence int       `json:"message_sequence" dynamodbav:"message_sequence"`
 }
 
-// UserContextCacheItem represents cached Neptune context in DynamoDB
+// UserContextCacheItem represents cached S3 context in DynamoDB
 type UserContextCacheItem struct {
 	UserID         string                 `json:"user_id" dynamodbav:"user_id"`           // PK
-	ContextData    map[string]interface{} `json:"context_data" dynamodbav:"context_data"` // Neptune GraphRAG context
+	ContextData    map[string]interface{} `json:"context_data" dynamodbav:"context_data"` // S3 GraphRAG context
 	LastUpdated    time.Time              `json:"last_updated" dynamodbav:"last_updated"`
 	LoginSessionID string                 `json:"login_session_id" dynamodbav:"login_session_id"`
 	TTL            int64                  `json:"ttl" dynamodbav:"ttl"` // 1-hour TTL, refreshed on use

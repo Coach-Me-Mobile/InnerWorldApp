@@ -8,7 +8,7 @@ Complete serverless conversation AI pipeline for the InnerWorld AR app, implemen
 - ✅ Basic Lambda function structure (conversation handler + health check)
 - ✅ OpenRouter API client for LLM conversations
 - ✅ OpenAI API client for text embeddings  
-- ✅ Mock Neptune connection layer
+- ✅ Mock S3 connection layer
 - ✅ Local development environment
 
 **Phase 2 - Real-Time Conversation Pipeline:**
@@ -16,7 +16,7 @@ Complete serverless conversation AI pipeline for the InnerWorld AR app, implemen
 - ✅ **LangChain-Go Integration**: input_safety → persona_prompt → llm_generation → output_safety → live_storage
 - ✅ **Persona Loading System**: Configurable loader with default template (expandable for Phase 4+)
 - ✅ **DynamoDB Operations**: LiveConversations storage (24-hour TTL), UserContextCache with TTL
-- ✅ **Context Caching**: Login-time Neptune context retrieval for performance
+- ✅ **Context Caching**: Login-time S3 context retrieval for performance
 - ✅ **Session Processing**: Conversation element extraction and graph updates
 - ✅ **Error Handling**: Retry logic, circuit breakers, resilience patterns
 
@@ -50,7 +50,7 @@ backend/
 ├── internal/
 │   ├── config/                 # Configuration management
 │   ├── embeddings/             # OpenAI client
-│   ├── graph/                  # Neptune interface + mock
+│   ├── graph/                  # S3 interface + mock
 │   ├── llm/                    # OpenRouter client
 │   ├── personas/               # 🆕 Persona loading system
 │   ├── resilience/             # 🆕 Error handling & retry logic
@@ -67,8 +67,8 @@ backend/
 
 ### 1. Login Context Handler Lambda
 - **Trigger**: Cognito Post-Authentication
-- **Purpose**: Cache user's Neptune GraphRAG context at login
-- **Process**: Neptune context retrieval → DynamoDB cache storage
+- **Purpose**: Cache user's S3 GraphRAG context at login
+- **Process**: S3 context retrieval → DynamoDB cache storage
 - **Performance**: Heavy operation done once per login session
 
 ### 2. WebSocket Message Handler Lambda  
@@ -79,8 +79,8 @@ backend/
 
 ### 3. Session End Processor Lambda
 - **Triggers**: WebSocket disconnect or manual session end
-- **Purpose**: Convert conversation into Neptune graph nodes/edges  
-- **Process**: DynamoDB messages → element extraction → Neptune updates → context refresh
+- **Purpose**: Convert conversation into S3 graph nodes/edges  
+- **Process**: DynamoDB messages → element extraction → S3 updates → context refresh
 - **Cleanup**: Remove processed conversation data with TTL
 
 ### 4. LangChain-Go Conversation Processing
@@ -97,14 +97,14 @@ backend/
 
 ### 6. DynamoDB Storage (Mock)
 - **LiveConversations**: Message-per-item with session GSI, 24-hour TTL
-- **UserContextCache**: Cached Neptune context, 1-hour TTL
+- **UserContextCache**: Cached S3 context, 1-hour TTL
 - **Performance**: Fast context access during conversations
 - **Cleanup**: Automatic TTL-based data removal
 
 ### 7. Error Handling & Resilience
 - **Retry Logic**: Exponential backoff with configurable attempts
 - **Circuit Breakers**: Fail-fast for consistently failing services  
-- **Service-Specific**: Different retry logic for Neptune, DynamoDB, OpenRouter
+- **Service-Specific**: Different retry logic for S3, DynamoDB, OpenRouter
 - **Graceful Degradation**: Fallback responses when services fail
 
 ## Phase 2 API Examples
@@ -190,8 +190,8 @@ sequenceDiagram
     participant L as LangGraph Workflow
     participant D as DynamoDB
     participant O as OpenRouter
-    participant S as Session Processor
-    participant N as Neptune (Mock)
+    participant SP as Session Processor
+    participant S3 as S3 (Mock)
     
     U->>+W: Connect WebSocket
     U->>+W: Send Message (persona, content)
@@ -228,17 +228,17 @@ sequenceDiagram
 ### Infrastructure Dependencies (Nataly)
 - **WebSocket API Gateway** with Lambda integration
 - **DynamoDB tables**: `LiveConversations`, `UserContextCache`  
-- **Lambda layers**: OpenRouter, Neptune, LangGraph dependencies
-- **IAM roles**: Lambda access to Neptune, DynamoDB, Cognito
+- **Lambda layers**: OpenRouter, S3, LangGraph dependencies
+- **IAM roles**: Lambda access to S3, DynamoDB, Cognito
 
 ### Graph Database Dependencies (Hutch)
-- **Neptune GraphRAG schema**: Node types (Event, Feeling, Value, Goal, Habit, Person, Topic)
+- **S3 GraphRAG schema**: Node types (Event, Feeling, Value, Goal, Habit, Person, Topic)
 - **Edge relationships**: temporal, causal, about, supports, conflicts, felt_during
 - **Gremlin queries**: Context retrieval and graph update patterns
 
 ### Mock Implementations (Phase 2 Ready)
 - **Mock DynamoDB**: In-memory storage for development/testing
-- **Mock Neptune**: Basic context storage and graph operations
+- **Mock S3**: Basic context storage and graph operations
 - **Mock WebSocket**: Response logging instead of actual WebSocket calls
 - **Fallback responses**: When OpenRouter API unavailable
 
@@ -262,7 +262,7 @@ Tests individual components in isolation:
 ```
 Tests complete conversation workflow with mock services:
 - Setup and component initialization
-- Neptune context loading and DynamoDB caching  
+- S3 context loading and DynamoDB caching  
 - **Bidirectional safety checks** (input + output)
 - Persona context injection with system prompts
 - Message storage with 24-hour TTL verification
@@ -300,9 +300,9 @@ ls bin/
 # OpenRouter API (optional for development)
 OPENROUTER_API_KEY=your-key-here
 
-# Neptune (production) 
-NEPTUNE_ENDPOINT=your-neptune-cluster.region.neptune.amazonaws.com
-NEPTUNE_PORT=8182
+# S3 (production) 
+S3_BUCKET=your-s3-bucket-name
+S3_REGION=us-west-2
 
 # DynamoDB Tables
 LIVE_CONVERSATIONS_TABLE=LiveConversations-dev

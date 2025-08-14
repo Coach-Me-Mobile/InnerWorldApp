@@ -20,7 +20,7 @@ import (
 var (
 	cfg              *config.Config
 	dynamoDB         storage.DynamoDBClient
-	neptuneClient    graph.NeptuneClient
+	s3Client         graph.S3Client
 	openRouterClient *llm.OpenRouterClient
 )
 
@@ -38,9 +38,9 @@ func init() {
 	dynamoDB = storage.NewMockDynamoDBClient()
 	log.Println("Initialized mock DynamoDB client")
 
-	// Initialize Neptune client (mock for Phase 2)
-	neptuneClient = graph.NewMockNeptuneClient()
-	log.Println("Initialized mock Neptune client - GraphRAG disabled in Phase 2")
+	// Initialize S3 client (mock for Phase 2)
+	s3Client = graph.NewMockS3Client()
+	log.Println("Initialized mock S3 client - GraphRAG disabled in Phase 2")
 
 	// Initialize OpenRouter client for element extraction
 	if cfg.OpenRouter.APIKey != "" && cfg.OpenRouter.APIKey != "your-openrouter-api-key-here" {
@@ -88,16 +88,16 @@ func handleSessionEndProcessing(ctx context.Context, request types.SessionEndReq
 	result.ElementsExtracted = elements
 	log.Printf("Extracted %d elements from conversation", len(elements))
 
-	// Step 3: Update Neptune graph with extracted elements
-	nodesCreated, edgesCreated, err := updateNeptuneGraph(ctx, request.UserID, elements)
+	// Step 3: Update S3 graph with extracted elements
+	nodesCreated, edgesCreated, err := updateS3Graph(ctx, request.UserID, elements)
 	if err != nil {
-		result.Error = fmt.Sprintf("failed to update Neptune graph: %v", err)
+		result.Error = fmt.Sprintf("failed to update S3 graph: %v", err)
 		return result, err
 	}
 
 	result.GraphNodesCreated = nodesCreated
 	result.GraphEdgesCreated = edgesCreated
-	log.Printf("Created %d nodes and %d edges in Neptune", nodesCreated, edgesCreated)
+	log.Printf("Created %d nodes and %d edges in S3", nodesCreated, edgesCreated)
 
 	// Step 4: Refresh cached context with new graph data
 	if err := refreshUserContext(ctx, request.UserID); err != nil {
@@ -278,12 +278,12 @@ func generateMockElements(messages []types.LiveConversationItem) []types.Convers
 	return elements
 }
 
-// updateNeptuneGraph creates nodes and edges in the Neptune graph database
-func updateNeptuneGraph(ctx context.Context, userID string, elements []types.ConversationElement) (int, int, error) {
-	log.Printf("Updating Neptune graph for user %s with %d elements", userID, len(elements))
+// updateS3Graph creates nodes and edges in the S3 graph database
+func updateS3Graph(ctx context.Context, userID string, elements []types.ConversationElement) (int, int, error) {
+	log.Printf("Updating S3 graph for user %s with %d elements", userID, len(elements))
 
-	// Phase 2: Mock Neptune operations
-	// Phase 3+: Real Gremlin queries to create nodes and relationships
+	// Phase 2: Mock S3 operations
+	// Phase 3+: Real S3 object storage operations to create nodes and relationships
 
 	nodesCreated := 0
 	edgesCreated := 0
@@ -292,31 +292,31 @@ func updateNeptuneGraph(ctx context.Context, userID string, elements []types.Con
 		// Mock node creation
 		nodeID := fmt.Sprintf("%s_%s_%d", element.Type, userID, time.Now().Unix())
 
-		// Create node in Neptune (mock)
-		if err := neptuneClient.CreateNode(userID, element.Type, element.Content); err != nil {
+		// Create node in S3 (mock)
+		if err := s3Client.CreateNode(userID, element.Type, element.Content); err != nil {
 			log.Printf("Failed to create node %s: %v", nodeID, err)
 			continue
 		}
 		nodesCreated++
 
 		// Create temporal edge (mock)
-		if err := neptuneClient.CreateEdge(userID, nodeID, "temporal", element.Timestamp.Format(time.RFC3339)); err != nil {
+		if err := s3Client.CreateEdge(userID, nodeID, "temporal", element.Timestamp.Format(time.RFC3339)); err != nil {
 			log.Printf("Failed to create temporal edge for %s: %v", nodeID, err)
 		} else {
 			edgesCreated++
 		}
 	}
 
-	log.Printf("Neptune graph update completed: %d nodes, %d edges", nodesCreated, edgesCreated)
+	log.Printf("S3 graph update completed: %d nodes, %d edges", nodesCreated, edgesCreated)
 	return nodesCreated, edgesCreated, nil
 }
 
-// refreshUserContext updates the cached user context with new Neptune data
+// refreshUserContext updates the cached user context with new S3 data
 func refreshUserContext(ctx context.Context, userID string) error {
 	log.Printf("Refreshing context cache for user %s", userID)
 
-	// Retrieve updated context from Neptune
-	graphContext, err := neptuneClient.GetUserContext(ctx, userID)
+	// Retrieve updated context from S3
+	graphContext, err := s3Client.GetUserContext(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve updated context: %w", err)
 	}

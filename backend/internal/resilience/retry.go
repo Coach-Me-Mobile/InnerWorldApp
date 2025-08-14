@@ -113,8 +113,8 @@ func DefaultRetryableErrors(err error) bool {
 	return false
 }
 
-// NeptuneRetryableErrors checks for Neptune-specific retryable errors
-func NeptuneRetryableErrors(err error) bool {
+// S3RetryableErrors checks for S3-specific retryable errors
+func S3RetryableErrors(err error) bool {
 	if DefaultRetryableErrors(err) {
 		return true
 	}

@@ -27,25 +27,25 @@ func main() {
 
 	// Initialize mock clients
 	dynamoDB := storage.NewMockDynamoDBClient()
-	neptuneClient := graph.NewMockNeptuneClient()
+	s3Client := graph.NewMockS3Client()
 	llmClient := llm.NewOpenRouterClient("")
 	personaLoader := personas.NewPersonaLoader()
 	conversationChain := workflow.NewConversationChain(personaLoader, llmClient, dynamoDB)
 
 	fmt.Println("   ✅ Mock DynamoDB client initialized")
-	fmt.Println("   ✅ Mock Neptune client initialized")
+	fmt.Println("   ✅ Mock S3 client initialized")
 	fmt.Println("   ✅ OpenRouter client initialized (mock mode)")
 	fmt.Println("   ✅ Persona loader initialized")
 	fmt.Println("   ✅ LangChain conversation chain initialized")
 
-	// 2. WebSocket Connect - Load user context from Neptune
-	fmt.Println("\n🔌 2. WEBSOCKET CONNECT - Loading user context from Neptune...")
+	// 2. WebSocket Connect - Load user context from S3
+	fmt.Println("\n🔌 2. WEBSOCKET CONNECT - Loading user context from S3...")
 
 	userID := "test_user_" + uuid.New().String()[:8]
 	connectionID := "conn_" + uuid.New().String()[:8]
 
 	// Simulate Cognito login context caching (what login-context-handler does)
-	userContext, err := neptuneClient.GetUserContext(ctx, userID)
+	userContext, err := s3Client.GetUserContext(ctx, userID)
 	if err != nil {
 		log.Printf("Failed to get user context: %v", err)
 	}
@@ -72,7 +72,7 @@ func main() {
 	}
 
 	fmt.Printf("   ✅ WebSocket connected for user: %s (connection: %s)\n", userID, connectionID)
-	fmt.Printf("   ✅ Loaded user context from Neptune: %d context fields\n", len(contextData))
+	fmt.Printf("   ✅ Loaded user context from S3: %d context fields\n", len(contextData))
 	fmt.Printf("   ✅ Cached context in DynamoDB with 1-hour TTL\n")
 
 	// Show context details
@@ -183,7 +183,7 @@ func main() {
 
 	// In real implementation, this would trigger session-processor Lambda
 	fmt.Println("   ⚡ Session-processor would now:")
-	fmt.Println("      - Extract conversation elements for Neptune")
+	fmt.Println("      - Extract conversation elements for S3")
 	fmt.Println("      - Update user's graph context")
 	fmt.Println("      - Clean up expired conversation data")
 	fmt.Println("      - Refresh user context cache")
@@ -195,7 +195,7 @@ func main() {
 	fmt.Println("\n=== 🎉 END-TO-END TEST COMPLETE ===")
 	fmt.Println("\n✅ VERIFIED COMPONENTS:")
 	fmt.Println("   • Setup and initialization")
-	fmt.Println("   • Neptune context loading and caching")
+	fmt.Println("   • S3 context loading and caching")
 	fmt.Println("   • Bidirectional safety checks (input + output)")
 	fmt.Println("   • Persona context injection")
 	fmt.Println("   • LLM conversation processing")

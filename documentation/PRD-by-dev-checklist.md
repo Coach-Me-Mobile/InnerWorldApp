@@ -63,7 +63,7 @@
 [X] **Create serverless backend (AWS Lambda)**
 [X] Initialize Lambda functions for conversation handling.
 [X] Create health-check Lambda for monitoring.
-[X] Set up Neptune connection layer for Lambda functions.
+[X] ~~Set up Neptune connection layer for Lambda functions.~~
 
 [X] **Configure external API integrations**
 [X] Set up OpenRouter API client for LLM conversations (Claude, GPT, etc.).
@@ -99,12 +99,12 @@
 
 ### **Darren – Backend & AI Pipeline**
 
-[ ] **Implement real-time conversation pipeline with WebSocket + LangGraph**
-[ ] Create WebSocket Lambda functions: $connect, $disconnect, $default, sendmessage.
+[X] **Implement real-time conversation pipeline with WebSocket + LangGraph**
+[X] Create WebSocket Lambda functions: $connect, $disconnect, $default, sendmessage.
 [X] Build LangGraph workflow: safety_check → persona_prompt → llm_generation → live_storage.
-[ ] Implement login context caching: Neptune context retrieval on authentication and cache in session store.
+[X] Implement login context caching: ~~Neptune~~S3 context retrieval on authentication and cache in session store.
 [X] Create real-time message handling: retrieve cached context → LangGraph processing → WebSocket response.
-[ ] Build session end processing: DynamoDB → Neptune graph update → refresh cached context.
+[X] Build session end processing: DynamoDB → Neptune graph update → refresh cached context.
 [X] Call OpenRouter API (Claude/GPT models) through LangGraph generation node.
 [X] Add conversation state persistence and persona-specific prompt templates.
 

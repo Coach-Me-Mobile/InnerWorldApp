@@ -31,8 +31,8 @@ type ServiceHealth struct {
 
 // Global variables for reuse across invocations
 var (
-	cfg           *config.Config
-	neptuneClient graph.NeptuneClient
+	cfg      *config.Config
+	s3Client graph.S3Client
 )
 
 // init runs once when the Lambda function is initialized
@@ -45,14 +45,14 @@ func init() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Initialize Neptune client (mock for local development)
+	// Initialize S3 client (mock for local development)
 	if cfg.IsDevelopment() {
-		neptuneClient = graph.NewMockNeptuneClient()
-		log.Println("Initialized Mock Neptune client for development")
+		s3Client = graph.NewMockS3Client()
+		log.Println("Initialized Mock S3 client for development")
 	} else {
-		// TODO: Initialize real Neptune client when infrastructure is ready
-		neptuneClient = graph.NewMockNeptuneClient()
-		log.Println("Using Mock Neptune client (production Neptune not yet configured)")
+		// TODO: Initialize real S3 client when infrastructure is ready
+		s3Client = graph.NewMockS3Client()
+		log.Println("Using Mock S3 client (production S3 not yet configured)")
 	}
 }
 
@@ -65,9 +65,9 @@ func handleHealthCheck(ctx context.Context, request events.APIGatewayProxyReques
 	// Check all services
 	services := make(map[string]ServiceHealth)
 
-	// Check Neptune connectivity
-	neptuneHealth := checkNeptuneHealth(ctx)
-	services["neptune"] = neptuneHealth
+	// Check S3 connectivity
+	s3Health := checkS3Health(ctx)
+	services["s3"] = s3Health
 
 	// Check OpenRouter (skip in health check to avoid API costs)
 	services["openrouter"] = ServiceHealth{
@@ -145,19 +145,19 @@ func handleHealthCheck(ctx context.Context, request events.APIGatewayProxyReques
 	}, nil
 }
 
-// checkNeptuneHealth verifies Neptune database connectivity
-func checkNeptuneHealth(ctx context.Context) ServiceHealth {
+// checkS3Health verifies S3 storage connectivity
+func checkS3Health(ctx context.Context) ServiceHealth {
 	start := time.Now()
 
 	// Create context with timeout
-	neptuneCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	s3Ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	err := neptuneClient.HealthCheck(neptuneCtx)
+	err := s3Client.HealthCheck(s3Ctx)
 	responseTime := time.Since(start)
 
 	if err != nil {
-		log.Printf("Neptune health check failed: %v", err)
+		log.Printf("S3 health check failed: %v", err)
 		return ServiceHealth{
 			Status:       "unhealthy",
 			ResponseTime: responseTime.String(),

@@ -24,7 +24,7 @@ fi
 echo ""
 echo "🎯 This test demonstrates:"
 echo "  1. ✅ Setup works (all components initialized)"
-echo "  2. ✅ WebSocket connect loads mock Neptune data"
+echo "  2. ✅ WebSocket connect loads mock S3 data"
 echo "  3. ✅ Bidirectional safety checks on all messages"
 echo "  4. ✅ System prompt context injection with persona"
 echo "  5. ✅ DynamoDB storage with 24-hour TTL verification" 

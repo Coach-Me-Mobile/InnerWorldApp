@@ -16,9 +16,9 @@ import (
 
 // Global variables for connection reuse across invocations
 var (
-	cfg           *config.Config
-	dynamoDB      storage.DynamoDBClient
-	neptuneClient graph.NeptuneClient
+	cfg      *config.Config
+	dynamoDB storage.DynamoDBClient
+	s3Client graph.S3Client
 )
 
 // init runs once when Lambda container starts
@@ -35,9 +35,9 @@ func init() {
 	dynamoDB = storage.NewMockDynamoDBClient()
 	log.Println("Initialized mock DynamoDB client")
 
-	// Initialize Neptune client (mock for Phase 2)
-	neptuneClient = graph.NewMockNeptuneClient()
-	log.Println("Initialized mock Neptune client - GraphRAG disabled in Phase 2")
+	// Initialize S3 client (mock for Phase 2)
+	s3Client = graph.NewMockS3Client()
+	log.Println("Initialized mock S3 client - GraphRAG disabled in Phase 2")
 }
 
 // CognitoTriggerEvent represents the Cognito Post-Authentication trigger event
@@ -66,10 +66,10 @@ func handleCognitoTrigger(ctx context.Context, event CognitoTriggerEvent) (Cogni
 
 	log.Printf("Caching context for user: %s", userID)
 
-	// Retrieve user's full GraphRAG context from Neptune
+	// Retrieve user's full GraphRAG context from S3
 	userContext, err := retrieveUserContext(ctx, userID)
 	if err != nil {
-		log.Printf("Failed to retrieve Neptune context for user %s: %v", userID, err)
+		log.Printf("Failed to retrieve S3 context for user %s: %v", userID, err)
 		// Use mock context for Phase 2 testing
 		userContext = storage.GenerateMockUserContext(userID)
 	}
@@ -96,10 +96,10 @@ func handleCognitoTrigger(ctx context.Context, event CognitoTriggerEvent) (Cogni
 func handleDirectInvocation(ctx context.Context, req types.LoginContextRequest) (*types.UserContextCacheItem, error) {
 	log.Printf("Processing direct login context request for user: %s", req.UserID)
 
-	// Retrieve user's full GraphRAG context from Neptune
+	// Retrieve user's full GraphRAG context from S3
 	userContext, err := retrieveUserContext(ctx, req.UserID)
 	if err != nil {
-		log.Printf("Failed to retrieve Neptune context for user %s: %v", req.UserID, err)
+		log.Printf("Failed to retrieve S3 context for user %s: %v", req.UserID, err)
 		// Use mock context for Phase 2 testing
 		userContext = storage.GenerateMockUserContext(req.UserID)
 	}
@@ -120,27 +120,26 @@ func handleDirectInvocation(ctx context.Context, req types.LoginContextRequest) 
 	return cacheItem, nil
 }
 
-// retrieveUserContext gets the user's full GraphRAG context from Neptune
+// retrieveUserContext gets the user's full GraphRAG context from S3
 func retrieveUserContext(ctx context.Context, userID string) (map[string]interface{}, error) {
-	log.Printf("Retrieving Neptune context for user: %s", userID)
+	log.Printf("Retrieving S3 context for user: %s", userID)
 
-	// Phase 2: Use mock Neptune client
-	// Phase 3+: Replace with real Gremlin queries
+	// Phase 2: Use mock S3 client
+	// Phase 3+: Replace with real S3 operations
 
 	// Mock query: Get user's conversation history and themes
-	// In production, this would be a complex Gremlin traversal like:
-	// g.V().has('user_id', userID).outE('felt_during', 'about', 'supports').inV().limit(50)
+	// In production, this would be S3 object queries for user data
 
-	graphContext, err := neptuneClient.GetUserContext(ctx, userID)
+	graphContext, err := s3Client.GetUserContext(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("Neptune query failed: %w", err)
+		return nil, fmt.Errorf("S3 query failed: %w", err)
 	}
 
-	// Convert Neptune GraphContext to context map for caching
+	// Convert S3 GraphContext to context map for caching
 	userContext := map[string]interface{}{
 		"user_id":        userID,
 		"retrieved_at":   time.Now().Format(time.RFC3339),
-		"context_source": "neptune_mock",
+		"context_source": "s3_mock",
 		"summary":        graphContext.Summary,
 		"last_updated":   graphContext.LastUpdated.Format(time.RFC3339),
 	}

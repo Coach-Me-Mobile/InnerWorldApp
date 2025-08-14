@@ -92,7 +92,7 @@ func (m *MockDynamoDBClient) DeleteSessionMessages(ctx context.Context, sessionI
 	return nil
 }
 
-// CacheUserContext stores user's Neptune context for fast access
+// CacheUserContext stores user's S3 context for fast access
 func (m *MockDynamoDBClient) CacheUserContext(ctx context.Context, item *types.UserContextCacheItem) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -128,7 +128,7 @@ func (m *MockDynamoDBClient) GetUserContext(ctx context.Context, userID string) 
 	return &item, nil
 }
 
-// RefreshUserContext updates cached context with new Neptune data
+// RefreshUserContext updates cached context with new S3 data
 func (m *MockDynamoDBClient) RefreshUserContext(ctx context.Context, userID string, newContext map[string]interface{}) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -158,7 +158,7 @@ func CreateConversationID(sessionID string) string {
 	return fmt.Sprintf("%s_%s", sessionID, time.Now().Format("2006-01-02"))
 }
 
-// Helper function to generate mock user context (for testing when Neptune is not available)
+// Helper function to generate mock user context (for testing when S3 is not available)
 func GenerateMockUserContext(userID string) map[string]interface{} {
 	return map[string]interface{}{
 		"user_id":       userID,
@@ -169,6 +169,6 @@ func GenerateMockUserContext(userID string) map[string]interface{} {
 			"last_persona":    "comfort",
 			"frequent_topics": []string{"presentations", "social situations"},
 		},
-		"mock_note": "This is mock context data until Neptune GraphRAG is implemented",
+		"mock_note": "This is mock context data until S3 GraphRAG is implemented",
 	}
 }
