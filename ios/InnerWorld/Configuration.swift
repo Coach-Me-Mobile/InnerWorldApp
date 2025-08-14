@@ -1,24 +1,46 @@
 import Foundation
+import os.log
 
 /// Configuration manager for API endpoints and environment-specific settings
 struct Configuration {
+    
+    // MARK: - Logging
+    
+    /// Centralized logger for API operations
+    static let logger = Logger(subsystem: "com.innerworld.app", category: "api")
+    
+    // MARK: - Rate Limiting
+    
+    /// Rate limiter for API requests to prevent abuse
+    private static let rateLimitSemaphore = DispatchSemaphore(value: 10) // Max 10 concurrent requests
+    private static var lastRequestTime: Date = Date.distantPast
+    private static let minRequestInterval: TimeInterval = 0.1 // Throttle: min 100ms between requests
     
     // MARK: - API Endpoints
     
     /// Backend API base URL - configurable via environment variables or Info.plist
     static var backendBaseURL: String {
+        let baseURL: String
+        
         // First check environment variables
         if let envURL = ProcessInfo.processInfo.environment["BACKEND_BASE_URL"] {
-            return envURL
+            baseURL = envURL
         }
-        
         // Fallback to Info.plist configuration
-        if let plistURL = Bundle.main.object(forInfoDictionaryKey: "BackendBaseURL") as? String {
-            return plistURL
+        else if let plistURL = Bundle.main.object(forInfoDictionaryKey: "BackendBaseURL") as? String {
+            baseURL = plistURL
+        }
+        // Development default
+        else {
+            baseURL = "http://localhost:3000"
         }
         
-        // Development default
-        return "http://localhost:3000"
+        // Add API versioning - append /v1 if not already present
+        if !baseURL.contains("/v1") && !baseURL.contains("/v2") {
+            return baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/v1"
+        }
+        
+        return baseURL
     }
     
     /// WebSocket endpoint for real-time communication
@@ -79,6 +101,19 @@ struct Configuration {
         #else
         return .production
         #endif
+    }
+    
+    /// Current API version for backward compatibility
+    static var apiVersion: String {
+        if let envVersion = ProcessInfo.processInfo.environment["API_VERSION"] {
+            return "v" + envVersion
+        }
+        
+        if let plistVersion = Bundle.main.object(forInfoDictionaryKey: "ApiVersion") as? String {
+            return "v" + plistVersion
+        }
+        
+        return "v1" // Default API version
     }
     
     /// Is debugging enabled
@@ -181,7 +216,62 @@ enum ConfigurationError: LocalizedError {
         case .missingValue(let key):
             return "Missing required configuration value: \(key)"
         case .invalidValue(let message):
-            return "Invalid configuration value: \(message)"
+                    return "Invalid configuration value: \(message)"
+    }
+}
+
+// MARK: - API Request Utilities
+
+extension Configuration {
+    
+    /// Rate limit API requests to prevent abuse and control costs
+    static func rateLimit<T>(_ operation: @escaping () async throws -> T) async throws -> T {
+        // Acquire semaphore to limit concurrent requests
+        rateLimitSemaphore.wait()
+        defer { rateLimitSemaphore.signal() }
+        
+        // Throttle requests to prevent rapid fire
+        let now = Date()
+        let timeSinceLastRequest = now.timeIntervalSince(lastRequestTime)
+        if timeSinceLastRequest < minRequestInterval {
+            let delay = minRequestInterval - timeSinceLastRequest
+            try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
         }
+        lastRequestTime = Date()
+        
+        logger.log(level: .info, "API request rate limited and throttled")
+        
+        return try await operation()
+    }
+    
+    /// Debounce API calls to reduce unnecessary requests
+    static func debounce<T>(delay: TimeInterval = 0.5, operation: @escaping () async throws -> T) async throws -> T {
+        try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+        logger.log(level: .debug, "API request debounced for \(delay) seconds")
+        return try await operation()
+    }
+    
+    /// Log API requests for debugging and monitoring
+    static func logAPIRequest(url: String, method: String, statusCode: Int? = nil) {
+        if statusCode != nil {
+            logger.log(level: .info, "API Response: \(method) \(url) -> \(statusCode!)")
+        } else {
+            logger.log(level: .info, "API Request: \(method) \(url)")
+        }
+    }
+    
+    /// Build versioned API URL with proper version path
+    static func buildAPIURL(endpoint: String, version: String? = nil) -> String {
+        let baseURL = backendBaseURL
+        let apiVersion = version ?? self.apiVersion
+        
+        // Ensure endpoint starts with /
+        let cleanEndpoint = endpoint.hasPrefix("/") ? endpoint : "/" + endpoint
+        
+        // Build versioned URL: baseURL/v1/endpoint
+        let versionedURL = "\(baseURL)/\(apiVersion)\(cleanEndpoint)"
+        
+        logger.log(level: .debug, "Built versioned API URL: \(versionedURL)")
+        return versionedURL
     }
 }
