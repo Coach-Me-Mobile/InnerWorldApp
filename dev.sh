@@ -16,7 +16,8 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 # Cleanup function for signal handling
 cleanup() {
-    print_status "Cleaning up development environment..."
+    echo ""
+    print_status "Shutting down development environment..."
     
     # Stop docker containers
     if docker-compose -f backend/docker-compose.yml ps -q | grep -q .; then
@@ -25,7 +26,7 @@ cleanup() {
     fi
     
     # Stop iOS simulator if running
-    if check_ios_tools; then
+    if command -v xcrun >/dev/null 2>&1; then
         local running_devices=$(xcrun simctl list devices booted | grep "iPhone" | wc -l)
         if [ "$running_devices" -gt 0 ]; then
             print_status "Shutting down iOS simulators..."
@@ -33,7 +34,7 @@ cleanup() {
         fi
     fi
     
-    print_success "Cleanup completed"
+    print_success "Development environment stopped"
     exit 0
 }
 
@@ -45,12 +46,12 @@ load_env() {
     if [ ! -f ".env" ]; then
         print_warning "No .env found, creating from template..."
         cp .env.example .env
-        print_status "Edit .env to add API keys (optional)"
+        print_status "Edit .env to add API keys (optional - using mocks for now)"
     fi
     export $(cat .env | grep -v '#' | grep -v '^$' | xargs)
 }
 
-# Check prerequisites
+# Check prerequisites  
 check_prerequisites() {
     # Check Docker
     if ! docker info >/dev/null 2>&1; then
@@ -58,38 +59,19 @@ check_prerequisites() {
         exit 1
     fi
     
-    # Check Go (required for building Lambda functions)
+    # Check Go (optional for building Lambda functions)
     if ! command -v go >/dev/null 2>&1; then
-        print_error "Go not found. Please install Go to build Lambda functions."
-        print_status "Install options:"
-        print_status "  • macOS: brew install go"
-        print_status "  • Download: https://golang.org/dl/"
-        print_status ""
-        print_status "Or continue without building (LocalStack will still work):"
-        read -p "Continue without Go? (y/n): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
-        fi
+        print_warning "Go not found - Lambda functions won't be built locally"
+        print_status "Install Go: brew install go (optional)"
         return 1
     fi
     
-    print_success "Prerequisites check passed"
     return 0
-}
-
-# Check if iOS development tools are available
-check_ios_tools() {
-    if command -v xcrun >/dev/null 2>&1; then
-        return 0
-    else
-        return 1
-    fi
 }
 
 # Start iOS simulator and app
 start_ios() {
-    if ! check_ios_tools; then
+    if ! command -v xcrun >/dev/null 2>&1; then
         print_warning "Xcode tools not available - skipping iOS simulator"
         return 1
     fi
@@ -100,7 +82,7 @@ start_ios() {
     local device_id=$(xcrun simctl list devices available | grep "iPhone" | head -1 | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/')
     
     if [ -z "$device_id" ]; then
-        print_error "No iPhone simulators available"
+        print_warning "No iPhone simulators available"
         return 1
     fi
     
@@ -115,16 +97,15 @@ start_ios() {
     
     # Build and install the app
     print_status "Building and installing InnerWorld app..."
-    print_status "(This may take several minutes on first run - downloading dependencies...)"
     cd ios
     
     # Clean previous builds for reliability
     print_status "Cleaning previous builds..."
     xcodebuild -project InnerWorld.xcodeproj -scheme InnerWorld -destination "id=$device_id" clean >/dev/null 2>&1 || true
     
-    # Build with more verbose output for debugging
+    # Build with less verbose output for cleaner logs
     print_status "Compiling iOS app..."
-    if xcodebuild -project InnerWorld.xcodeproj -scheme InnerWorld -destination "id=$device_id" -configuration Debug -derivedDataPath build -allowProvisioningUpdates; then
+    if xcodebuild -project InnerWorld.xcodeproj -scheme InnerWorld -destination "id=$device_id" -configuration Debug -derivedDataPath build -allowProvisioningUpdates >/dev/null 2>&1; then
         print_success "iOS build completed successfully"
         
         # Find the built app
@@ -134,92 +115,75 @@ start_ios() {
             xcrun simctl install "$device_id" "$app_path"
             print_success "InnerWorld app installed on simulator"
             
-            # Wait for installation to complete
-            sleep 2
-            
             # Launch the app
             print_status "Launching InnerWorld app..."
-            if xcrun simctl launch "$device_id" com.thoughtmanifold.InnerWorld; then
+            if xcrun simctl launch "$device_id" com.thoughtmanifold.InnerWorld >/dev/null 2>&1; then
                 print_success "InnerWorld app launched successfully"
+                cd ..
+                return 0
             else
-                print_warning "App installed but launch failed - you can launch manually from simulator"
+                print_warning "App installed but launch failed"
             fi
         else
             print_warning "Build succeeded but app not found at expected location"
         fi
     else
-        print_warning "Failed to build iOS app - you can build manually in Xcode"
-        print_status "Try running: cd ios && xcodebuild -project InnerWorld.xcodeproj -scheme InnerWorld"
+        print_warning "Failed to build iOS app"
     fi
     cd ..
-    
-    return 0
+    return 1
 }
 
-# Check if services are running
-is_running() {
-    docker-compose -f backend/docker-compose.yml ps -q | grep -q . 2>/dev/null
-}
-
-# Start development environment
-start_dev() {
-    print_status "Starting InnerWorld development environment..."
+# Main development environment function
+main() {
+    print_status "🚀 Starting InnerWorld Development Environment"
+    echo ""
     
+    # Load environment
     load_env
     
     # Check prerequisites
     if check_prerequisites; then
         GO_AVAILABLE=true
+        print_success "Go found - Lambda functions will be built"
     else
         GO_AVAILABLE=false
-        print_warning "Continuing without Go - Lambda functions won't be built locally"
     fi
     
     # Check for --with-ios flag
-    if [ "$1" = "--with-ios" ]; then
-        START_IOS=true
-    else
-        START_IOS=false
-    fi
+    START_IOS=false
+    for arg in "$@"; do
+        if [ "$arg" = "--with-ios" ]; then
+            START_IOS=true
+            break
+        fi
+    done
     
-    # Start LocalStack (only service we need)
-    print_status "Starting LocalStack..."
-    cd backend && docker-compose up -d && cd ..
+    # Start LocalStack
+    print_status "Starting LocalStack (AWS services)..."
+    cd backend
+    docker-compose up -d
+    cd ..
     
-    # Wait for LocalStack
-    print_status "Waiting for LocalStack..."
+    # Wait for LocalStack to be ready
+    print_status "Waiting for LocalStack to be ready..."
     for i in {1..30}; do
-        # Check if container is healthy (more reliable than HTTP check)
         if docker inspect innerworld-localstack --format='{{.State.Health.Status}}' 2>/dev/null | grep -q "healthy"; then
-            print_success "LocalStack container is healthy"
-            
-            # Try HTTP health check as secondary verification
-            if curl -f http://localhost:4566/_localstack/health >/dev/null 2>&1; then
-                print_success "LocalStack HTTP endpoint is ready"
-            else
-                print_warning "LocalStack container healthy but HTTP endpoint not accessible from host"
-                print_status "This may be a Docker networking issue but LocalStack should work"
-            fi
+            print_success "LocalStack is ready"
             break
         fi
         if [ $i -eq 30 ]; then
-            print_error "LocalStack container failed to become healthy"
-            print_status "Checking container status..."
-            docker-compose -f backend/docker-compose.yml ps
-            print_status "Checking LocalStack logs..."
-            docker logs innerworld-localstack --tail 20
+            print_error "LocalStack failed to start"
             exit 1
         fi
-        printf "."
         sleep 2
     done
     
-    # Build backend functions (if Go is available)
+    # Build backend functions if Go is available
     if [ "$GO_AVAILABLE" = true ]; then
-        print_status "Building backend functions..."
-        cd backend && make build && cd ..
-    else
-        print_warning "Skipping backend build (Go not available)"
+        print_status "Building Lambda functions..."
+        cd backend && make build >/dev/null 2>&1 && cd ..
+        print_success "Lambda functions built"
     fi
     
     # Start iOS if requested
@@ -233,136 +197,30 @@ start_dev() {
         IOS_RUNNING=false
     fi
     
-    print_success "Development environment ready!"
+    # Show running services
     echo ""
-    echo "🌐 Services:"
+    print_success "🌟 Development environment is ready!"
+    echo ""
+    echo "🌐 Services running:"
     if [ "$GO_AVAILABLE" = true ]; then
-        echo "   • Backend API: http://localhost:3000 (use 'make test-sam-api' in backend/)"
+        echo "   • Backend API: http://localhost:3000"
         echo "   • Health Check: http://localhost:3000/health"  
-    else
-        echo "   • Backend API: Not available (Go not installed)"
-        echo "   • Health Check: Not available (Go not installed)"
     fi
     echo "   • LocalStack: http://localhost:4566"
     if [ "$IOS_RUNNING" = true ]; then
         echo "   • iOS App: Running in Simulator"
-    elif [ "$START_IOS" = true ]; then
-        echo "   • iOS App: Failed to start"
-    else
-        echo "   • iOS App: Not started (use --with-ios flag)"
     fi
     echo ""
-    echo "🧪 Testing:"
-    echo "   • ./dev.sh test"
-    if [ "$GO_AVAILABLE" != true ]; then
-        echo ""
-        echo "💡 To enable Lambda functions:"
-        echo "   • Install Go: brew install go"
-        echo "   • Restart: ./dev.sh restart"
-    fi
-    if [ "$IOS_RUNNING" != true ] && check_ios_tools; then
-        echo ""
-        echo "📱 To start with iOS:"
-        echo "   • ./dev.sh restart --with-ios"
-    fi
+    print_status "Press Ctrl+C to stop all services"
     echo ""
-    echo "🛑 Stop:"
-    echo "   • Press Ctrl+C to stop all services"
+    
+    # Follow logs from LocalStack and show a continuous stream
+    print_status "📋 Streaming logs (press Ctrl+C to stop)..."
     echo ""
-    print_status "Development environment is running. Press Ctrl+C to stop all services..."
     
-    # Keep the script running and wait for signals
-    while true; do
-        sleep 1
-    done
+    # Stream logs from docker containers
+    docker-compose -f backend/docker-compose.yml logs -f
 }
 
-# Stop development environment  
-stop_dev() {
-    print_status "Stopping InnerWorld development environment..."
-    
-    # Stop docker containers
-    if docker-compose -f backend/docker-compose.yml ps -q | grep -q .; then
-        print_status "Stopping Docker containers..."
-        docker-compose -f backend/docker-compose.yml down
-    else
-        print_status "No Docker containers running"
-    fi
-    
-    # Stop iOS simulator if running
-    if check_ios_tools; then
-        local running_devices=$(xcrun simctl list devices booted | grep "iPhone" | wc -l)
-        if [ "$running_devices" -gt 0 ]; then
-            print_status "Shutting down iOS simulators..."
-            xcrun simctl shutdown booted >/dev/null 2>&1 || true
-        fi
-    fi
-    
-    print_success "Development environment stopped"
-}
-
-# Test services
-test_dev() {
-    print_status "Testing development services..."
-    
-    # Test LocalStack (try container health as fallback)
-    if curl -f http://localhost:4566/_localstack/health >/dev/null 2>&1; then
-        print_success "LocalStack HTTP: OK"
-    elif docker inspect innerworld-localstack --format='{{.State.Health.Status}}' 2>/dev/null | grep -q "healthy"; then
-        print_success "LocalStack Container: Healthy (HTTP endpoint not accessible)"
-    else
-        print_error "LocalStack: FAILED"
-    fi
-    
-    # Test backend functions (if Go is available)
-    if command -v go >/dev/null 2>&1; then
-        cd backend
-        if [ -f "bin/health-check" ]; then
-            print_status "Testing health check..."
-            make test-health
-            print_status "Testing conversation handler..."
-            make test-conversation
-        else
-            print_warning "Backend not built - run './dev.sh start' first"
-        fi
-        cd ..
-    else
-        print_warning "Go not available - skipping backend function tests"
-    fi
-}
-
-# Main script logic
-case "${1:-}" in
-    "start")
-        start_dev "$2"
-        ;;
-    "stop") 
-        stop_dev
-        ;;
-    "restart")
-        stop_dev
-        start_dev "$2"
-        ;;
-    "test")
-        test_dev
-        ;;
-    "status")
-        if is_running; then
-            print_success "Development environment is running"
-            docker-compose -f backend/docker-compose.yml ps
-        else
-            print_warning "Development environment is stopped"
-        fi
-        ;;
-    *)
-        if is_running; then
-            print_status "Development environment is running"
-            echo "Usage: $0 {stop|restart|test|status}"
-            echo "       $0 restart --with-ios"
-        else
-            print_status "Development environment is stopped"  
-            echo "Usage: $0 {start|test|status}"
-            echo "       $0 start --with-ios"
-        fi
-        ;;
-esac
+# Run the main function with all arguments
+main "$@"
