@@ -83,13 +83,13 @@ output "cognito_urls" {
 output "s3" {
   description = "S3 buckets and CloudFront distribution information"
   value = {
-    app_assets_bucket_name           = module.s3.app_assets_bucket_name
-    app_assets_bucket_arn            = module.s3.app_assets_bucket_arn
-    testflight_builds_bucket_name    = module.s3.testflight_builds_bucket_name
-    testflight_builds_bucket_arn     = module.s3.testflight_builds_bucket_arn
-    cloudfront_distribution_id       = module.s3.cloudfront_distribution_id
-    cloudfront_domain_name           = module.s3.cloudfront_domain_name
-    s3_access_policy_arn             = module.s3.s3_access_policy_arn
+    app_assets_bucket_name        = module.s3.app_assets_bucket_name
+    app_assets_bucket_arn         = module.s3.app_assets_bucket_arn
+    testflight_builds_bucket_name = module.s3.testflight_builds_bucket_name
+    testflight_builds_bucket_arn  = module.s3.testflight_builds_bucket_arn
+    cloudfront_distribution_id    = module.s3.cloudfront_distribution_id
+    cloudfront_domain_name        = module.s3.cloudfront_domain_name
+    s3_access_policy_arn          = module.s3.s3_access_policy_arn
   }
   sensitive = false
 }
@@ -101,11 +101,11 @@ output "s3" {
 output "secrets" {
   description = "AWS Secrets Manager secret ARNs and names"
   value = {
-    openai_api_key_arn           = module.secrets.openai_api_key_arn
-    neptune_config_arn           = module.secrets.neptune_config_arn
-    apple_signin_key_arn         = module.secrets.apple_signin_key_arn
-    app_store_connect_key_arn    = module.secrets.app_store_connect_key_arn
-    jwt_secret_arn               = module.secrets.jwt_secret_arn
+    openai_api_key_arn        = module.secrets.openai_api_key_arn
+    neptune_config_arn        = module.secrets.neptune_config_arn
+    apple_signin_key_arn      = module.secrets.apple_signin_key_arn
+    app_store_connect_key_arn = module.secrets.app_store_connect_key_arn
+    jwt_secret_arn            = module.secrets.jwt_secret_arn
   }
   sensitive = false
 }
@@ -142,13 +142,13 @@ output "codepipeline" {
 output "ios_pipeline" {
   description = "iOS CI/CD pipeline and build infrastructure for TestFlight"
   value = var.enable_ios_pipeline ? {
-    pipeline_name              = module.ios_pipeline[0].pipeline_name
-    pipeline_arn               = module.ios_pipeline[0].pipeline_arn
-    ios_build_project_name     = module.ios_pipeline[0].ios_build_project_name
-    ios_test_project_name      = module.ios_pipeline[0].ios_test_project_name
+    pipeline_name                  = module.ios_pipeline[0].pipeline_name
+    pipeline_arn                   = module.ios_pipeline[0].pipeline_arn
+    ios_build_project_name         = module.ios_pipeline[0].ios_build_project_name
+    ios_test_project_name          = module.ios_pipeline[0].ios_test_project_name
     testflight_deploy_project_name = module.ios_pipeline[0].testflight_deploy_project_name
-    artifacts_bucket_name      = module.ios_pipeline[0].artifacts_bucket_name
-    requires_manual_approval   = var.environment == "prod" ? true : false
+    artifacts_bucket_name          = module.ios_pipeline[0].artifacts_bucket_name
+    requires_manual_approval       = var.environment == "prod" ? true : false
   } : null
   sensitive = false
 }

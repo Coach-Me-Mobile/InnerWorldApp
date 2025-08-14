@@ -129,10 +129,10 @@ module "s3" {
   environment = var.environment
 
   # S3 configuration
-  enable_cloudfront                 = var.environment == "prod" ? true : false
-  cloudfront_price_class            = var.environment == "prod" ? "PriceClass_100" : "PriceClass_100"
-  app_assets_lifecycle_enabled      = true
-  testflight_builds_retention_days  = var.environment == "prod" ? 90 : 30
+  enable_cloudfront                = var.environment == "prod" ? true : false
+  cloudfront_price_class           = var.environment == "prod" ? "PriceClass_100" : "PriceClass_100"
+  app_assets_lifecycle_enabled     = true
+  testflight_builds_retention_days = var.environment == "prod" ? 90 : 30
 
   tags = local.common_tags
 }
@@ -185,8 +185,8 @@ module "ios_pipeline" {
   testflight_builds_bucket_arn  = module.s3.testflight_builds_bucket_arn
 
   # Apple secrets configuration
-  apple_developer_secrets_arn    = module.secrets.apple_signin_key_arn
-  app_store_connect_secrets_arn  = module.secrets.app_store_connect_key_arn
+  apple_developer_secrets_arn   = module.secrets.apple_signin_key_arn
+  app_store_connect_secrets_arn = module.secrets.app_store_connect_key_arn
 
   # Pipeline configuration
   require_manual_approval = var.environment == "prod" ? true : false

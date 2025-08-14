@@ -13,8 +13,8 @@ resource "aws_s3_bucket" "artifacts" {
   bucket = "${var.name_prefix}-ios-pipeline-artifacts"
 
   tags = merge(var.tags, {
-    Name = "${var.name_prefix}-ios-pipeline-artifacts"
-    Type = "S3Bucket"
+    Name    = "${var.name_prefix}-ios-pipeline-artifacts"
+    Type    = "S3Bucket"
     Purpose = "iOSPipelineArtifacts"
   })
 }
@@ -230,8 +230,8 @@ resource "aws_codebuild_project" "ios_build" {
   }
 
   environment {
-    compute_type                = "BUILD_GENERAL1_LARGE"  # Increased for iOS builds
-    image                       = "aws/codebuild/standard:7.0"  # macOS support
+    compute_type                = "BUILD_GENERAL1_LARGE"       # Increased for iOS builds
+    image                       = "aws/codebuild/standard:7.0" # macOS support
     type                        = "LINUX_CONTAINER"
     image_pull_credentials_type = "CODEBUILD"
     privileged_mode             = false

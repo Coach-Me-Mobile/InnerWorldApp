@@ -13,8 +13,8 @@ resource "aws_s3_bucket" "app_assets" {
   bucket = "${var.name_prefix}-app-assets"
 
   tags = merge(var.tags, {
-    Name = "${var.name_prefix}-app-assets"
-    Type = "S3Bucket"
+    Name    = "${var.name_prefix}-app-assets"
+    Type    = "S3Bucket"
     Purpose = "AppAssets"
   })
 }
@@ -83,8 +83,8 @@ resource "aws_s3_bucket" "testflight_builds" {
   bucket = "${var.name_prefix}-testflight-builds"
 
   tags = merge(var.tags, {
-    Name = "${var.name_prefix}-testflight-builds"
-    Type = "S3Bucket"
+    Name    = "${var.name_prefix}-testflight-builds"
+    Type    = "S3Bucket"
     Purpose = "TestFlightBuilds"
   })
 }
@@ -200,8 +200,8 @@ resource "aws_cloudfront_distribution" "app_assets" {
     }
 
     min_ttl                = 0
-    default_ttl            = 86400  # 1 day
-    max_ttl                = 31536000  # 1 year
+    default_ttl            = 86400    # 1 day
+    max_ttl                = 31536000 # 1 year
     compress               = true
     viewer_protocol_policy = "redirect-to-https"
   }
@@ -233,8 +233,8 @@ resource "aws_s3_bucket_policy" "app_assets_cloudfront" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowCloudFrontServicePrincipal"
-        Effect    = "Allow"
+        Sid    = "AllowCloudFrontServicePrincipal"
+        Effect = "Allow"
         Principal = {
           Service = "cloudfront.amazonaws.com"
         }

@@ -86,9 +86,9 @@ output "s3_access_policy_name" {
 output "s3_summary" {
   description = "Summary of S3 configuration"
   value = {
-    app_assets_bucket     = aws_s3_bucket.app_assets.bucket
+    app_assets_bucket        = aws_s3_bucket.app_assets.bucket
     testflight_builds_bucket = aws_s3_bucket.testflight_builds.bucket
-    cloudfront_enabled    = var.enable_cloudfront
-    cloudfront_domain     = var.enable_cloudfront ? aws_cloudfront_distribution.app_assets[0].domain_name : null
+    cloudfront_enabled       = var.enable_cloudfront
+    cloudfront_domain        = var.enable_cloudfront ? aws_cloudfront_distribution.app_assets[0].domain_name : null
   }
 }

@@ -90,9 +90,9 @@ output "codebuild_role_arn" {
 output "log_groups" {
   description = "Map of CloudWatch log group names"
   value = {
-    ios_build          = aws_cloudwatch_log_group.ios_build.name
-    ios_test           = aws_cloudwatch_log_group.ios_test.name
-    testflight_deploy  = aws_cloudwatch_log_group.testflight_deploy.name
+    ios_build         = aws_cloudwatch_log_group.ios_build.name
+    ios_test          = aws_cloudwatch_log_group.ios_test.name
+    testflight_deploy = aws_cloudwatch_log_group.testflight_deploy.name
   }
 }
 
@@ -111,12 +111,12 @@ output "alarm_names" {
 output "ios_pipeline_summary" {
   description = "Summary of iOS pipeline configuration"
   value = {
-    pipeline_name              = aws_codepipeline.ios_pipeline.name
-    pipeline_arn               = aws_codepipeline.ios_pipeline.arn
-    artifacts_bucket           = aws_s3_bucket.artifacts.bucket
-    github_repository          = var.github_repository
-    github_branch              = var.github_branch
-    requires_manual_approval   = var.require_manual_approval
+    pipeline_name            = aws_codepipeline.ios_pipeline.name
+    pipeline_arn             = aws_codepipeline.ios_pipeline.arn
+    artifacts_bucket         = aws_s3_bucket.artifacts.bucket
+    github_repository        = var.github_repository
+    github_branch            = var.github_branch
+    requires_manual_approval = var.require_manual_approval
     build_projects = {
       ios_build         = aws_codebuild_project.ios_build.name
       ios_test          = aws_codebuild_project.ios_test.name
