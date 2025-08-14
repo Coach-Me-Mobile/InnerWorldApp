@@ -134,7 +134,16 @@ module "s3" {
   app_assets_lifecycle_enabled     = true
   testflight_builds_retention_days = var.environment == "prod" ? 90 : 30
 
+  # Secrets Manager ARNs for GitHub Actions access
+  secrets_manager_arns = [
+    module.secrets.apple_signin_key_arn,
+    module.secrets.app_store_connect_key_arn,
+    module.secrets.openai_api_key_arn
+  ]
+
   tags = local.common_tags
+
+  depends_on = [module.secrets]
 }
 
 # Cognito module - Authentication and authorization
@@ -165,37 +174,8 @@ module "cognito" {
   tags = local.common_tags
 }
 
-# iOS Pipeline module - CI/CD pipeline for TestFlight deployment
-module "ios_pipeline" {
-  count  = var.enable_ios_pipeline ? 1 : 0
-  source = "./modules/ios_pipeline"
-
-  name_prefix  = local.name_prefix
-  project_name = var.project_name
-  environment  = var.environment
-  aws_region   = var.aws_region
-
-  # GitHub configuration - these will need to be set via terraform.tfvars
-  github_connection_arn = var.github_connection_arn
-  github_repository     = var.github_repository
-  github_branch         = var.github_branch
-
-  # S3 bucket configuration for TestFlight builds
-  testflight_builds_bucket_name = module.s3.testflight_builds_bucket_name
-  testflight_builds_bucket_arn  = module.s3.testflight_builds_bucket_arn
-
-  # Apple secrets configuration
-  apple_developer_secrets_arn   = module.secrets.apple_signin_key_arn
-  app_store_connect_secrets_arn = module.secrets.app_store_connect_key_arn
-
-  # Pipeline configuration
-  require_manual_approval = var.environment == "prod" ? true : false
-  log_retention_days      = var.log_retention_days
-
-  tags = local.common_tags
-
-  depends_on = [module.s3, module.secrets]
-}
+# iOS CI/CD is now handled by GitHub Actions
+# S3 buckets and secrets are still available for GitHub Actions to use
 
 # Neptune module - Graph database for GraphRAG (TEMPORARILY DISABLED FOR TESTFLIGHT)
 # Uncomment when ready for production GraphRAG features ($526/month cost)

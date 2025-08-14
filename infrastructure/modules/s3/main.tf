@@ -251,7 +251,7 @@ resource "aws_s3_bucket_policy" "app_assets_cloudfront" {
 }
 
 # ==============================================================================
-# IAM ROLE FOR CODEBUILD TO ACCESS S3
+# IAM POLICIES FOR GITHUB ACTIONS S3 ACCESS
 # ==============================================================================
 
 data "aws_iam_policy_document" "s3_access" {
@@ -289,4 +289,57 @@ resource "aws_iam_policy" "s3_access" {
     Name = "${var.name_prefix}-s3-access-policy"
     Type = "IAMPolicy"
   })
+}
+
+# ==============================================================================
+# IAM USER FOR GITHUB ACTIONS
+# ==============================================================================
+
+resource "aws_iam_user" "github_actions" {
+  name = "${var.name_prefix}-github-actions"
+  path = "/service/"
+
+  tags = merge(var.tags, {
+    Name    = "${var.name_prefix}-github-actions-user"
+    Type    = "ServiceUser"
+    Purpose = "GitHubActions"
+  })
+}
+
+resource "aws_iam_access_key" "github_actions" {
+  user = aws_iam_user.github_actions.name
+}
+
+# Attach S3 access policy
+resource "aws_iam_user_policy_attachment" "github_actions_s3" {
+  user       = aws_iam_user.github_actions.name
+  policy_arn = aws_iam_policy.s3_access.arn
+}
+
+# Policy for Secrets Manager access
+data "aws_iam_policy_document" "secrets_access" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "secretsmanager:GetSecretValue"
+    ]
+    resources = var.secrets_manager_arns
+  }
+}
+
+resource "aws_iam_policy" "secrets_access" {
+  name_prefix = "${var.name_prefix}-github-secrets-"
+  description = "IAM policy for GitHub Actions to access secrets"
+  policy      = data.aws_iam_policy_document.secrets_access.json
+
+  tags = merge(var.tags, {
+    Name = "${var.name_prefix}-github-secrets-policy"
+    Type = "IAMPolicy"
+  })
+}
+
+# Attach secrets access policy
+resource "aws_iam_user_policy_attachment" "github_actions_secrets" {
+  user       = aws_iam_user.github_actions.name
+  policy_arn = aws_iam_policy.secrets_access.arn
 }

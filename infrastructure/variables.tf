@@ -206,17 +206,8 @@ variable "backup_config" {
 # FEATURE FLAGS
 # ==============================================================================
 
-variable "enable_codepipeline" {
-  description = "Enable AWS CodePipeline for CI/CD (legacy)"
-  type        = bool
-  default     = false
-}
-
-variable "enable_ios_pipeline" {
-  description = "Enable iOS CI/CD pipeline for TestFlight deployment"
-  type        = bool
-  default     = true
-}
+# CI/CD is handled by GitHub Actions
+# No AWS CodePipeline variables needed
 
 variable "enable_xray_tracing" {
   description = "Enable AWS X-Ray tracing for Lambda functions"
@@ -244,26 +235,10 @@ variable "cost_optimization" {
 }
 
 # ==============================================================================
-# CODEPIPELINE CONFIGURATION
+# GITHUB ACTIONS CONFIGURATION
 # ==============================================================================
-
-variable "github_connection_arn" {
-  description = "ARN of the GitHub CodeStar connection (must be created manually)"
-  type        = string
-  default     = ""
-}
-
-variable "github_repository" {
-  description = "GitHub repository in format 'owner/repo'"
-  type        = string
-  default     = "GauntletAI/InnerWorldApp"
-}
-
-variable "github_branch" {
-  description = "GitHub branch to monitor"
-  type        = string
-  default     = "main"
-}
+# GitHub Actions handles CI/CD directly from the repository
+# No additional AWS configuration needed
 
 # ==============================================================================
 # LAMBDA CONFIGURATION

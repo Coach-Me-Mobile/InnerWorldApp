@@ -80,6 +80,27 @@ output "s3_access_policy_name" {
 }
 
 # ==============================================================================
+# GITHUB ACTIONS OUTPUTS
+# ==============================================================================
+
+output "github_actions_user_name" {
+  description = "Name of the GitHub Actions IAM user"
+  value       = aws_iam_user.github_actions.name
+}
+
+output "github_actions_access_key_id" {
+  description = "Access key ID for GitHub Actions"
+  value       = aws_iam_access_key.github_actions.id
+  sensitive   = true
+}
+
+output "github_actions_secret_access_key" {
+  description = "Secret access key for GitHub Actions"
+  value       = aws_iam_access_key.github_actions.secret
+  sensitive   = true
+}
+
+# ==============================================================================
 # SUMMARY OUTPUTS
 # ==============================================================================
 
@@ -90,5 +111,6 @@ output "s3_summary" {
     testflight_builds_bucket = aws_s3_bucket.testflight_builds.bucket
     cloudfront_enabled       = var.enable_cloudfront
     cloudfront_domain        = var.enable_cloudfront ? aws_cloudfront_distribution.app_assets[0].domain_name : null
+    github_actions_user      = aws_iam_user.github_actions.name
   }
 }

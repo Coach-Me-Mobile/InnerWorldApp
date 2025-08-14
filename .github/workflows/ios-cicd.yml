@@ -1,0 +1,568 @@
+# =============================================================================
+# GITHUB ACTIONS - IOS CI/CD PIPELINE
+# =============================================================================
+# Comprehensive iOS CI/CD pipeline for InnerWorld app
+# Handles build, test, code signing, and TestFlight deployment
+# =============================================================================
+
+name: iOS CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-cicd.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-cicd.yml'
+  workflow_dispatch:
+    inputs:
+      deploy_to_testflight:
+        description: 'Deploy to TestFlight'
+        required: false
+        default: false
+        type: boolean
+      skip_tests:
+        description: 'Skip running tests'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  # iOS Configuration
+  XCODE_VERSION: '15.1'
+  IOS_SIMULATOR_DEVICE: 'iPhone 15 Pro'
+  IOS_SIMULATOR_OS: '17.1'
+  SCHEME_NAME: 'InnerWorld'
+  WORKSPACE_PATH: 'ios/InnerWorld.xcodeproj'
+  
+  # Build Configuration
+  BUILD_CONFIGURATION: 'Release'
+  ARCHIVE_PATH: 'build/InnerWorld.xcarchive'
+  EXPORT_PATH: 'build/export'
+  IPA_PATH: 'build/export/InnerWorld.ipa'
+  
+  # AWS Configuration
+  AWS_REGION: 'us-east-1'
+  S3_BUCKET_BUILDS: 'innerworld-prod-testflight-builds'
+  S3_BUCKET_ASSETS: 'innerworld-prod-app-assets'
+
+# =============================================================================
+# JOBS
+# =============================================================================
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # SETUP AND VALIDATION
+  # ---------------------------------------------------------------------------
+  
+  setup:
+    name: Setup & Validation
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.deploy-check.outputs.should_deploy }}
+      build_number: ${{ steps.build-info.outputs.build_number }}
+      version_number: ${{ steps.build-info.outputs.version_number }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Generate build information
+        id: build-info
+        run: |
+          BUILD_NUMBER=$(echo "${GITHUB_SHA:0:8}")
+          VERSION_NUMBER=$(date '+%Y.%m.%d')
+          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "version_number=$VERSION_NUMBER" >> $GITHUB_OUTPUT
+          echo "Build Number: $BUILD_NUMBER"
+          echo "Version Number: $VERSION_NUMBER"
+      
+      - name: Determine deployment
+        id: deploy-check
+        run: |
+          SHOULD_DEPLOY="false"
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.event.inputs.deploy_to_testflight }}" == "true" ]]; then
+            SHOULD_DEPLOY="true"
+          fi
+          echo "should_deploy=$SHOULD_DEPLOY" >> $GITHUB_OUTPUT
+          echo "Should deploy to TestFlight: $SHOULD_DEPLOY"
+      
+      - name: Validate iOS project structure
+        run: |
+          if [ ! -d "ios" ]; then
+            echo "❌ ERROR: iOS directory not found"
+            exit 1
+          fi
+          
+          if [ ! -f "$WORKSPACE_PATH" ]; then
+            echo "❌ ERROR: Xcode project not found at $WORKSPACE_PATH"
+            exit 1
+          fi
+          
+          echo "✅ iOS project structure validated"
+
+  # ---------------------------------------------------------------------------
+  # IOS BUILD
+  # ---------------------------------------------------------------------------
+  
+  build:
+    name: Build iOS App
+    runs-on: macos-14
+    needs: setup
+    if: always() && needs.setup.result == 'success'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+      
+      - name: Cache derived data
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-derived-data-${{ hashFiles('ios/**/*.swift', 'ios/**/*.pbxproj') }}
+          restore-keys: |
+            ${{ runner.os }}-derived-data-
+      
+      - name: Install dependencies
+        run: |
+          # Install any CocoaPods dependencies if needed
+          if [ -f "ios/Podfile" ]; then
+            cd ios
+            pod install --repo-update
+            cd ..
+          fi
+      
+      - name: Configure build settings
+        run: |
+          echo "🔧 Configuring build settings..."
+          echo "Build Number: ${{ needs.setup.outputs.build_number }}"
+          echo "Version Number: ${{ needs.setup.outputs.version_number }}"
+          
+          # Update build number and version in Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ needs.setup.outputs.version_number }}" ios/InnerWorld/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ needs.setup.outputs.build_number }}" ios/InnerWorld/Info.plist
+      
+      - name: Build for testing
+        if: github.event.inputs.skip_tests != 'true'
+        run: |
+          echo "🏗️ Building for testing..."
+          set -o pipefail && xcodebuild \
+            -project "$WORKSPACE_PATH" \
+            -scheme "$SCHEME_NAME" \
+            -destination "platform=iOS Simulator,name=$IOS_SIMULATOR_DEVICE,OS=$IOS_SIMULATOR_OS" \
+            -configuration Debug \
+            build-for-testing | xcpretty
+      
+      - name: Build for release
+        run: |
+          echo "🏗️ Building for release..."
+          mkdir -p build
+          
+          set -o pipefail && xcodebuild \
+            -project "$WORKSPACE_PATH" \
+            -scheme "$SCHEME_NAME" \
+            -destination "generic/platform=iOS" \
+            -configuration "$BUILD_CONFIGURATION" \
+            -archivePath "$ARCHIVE_PATH" \
+            -allowProvisioningUpdates \
+            archive | xcpretty
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-${{ needs.setup.outputs.build_number }}
+          path: |
+            build/
+            ios/InnerWorld/Info.plist
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # IOS TESTING
+  # ---------------------------------------------------------------------------
+  
+  test:
+    name: Test iOS App
+    runs-on: macos-14
+    needs: [setup, build]
+    if: always() && needs.build.result == 'success' && github.event.inputs.skip_tests != 'true'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+      
+      - name: Cache derived data
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-derived-data-${{ hashFiles('ios/**/*.swift', 'ios/**/*.pbxproj') }}
+          restore-keys: |
+            ${{ runner.os }}-derived-data-
+      
+      - name: Install dependencies
+        run: |
+          if [ -f "ios/Podfile" ]; then
+            cd ios
+            pod install --repo-update
+            cd ..
+          fi
+      
+      - name: Run unit tests
+        run: |
+          echo "🧪 Running unit tests..."
+          set -o pipefail && xcodebuild \
+            -project "$WORKSPACE_PATH" \
+            -scheme "$SCHEME_NAME" \
+            -destination "platform=iOS Simulator,name=$IOS_SIMULATOR_DEVICE,OS=$IOS_SIMULATOR_OS" \
+            -configuration Debug \
+            -enableCodeCoverage YES \
+            -resultBundlePath TestResults.xcresult \
+            test | xcpretty --test --color
+      
+      - name: Generate test report
+        if: always()
+        run: |
+          echo "📊 Generating test report..."
+          xcrun xccov view --report --json TestResults.xcresult > coverage.json
+          
+          # Extract coverage percentage
+          COVERAGE=$(cat coverage.json | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          coverage = data.get('lineCoverage', 0) * 100
+          print(f'{coverage:.1f}')
+          ")
+          
+          echo "Code Coverage: $COVERAGE%"
+          echo "COVERAGE_PERCENTAGE=$COVERAGE" >> $GITHUB_ENV
+          
+          # Create coverage badge
+          echo "![Coverage](https://img.shields.io/badge/Coverage-$COVERAGE%25-brightgreen)" > coverage-badge.md
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ needs.setup.outputs.build_number }}
+          path: |
+            TestResults.xcresult
+            coverage.json
+            coverage-badge.md
+          retention-days: 30
+      
+      - name: Comment test results on PR
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const coverage = process.env.COVERAGE_PERCENTAGE || '0';
+            const body = `## 🧪 Test Results
+            
+            **Code Coverage:** ${coverage}%
+            
+            ${coverage >= 80 ? '✅' : '⚠️'} Coverage threshold: 80%
+            
+            Build: ${{ needs.setup.outputs.build_number }}
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+  # ---------------------------------------------------------------------------
+  # CODE SIGNING & IPA EXPORT
+  # ---------------------------------------------------------------------------
+  
+  sign-and-export:
+    name: Code Signing & IPA Export
+    runs-on: macos-14
+    needs: [setup, build, test]
+    if: always() && needs.build.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') && needs.setup.outputs.should_deploy == 'true'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+      
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-build-${{ needs.setup.outputs.build_number }}
+          path: .
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Retrieve Apple certificates from AWS Secrets Manager
+        run: |
+          echo "🔐 Retrieving Apple certificates from AWS Secrets Manager..."
+          
+          # Get Apple Developer secrets
+          APPLE_SECRETS=$(aws secretsmanager get-secret-value \
+            --secret-id "innerworld-prod/apple/signin-key" \
+            --query SecretString --output text)
+          
+          # Parse secrets
+          echo "$APPLE_SECRETS" | jq -r '.team_id' > /tmp/team_id
+          echo "$APPLE_SECRETS" | jq -r '.private_key' > /tmp/apple_private_key.p8
+          
+          # Get App Store Connect secrets
+          ASC_SECRETS=$(aws secretsmanager get-secret-value \
+            --secret-id "innerworld-prod/appstoreconnect/api-key" \
+            --query SecretString --output text)
+          
+          echo "$ASC_SECRETS" | jq -r '.key_id' > /tmp/asc_key_id
+          echo "$ASC_SECRETS" | jq -r '.issuer_id' > /tmp/asc_issuer_id
+          echo "$ASC_SECRETS" | jq -r '.private_key' > /tmp/asc_private_key.p8
+          
+          # Set environment variables
+          echo "APPLE_TEAM_ID=$(cat /tmp/team_id)" >> $GITHUB_ENV
+          echo "ASC_KEY_ID=$(cat /tmp/asc_key_id)" >> $GITHUB_ENV
+          echo "ASC_ISSUER_ID=$(cat /tmp/asc_issuer_id)" >> $GITHUB_ENV
+      
+      - name: Import certificates
+        run: |
+          echo "📱 Importing Apple certificates..."
+          
+          # Create keychain
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          
+          # Import certificates (you'll need to add these as repository secrets)
+          if [ -n "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" ]; then
+            echo "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" | base64 --decode > certificate.p12
+            security import certificate.p12 -k build.keychain -P "${{ secrets.APPLE_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          fi
+          
+          # Set key partition list
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+      
+      - name: Install provisioning profile
+        run: |
+          echo "📋 Installing provisioning profile..."
+          
+          if [ -n "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" ]; then
+            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+            echo "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/InnerWorld.mobileprovision
+          fi
+      
+      - name: Export IPA
+        run: |
+          echo "📦 Exporting IPA..."
+          mkdir -p "$EXPORT_PATH"
+          
+          # Create export options plist
+          cat > ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>teamID</key>
+              <string>$APPLE_TEAM_ID</string>
+              <key>uploadBitcode</key>
+              <false/>
+              <key>uploadSymbols</key>
+              <true/>
+              <key>compileBitcode</key>
+              <false/>
+          </dict>
+          </plist>
+          EOF
+          
+          # Export archive
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist ExportOptions.plist
+      
+      - name: Upload IPA to S3
+        run: |
+          echo "☁️ Uploading IPA to S3..."
+          BUILD_DIR="builds/${{ needs.setup.outputs.build_number }}"
+          
+          # Upload IPA
+          aws s3 cp "$IPA_PATH" "s3://$S3_BUCKET_BUILDS/$BUILD_DIR/"
+          
+          # Create build manifest
+          cat > build-manifest.json << EOF
+          {
+            "build_number": "${{ needs.setup.outputs.build_number }}",
+            "version_number": "${{ needs.setup.outputs.version_number }}",
+            "git_commit": "${{ github.sha }}",
+            "git_branch": "${{ github.ref_name }}",
+            "build_timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "environment": "production",
+            "github_run_id": "${{ github.run_id }}",
+            "artifacts": {
+              "ipa_path": "s3://$S3_BUCKET_BUILDS/$BUILD_DIR/InnerWorld.ipa",
+              "size_bytes": $(stat -f%z "$IPA_PATH")
+            }
+          }
+          EOF
+          
+          # Upload manifest
+          aws s3 cp build-manifest.json "s3://$S3_BUCKET_BUILDS/$BUILD_DIR/"
+          
+          echo "✅ Build artifacts uploaded to S3"
+          echo "S3 Location: s3://$S3_BUCKET_BUILDS/$BUILD_DIR/"
+      
+      - name: Upload signed IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-ipa-${{ needs.setup.outputs.build_number }}
+          path: |
+            ${{ env.IPA_PATH }}
+            build-manifest.json
+            ExportOptions.plist
+          retention-days: 90
+
+  # ---------------------------------------------------------------------------
+  # TESTFLIGHT DEPLOYMENT
+  # ---------------------------------------------------------------------------
+  
+  deploy-testflight:
+    name: Deploy to TestFlight
+    runs-on: macos-14
+    needs: [setup, build, test, sign-and-export]
+    if: always() && needs.sign-and-export.result == 'success'
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+      
+      - name: Download signed IPA
+        uses: actions/download-artifact@v4
+        with:
+          name: signed-ipa-${{ needs.setup.outputs.build_number }}
+          path: .
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Retrieve App Store Connect API key
+        run: |
+          echo "🔑 Retrieving App Store Connect API key..."
+          
+          ASC_SECRETS=$(aws secretsmanager get-secret-value \
+            --secret-id "innerworld-prod/appstoreconnect/api-key" \
+            --query SecretString --output text)
+          
+          # Create API key file
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$ASC_SECRETS" | jq -r '.private_key' > ~/.appstoreconnect/private_keys/AuthKey_$(echo "$ASC_SECRETS" | jq -r '.key_id').p8
+          
+          # Set environment variables
+          echo "ASC_KEY_ID=$(echo "$ASC_SECRETS" | jq -r '.key_id')" >> $GITHUB_ENV
+          echo "ASC_ISSUER_ID=$(echo "$ASC_SECRETS" | jq -r '.issuer_id')" >> $GITHUB_ENV
+      
+      - name: Upload to TestFlight
+        run: |
+          echo "🚀 Uploading to TestFlight..."
+          
+          # Upload using altool
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID" \
+            --verbose
+          
+          echo "✅ Successfully uploaded to TestFlight!"
+      
+      - name: Create deployment summary
+        run: |
+          cat > deployment-summary.json << EOF
+          {
+            "deployment_id": "tf-${{ needs.setup.outputs.build_number }}-$(date +%s)",
+            "build_number": "${{ needs.setup.outputs.build_number }}",
+            "version_number": "${{ needs.setup.outputs.version_number }}",
+            "deployment_timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platform": "ios",
+            "environment": "testflight",
+            "github_run_id": "${{ github.run_id }}",
+            "git_commit": "${{ github.sha }}",
+            "status": "success"
+          }
+          EOF
+          
+          echo "📊 Deployment Summary:"
+          cat deployment-summary.json
+      
+      - name: Notify Slack/Teams (if configured)
+        if: always()
+        run: |
+          echo "🔔 Deployment notification prepared"
+          echo "Build ${{ needs.setup.outputs.build_number }} deployed to TestFlight successfully!"
+          echo "Version: ${{ needs.setup.outputs.version_number }}"
+          echo "Commit: ${{ github.sha }}"
+      
+      - name: Upload deployment artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-summary-${{ needs.setup.outputs.build_number }}
+          path: deployment-summary.json
+          retention-days: 90
+
+  # ---------------------------------------------------------------------------
+  # CLEANUP
+  # ---------------------------------------------------------------------------
+  
+  cleanup:
+    name: Cleanup
+    runs-on: macos-14
+    needs: [setup, build, test, sign-and-export, deploy-testflight]
+    if: always()
+    
+    steps:
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          security delete-keychain build.keychain || true
+      
+      - name: Summary
+        run: |
+          echo "## 🎉 Pipeline Summary"
+          echo "**Build Number:** ${{ needs.setup.outputs.build_number }}"
+          echo "**Version:** ${{ needs.setup.outputs.version_number }}"
+          echo "**Status:** ${{ job.status }}"
+          echo "**Deployed to TestFlight:** ${{ needs.setup.outputs.should_deploy }}"

@@ -128,29 +128,39 @@ output "iam_roles" {
 # CODEPIPELINE OUTPUTS
 # ==============================================================================
 
-output "codepipeline" {
-  description = "CodePipeline and build infrastructure (legacy)"
-  value = var.enable_codepipeline ? {
-    pipeline_name          = module.codepipeline[0].pipeline_name
-    pipeline_arn           = module.codepipeline[0].pipeline_arn
-    codebuild_project_name = module.codepipeline[0].codebuild_project_name
-    s3_artifacts_bucket    = module.codepipeline[0].s3_artifacts_bucket
-  } : null
+# ==============================================================================
+# GITHUB ACTIONS INTEGRATION
+# ==============================================================================
+
+output "github_actions_resources" {
+  description = "AWS resources available for GitHub Actions CI/CD"
+  value = {
+    # S3 buckets for artifacts and builds
+    app_assets_bucket        = module.s3.app_assets_bucket_name
+    testflight_builds_bucket = module.s3.testflight_builds_bucket_name
+
+    # Secrets for GitHub Actions
+    apple_signin_secret_arn      = module.secrets.apple_signin_key_arn
+    app_store_connect_secret_arn = module.secrets.app_store_connect_key_arn
+    openai_api_secret_arn        = module.secrets.openai_api_key_arn
+
+    # AWS region for GitHub Actions
+    aws_region = var.aws_region
+
+    # GitHub Actions IAM user
+    github_actions_user = module.s3.github_actions_user_name
+  }
   sensitive = false
 }
 
-output "ios_pipeline" {
-  description = "iOS CI/CD pipeline and build infrastructure for TestFlight"
-  value = var.enable_ios_pipeline ? {
-    pipeline_name                  = module.ios_pipeline[0].pipeline_name
-    pipeline_arn                   = module.ios_pipeline[0].pipeline_arn
-    ios_build_project_name         = module.ios_pipeline[0].ios_build_project_name
-    ios_test_project_name          = module.ios_pipeline[0].ios_test_project_name
-    testflight_deploy_project_name = module.ios_pipeline[0].testflight_deploy_project_name
-    artifacts_bucket_name          = module.ios_pipeline[0].artifacts_bucket_name
-    requires_manual_approval       = var.environment == "prod" ? true : false
-  } : null
-  sensitive = false
+output "github_actions_credentials" {
+  description = "AWS credentials for GitHub Actions (sensitive)"
+  value = {
+    access_key_id     = module.s3.github_actions_access_key_id
+    secret_access_key = module.s3.github_actions_secret_access_key
+    region            = var.aws_region
+  }
+  sensitive = true
 }
 
 # ==============================================================================

@@ -51,3 +51,9 @@ variable "testflight_builds_retention_days" {
     error_message = "TestFlight builds retention must be between 1 and 365 days."
   }
 }
+
+variable "secrets_manager_arns" {
+  description = "List of AWS Secrets Manager ARNs that GitHub Actions needs access to"
+  type        = list(string)
+  default     = []
+}
