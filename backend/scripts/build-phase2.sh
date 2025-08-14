@@ -24,11 +24,11 @@ GOOS=linux GOARCH=amd64 go build -o bin/websocket-handler cmd/websocket-handler/
 echo "  Building session-processor..."
 GOOS=linux GOARCH=amd64 go build -o bin/session-processor cmd/session-processor/main.go
 
-echo "  Building phase2 test..."
-GOOS=linux GOARCH=amd64 go build -o bin/test-phase2 cmd/test-phase2/main.go
-
 echo "  Building e2e conversation test..."
 go build -o bin/test-e2e-conversation cmd/test-e2e-conversation/main.go
+
+echo "  Building integration test..."
+go build -o bin/test-integration cmd/test-integration/main.go
 
 # Create ZIP files for Lambda deployment
 echo "Creating deployment packages..."
@@ -44,11 +44,11 @@ zip -q websocket-handler.zip websocket-handler
 echo "  Packaging session-processor.zip..."
 zip -q session-processor.zip session-processor
 
-echo "  Packaging test-phase2.zip..."
-zip -q test-phase2.zip test-phase2
-
 echo "  Packaging test-e2e-conversation.zip..."
 zip -q test-e2e-conversation.zip test-e2e-conversation
+
+echo "  Packaging test-integration.zip..."
+zip -q test-integration.zip test-integration
 
 cd ..
 
@@ -58,10 +58,12 @@ echo "Built Lambda functions:"
 echo "  - bin/login-context-handler.zip"
 echo "  - bin/websocket-handler.zip" 
 echo "  - bin/session-processor.zip"
-echo "  - bin/test-phase2.zip"
 echo "  - bin/test-e2e-conversation.zip"
+echo "  - bin/test-integration.zip"
 echo ""
 echo "Next steps:"
-echo "  1. Deploy infrastructure with Nataly's Terraform"
+echo "  1. Deploy infrastructure with Terraform"
 echo "  2. Upload Lambda functions to AWS"
-echo "  3. Test with: ./scripts/test-phase2.sh"
+echo "  3. Test with: ./scripts/test-unit.sh (unit tests)"
+echo "  4. Test with: ./scripts/test-e2e-conversation.sh (component tests)"
+echo "  5. Test with: ./scripts/test-integration.sh (infrastructure tests)"

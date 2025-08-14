@@ -33,7 +33,7 @@ cd backend/
 make setup               # Initial setup
 make dev-start          # Start development environment
 ./scripts/build-phase2.sh   # Build Phase 2 Lambda functions
-./scripts/test-phase2.sh    # Run comprehensive Phase 2 tests
+./scripts/test-unit.sh       # Run unit tests
 ```
 
 ## Phase 2 Architecture
@@ -46,7 +46,7 @@ backend/
 │   ├── login-context-handler/   # 🆕 Login context caching
 │   ├── websocket-handler/       # 🆕 Real-time conversation
 │   ├── session-processor/       # 🆕 Session end processing
-│   └── test-phase2/            # 🆕 Integration tests
+│   └── test-integration/       # 🆕 Integration tests
 ├── internal/
 │   ├── config/                 # Configuration management
 │   ├── embeddings/             # OpenAI client
@@ -59,7 +59,7 @@ backend/
 │   └── workflow/               # 🆕 LangGraph conversation workflow
 ├── scripts/
 │   ├── build-phase2.sh         # 🆕 Phase 2 build script
-│   └── test-phase2.sh          # 🆕 Phase 2 test script
+│   └── test-unit.sh            # 🆕 Unit test script
 └── docker-compose.yml          # LocalStack
 ```
 
@@ -155,7 +155,7 @@ backend/
 ```bash
 # Phase 2 specific commands
 ./scripts/build-phase2.sh   # Build all 3 Lambda functions
-./scripts/test-phase2.sh    # Run comprehensive tests
+./scripts/test-unit.sh      # Run unit tests
 
 # Legacy Phase 1 commands still work
 make help                   # Show all commands
@@ -168,7 +168,7 @@ make test-health           # Test health check system
 ### Testing Individual Components
 ```bash
 # Test persona system
-go run cmd/test-phase2/main.go
+go run cmd/test-integration/main.go
 
 # Test individual Lambda functions
 echo '{"userId": "test-user"}' | go run cmd/login-context-handler/main.go
@@ -244,27 +244,43 @@ sequenceDiagram
 
 ## Testing
 
-### 🎯 End-to-End Conversation Test (Recommended)
+**Our testing strategy uses the right tool for each job:**
+
+### 📋 **Unit Tests** (Pure Go - Fast & Reliable)
+```bash
+./scripts/test-unit.sh
+```
+Tests individual components in isolation:
+- Configuration loading and validation
+- OpenAI embeddings and OpenRouter LLM clients
+- Conversation type validation  
+- Core component functionality
+
+### 🎯 **Component Tests** (Pure Go Mocks - Business Logic)
 ```bash
 ./scripts/test-e2e-conversation.sh
 ```
-This comprehensive test demonstrates the complete WebSocket conversation flow:
+Tests complete conversation workflow with mock services:
 - Setup and component initialization
 - Neptune context loading and DynamoDB caching  
-- Bidirectional safety checks (input + output)
+- **Bidirectional safety checks** (input + output)
 - Persona context injection with system prompts
 - Message storage with 24-hour TTL verification
 - WebSocket disconnect and resource cleanup
 
-### Unit Tests
+### 🐳 **Integration Tests** (Docker/LocalStack - Infrastructure)
 ```bash
-# Run all Phase 2 unit tests
-./scripts/test-phase2.sh
+./scripts/test-integration.sh
+```
+Tests actual AWS services via LocalStack emulation:
+- Real DynamoDB table operations (create, put, get, query)
+- AWS SDK v2 integration
+- Table schema and GSI functionality  
+- TTL attribute handling
+- Infrastructure readiness validation
 
-# Run specific component tests
-go test ./internal/... -v
-
-# Build all Lambda functions  
+### 🛠️ **Build All Components**
+```bash
 ./scripts/build-phase2.sh
 ```
 

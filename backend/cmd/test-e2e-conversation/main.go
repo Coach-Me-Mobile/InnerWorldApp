@@ -152,7 +152,7 @@ func main() {
 
 		// Show message details with TTL
 		for i, msg := range storedMessages {
-			ttlRemaining := time.Unix(msg.TTL, 0).Sub(time.Now())
+			ttlRemaining := time.Until(time.Unix(msg.TTL, 0))
 			fmt.Printf("   📋 Message %d: %s | TTL: %.1f hours remaining | Type: %s\n",
 				i+1, msg.MessageID[:12], ttlRemaining.Hours(), msg.MessageType)
 		}

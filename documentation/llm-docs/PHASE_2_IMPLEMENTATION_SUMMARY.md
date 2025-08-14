@@ -70,7 +70,7 @@ backend/
 │   ├── login-context-handler/    # ✅ Cognito post-auth context caching
 │   ├── websocket-handler/        # ✅ Real-time conversation processing
 │   ├── session-processor/        # ✅ Batch session end processing
-│   └── test-phase2/             # ✅ Integration test suite
+│   └── test-integration/        # ✅ Integration test suite
 ├── internal/
 │   ├── personas/                # ✅ 1 persona system with context injection
 │   ├── storage/                 # ✅ DynamoDB mock with TTL support
@@ -79,7 +79,7 @@ backend/
 │   └── types/                   # ✅ Phase 2 data structures
 └── scripts/
     ├── build-phase2.sh          # ✅ Build all Lambda functions
-    └── test-phase2.sh            # ✅ Comprehensive test suite
+    └── test-unit.sh              # ✅ Unit test suite
 ```
 
 ---
@@ -109,7 +109,7 @@ bin/
 ├── login-context-handler.zip    # 1.2MB - Ready for AWS deployment  
 ├── websocket-handler.zip         # 1.4MB - Ready for AWS deployment
 ├── session-processor.zip         # 1.3MB - Ready for AWS deployment
-└── test-phase2.zip               # 1.1MB - For testing/validation
+└── test-integration.zip          # 1.1MB - For integration testing/validation
 ```
 
 ### **Infrastructure Requirements** 
@@ -158,7 +158,9 @@ bin/
 
 ### **Developer Experience**
 - One-command build: `./scripts/build-phase2.sh` 
-- Comprehensive testing: `./scripts/test-phase2.sh`
+- Unit testing: `./scripts/test-unit.sh`
+- Component testing: `./scripts/test-e2e-conversation.sh`  
+- Integration testing: `./scripts/test-integration.sh`
 - Mock services for independent development
 - Clear error messages and detailed logging
 
@@ -211,6 +213,13 @@ The architecture is **production-ready**, **highly scalable**, and **cost-effici
 6. ✅ **WebSocket disconnect** - Resource cleanup and session processing
 
 **Phase 2 backend is complete and ready for infrastructure deployment!** 🎉
+
+---
+
+### 📚 **Additional Documentation**
+
+- **[Backend Testing Strategy](backend-lambda-testing-strategy.md)** - Comprehensive testing architecture and workflows
+- **[Lambda Deployment Guide](LAMBDA_DEPLOYMENT_GUIDE.md)** - AWS deployment instructions
 
 ---
 
