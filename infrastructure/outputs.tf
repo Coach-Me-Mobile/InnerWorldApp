@@ -101,7 +101,7 @@ output "s3" {
 output "secrets" {
   description = "AWS Secrets Manager secret ARNs and names"
   value = {
-    openai_api_key_arn        = module.secrets.openai_api_key_arn
+    openrouter_api_key_arn    = module.secrets.openrouter_api_key_arn
     neptune_config_arn        = module.secrets.neptune_config_arn
     apple_signin_key_arn      = module.secrets.apple_signin_key_arn
     app_store_connect_key_arn = module.secrets.app_store_connect_key_arn
@@ -142,7 +142,7 @@ output "github_actions_resources" {
     # Secrets for GitHub Actions
     apple_signin_secret_arn      = module.secrets.apple_signin_key_arn
     app_store_connect_secret_arn = module.secrets.app_store_connect_key_arn
-    openai_api_secret_arn        = module.secrets.openai_api_key_arn
+    openrouter_api_secret_arn    = module.secrets.openrouter_api_key_arn
 
     # AWS region for GitHub Actions
     aws_region = var.aws_region

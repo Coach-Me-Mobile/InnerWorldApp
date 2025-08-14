@@ -119,7 +119,7 @@ module "secrets" {
   enable_secret_rotation = false # Enable later if needed
 
   # Pass through all secret variables
-  openai_api_key                = var.openai_api_key
+  openrouter_api_key            = var.openrouter_api_key
   apple_team_id                 = var.apple_team_id
   apple_key_id                  = var.apple_key_id
   apple_private_key             = var.apple_private_key
@@ -127,7 +127,6 @@ module "secrets" {
   app_store_connect_issuer_id   = var.app_store_connect_issuer_id
   app_store_connect_key_id      = var.app_store_connect_key_id
   app_store_connect_private_key = var.app_store_connect_private_key
-  app_store_connect_app_id      = var.app_store_connect_app_id
 
   tags = local.common_tags
 }
@@ -149,7 +148,7 @@ module "s3" {
   secrets_manager_arns = [
     module.secrets.apple_signin_key_arn,
     module.secrets.app_store_connect_key_arn,
-    module.secrets.openai_api_key_arn
+    module.secrets.openrouter_api_key_arn
   ]
 
   tags = local.common_tags
@@ -253,7 +252,7 @@ module "lambda" {
 
   # Secrets Manager ARNs for Lambda permissions
   secrets_manager_arns = [
-    module.secrets.openai_api_key_arn,
+    module.secrets.openrouter_api_key_arn,
     module.secrets.apple_signin_key_arn,
     module.secrets.jwt_secret_arn
   ]

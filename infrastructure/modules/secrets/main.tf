@@ -6,12 +6,12 @@
 # ==============================================================================
 
 # ==============================================================================
-# OPENAI/OPENROUTER API KEY
+# OPENROUTER API KEY
 # ==============================================================================
 
-resource "aws_secretsmanager_secret" "openai_api_key" {
-  name        = "${var.name_prefix}/openai/api-key"
-  description = "OpenAI/OpenRouter API key for LLM and embeddings"
+resource "aws_secretsmanager_secret" "openrouter_api_key" {
+  name        = "${var.name_prefix}/openrouter/api-key"
+  description = "OpenRouter API key for LLM conversations and embeddings"
 
   recovery_window_in_days = var.recovery_window_days
 
@@ -20,17 +20,17 @@ resource "aws_secretsmanager_secret" "openai_api_key" {
   }
 
   tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-openai-api-key"
+    Name        = "${var.name_prefix}-openrouter-api-key"
     Type        = "APIKey"
-    Service     = "OpenAI"
+    Service     = "OpenRouter"
     Sensitivity = "High"
   })
 }
 
-resource "aws_secretsmanager_secret_version" "openai_api_key" {
-  secret_id = aws_secretsmanager_secret.openai_api_key.id
+resource "aws_secretsmanager_secret_version" "openrouter_api_key" {
+  secret_id = aws_secretsmanager_secret.openrouter_api_key.id
   secret_string = jsonencode({
-    api_key        = var.openai_api_key != "" ? var.openai_api_key : "REPLACE_WITH_ACTUAL_KEY"
+    api_key        = var.openrouter_api_key != "" ? var.openrouter_api_key : "sk-or-v1-REPLACE_WITH_ACTUAL_KEY"
     provider       = "openrouter"
     base_url       = "https://openrouter.ai/api/v1"
     model_primary  = "anthropic/claude-3.5-sonnet"
@@ -147,7 +147,6 @@ resource "aws_secretsmanager_secret_version" "app_store_connect_key" {
     issuer_id   = var.app_store_connect_issuer_id != "" ? var.app_store_connect_issuer_id : "REPLACE_WITH_ISSUER_ID"
     key_id      = var.app_store_connect_key_id != "" ? var.app_store_connect_key_id : "REPLACE_WITH_KEY_ID"
     private_key = var.app_store_connect_private_key != "" ? var.app_store_connect_private_key : "REPLACE_WITH_PRIVATE_KEY"
-    app_id      = var.app_store_connect_app_id != "" ? var.app_store_connect_app_id : "REPLACE_WITH_APP_ID"
     bundle_id   = var.apple_client_id != "" ? var.apple_client_id : "com.gauntletai.innerworld"
     created_at  = timestamp()
   })
@@ -314,7 +313,7 @@ data "aws_iam_policy_document" "secrets_access" {
     ]
 
     resources = [
-      aws_secretsmanager_secret.openai_api_key.arn,
+      aws_secretsmanager_secret.openrouter_api_key.arn,
       aws_secretsmanager_secret.neptune_config.arn,
       aws_secretsmanager_secret.apple_signin_key.arn,
       aws_secretsmanager_secret.jwt_secret.arn,

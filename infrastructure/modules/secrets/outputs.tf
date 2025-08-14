@@ -8,9 +8,9 @@
 # SECRET ARNS
 # ==============================================================================
 
-output "openai_api_key_arn" {
-  description = "ARN of the OpenAI/OpenRouter API key secret"
-  value       = aws_secretsmanager_secret.openai_api_key.arn
+output "openrouter_api_key_arn" {
+  description = "ARN of the OpenRouter API key secret"
+  value       = aws_secretsmanager_secret.openrouter_api_key.arn
 }
 
 output "neptune_config_arn" {
@@ -52,9 +52,9 @@ output "session_key_arn" {
 # SECRET NAMES
 # ==============================================================================
 
-output "openai_api_key_name" {
-  description = "Name of the OpenAI/OpenRouter API key secret"
-  value       = aws_secretsmanager_secret.openai_api_key.name
+output "openrouter_api_key_name" {
+  description = "Name of the OpenRouter API key secret"
+  value       = aws_secretsmanager_secret.openrouter_api_key.name
 }
 
 output "neptune_config_name" {
@@ -88,9 +88,9 @@ output "secrets_access_policy_arn" {
 output "secrets_summary" {
   description = "Summary of all secrets created"
   value = {
-    openai_api_key = {
-      arn  = aws_secretsmanager_secret.openai_api_key.arn
-      name = aws_secretsmanager_secret.openai_api_key.name
+    openrouter_api_key = {
+      arn  = aws_secretsmanager_secret.openrouter_api_key.arn
+      name = aws_secretsmanager_secret.openrouter_api_key.name
     }
     neptune_config = {
       arn  = aws_secretsmanager_secret.neptune_config.arn

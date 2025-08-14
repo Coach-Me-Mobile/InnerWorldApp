@@ -48,13 +48,28 @@ start_dev() {
     # Wait for LocalStack
     print_status "Waiting for LocalStack..."
     for i in {1..30}; do
-        if curl -f http://localhost:4566/_localstack/health >/dev/null 2>&1; then
+        # Check if container is healthy (more reliable than HTTP check)
+        if docker inspect innerworld-localstack --format='{{.State.Health.Status}}' 2>/dev/null | grep -q "healthy"; then
+            print_success "LocalStack container is healthy"
+            
+            # Try HTTP health check as secondary verification
+            if curl -f http://localhost:4566/_localstack/health >/dev/null 2>&1; then
+                print_success "LocalStack HTTP endpoint is ready"
+            else
+                print_warning "LocalStack container healthy but HTTP endpoint not accessible from host"
+                print_status "This may be a Docker networking issue but LocalStack should work"
+            fi
             break
         fi
         if [ $i -eq 30 ]; then
-            print_error "LocalStack failed to start"
+            print_error "LocalStack container failed to become healthy"
+            print_status "Checking container status..."
+            docker-compose -f backend/docker-compose.yml ps
+            print_status "Checking LocalStack logs..."
+            docker logs innerworld-localstack --tail 20
             exit 1
         fi
+        printf "."
         sleep 2
     done
     

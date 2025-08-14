@@ -47,16 +47,15 @@ secrets_config = {
 # ==============================================================================
 
 apple_team_id     = "REPLACE_WITH_YOUR_TEAM_ID"
-apple_key_id      = "REPLACE_WITH_YOUR_KEY_ID"
+apple_key_id      = "REPLACE_WITH_YOUR_KEY_ID"  
 apple_private_key = "REPLACE_WITH_YOUR_PRIVATE_KEY"
 apple_client_id   = "com.gauntletai.innerworld"
 
 app_store_connect_issuer_id   = "REPLACE_WITH_YOUR_ISSUER_ID"
 app_store_connect_key_id      = "REPLACE_WITH_YOUR_ASC_KEY_ID"
 app_store_connect_private_key = "REPLACE_WITH_YOUR_ASC_PRIVATE_KEY"
-app_store_connect_app_id      = "REPLACE_WITH_YOUR_APP_ID"
 
-openai_api_key = "REPLACE_WITH_YOUR_OPENROUTER_KEY"
+openrouter_api_key = "sk-or-v1-REPLACE_WITH_YOUR_OPENROUTER_KEY"
 
 # ==============================================================================
 # COST BREAKDOWN WITH THESE SETTINGS

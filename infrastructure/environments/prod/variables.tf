@@ -165,8 +165,8 @@ variable "lambda_environment_variables" {
 # SECRETS (Sensitive)
 # ==============================================================================
 
-variable "openai_api_key" {
-  description = "OpenRouter API key"
+variable "openrouter_api_key" {
+  description = "OpenRouter API key for LLM conversations"
   type        = string
   default     = ""
   sensitive   = true
@@ -221,9 +221,4 @@ variable "app_store_connect_private_key" {
   sensitive   = true
 }
 
-variable "app_store_connect_app_id" {
-  description = "App Store Connect App ID"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
+
