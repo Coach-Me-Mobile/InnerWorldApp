@@ -249,3 +249,70 @@ variable "lambda_environment_variables" {
   type        = map(string)
   default     = {}
 }
+
+# ==============================================================================
+# SECRETS CONFIGURATION (passed to secrets module)
+# ==============================================================================
+
+variable "openai_api_key" {
+  description = "OpenRouter API key"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "apple_team_id" {
+  description = "Apple Developer Team ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "apple_key_id" {
+  description = "Apple Key ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "apple_private_key" {
+  description = "Apple Private Key"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "apple_client_id" {
+  description = "Apple Client ID (Bundle ID)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "app_store_connect_issuer_id" {
+  description = "App Store Connect Issuer ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "app_store_connect_key_id" {
+  description = "App Store Connect Key ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "app_store_connect_private_key" {
+  description = "App Store Connect Private Key"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "app_store_connect_app_id" {
+  description = "App Store Connect App ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

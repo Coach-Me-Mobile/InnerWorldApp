@@ -118,6 +118,17 @@ module "secrets" {
   recovery_window_days   = var.secrets_config.recovery_window_days
   enable_secret_rotation = false # Enable later if needed
 
+  # Pass through all secret variables
+  openai_api_key                = var.openai_api_key
+  apple_team_id                 = var.apple_team_id
+  apple_key_id                  = var.apple_key_id
+  apple_private_key             = var.apple_private_key
+  apple_client_id               = var.apple_client_id
+  app_store_connect_issuer_id   = var.app_store_connect_issuer_id
+  app_store_connect_key_id      = var.app_store_connect_key_id
+  app_store_connect_private_key = var.app_store_connect_private_key
+  app_store_connect_app_id      = var.app_store_connect_app_id
+
   tags = local.common_tags
 }
 
