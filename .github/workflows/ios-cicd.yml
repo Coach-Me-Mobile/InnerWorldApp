@@ -528,13 +528,11 @@ jobs:
           echo "📊 Deployment Summary:"
           cat deployment-summary.json
       
-      - name: Notify Slack/Teams (if configured)
-        if: always()
+      - name: Deployment complete
         run: |
-          echo "🔔 Deployment notification prepared"
-          echo "Build ${{ needs.setup.outputs.build_number }} deployed to TestFlight successfully!"
+          echo "✅ TestFlight deployment completed successfully!"
+          echo "Build: ${{ needs.setup.outputs.build_number }}"
           echo "Version: ${{ needs.setup.outputs.version_number }}"
-          echo "Commit: ${{ github.sha }}"
       
       - name: Upload deployment artifacts
         uses: actions/upload-artifact@v4

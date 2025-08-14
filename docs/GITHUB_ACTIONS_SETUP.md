@@ -130,13 +130,7 @@ cat certificate_base64.txt
 cat profile_base64.txt
 ```
 
-### 2.3 Optional Notification Secrets
 
-For Slack/Teams notifications (optional):
-```
-SLACK_WEBHOOK_URL = https://hooks.slack.com/... (optional)
-TEAMS_WEBHOOK_URL = https://outlook.office.com/... (optional)
-```
 
 ## Step 3: Verify iOS Project Configuration
 
@@ -218,7 +212,6 @@ The workflow triggers on:
 - Retrieve App Store Connect API key from AWS
 - Upload to TestFlight using altool
 - Create deployment summary
-- Send notifications (if configured)
 
 #### **6. Cleanup**
 - Clean up keychains and temporary files
@@ -320,20 +313,7 @@ s3://innerworld-prod-testflight-builds/
 - S3 TestFlight builds: 90 days (configurable)
 - Test results: 30 days
 
-### 7.3 Notifications
 
-**Slack Integration Example:**
-Add to workflow after successful deployment:
-
-```yaml
-- name: Notify Slack
-  if: success()
-  uses: 8398a7/action-slack@v3
-  with:
-    status: success
-    webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-    text: "🚀 InnerWorld iOS build ${{ needs.setup.outputs.build_number }} deployed to TestFlight!"
-```
 
 ## Troubleshooting
 
@@ -444,7 +424,6 @@ aws secretsmanager get-secret-value --secret-id innerworld-prod/appstoreconnect/
 - Monitor Apple Developer Portal for certificate expiry
 
 ### 4. **Monitoring**
-- Set up notifications for failed builds
 - Monitor TestFlight upload success rates
 - Track build performance metrics
 - Review and rotate credentials regularly
