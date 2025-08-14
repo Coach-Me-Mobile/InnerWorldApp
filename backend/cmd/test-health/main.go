@@ -35,14 +35,14 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Initialize Neptune client (mock for development)
-	var neptuneClient graph.NeptuneClient
+	// Initialize S3 client (mock for development)
+	var s3Client graph.S3Client
 	if cfg.IsDevelopment() {
-		neptuneClient = graph.NewMockNeptuneClient()
-		log.Println("Initialized Mock Neptune client for development")
+		s3Client = graph.NewMockS3Client()
+		log.Println("Initialized Mock S3 client for development")
 	} else {
-		neptuneClient = graph.NewMockNeptuneClient()
-		log.Println("Using Mock Neptune client (production Neptune not yet configured)")
+		s3Client = graph.NewMockS3Client()
+		log.Println("Using Mock S3 client (production S3 not yet configured)")
 	}
 
 	ctx := context.Background()
@@ -51,9 +51,9 @@ func main() {
 	log.Println("Running health checks...")
 	services := make(map[string]ServiceHealth)
 
-	// Check Neptune connectivity
-	neptuneHealth := checkNeptuneHealth(ctx, neptuneClient)
-	services["neptune"] = neptuneHealth
+	// Check S3 connectivity
+	s3Health := checkS3Health(ctx, s3Client)
+	services["s3"] = s3Health
 
 	// Check OpenRouter (skip in health check to avoid API costs)
 	services["openrouter"] = ServiceHealth{
@@ -102,19 +102,19 @@ func main() {
 	fmt.Println(string(responseJSON))
 }
 
-// checkNeptuneHealth verifies Neptune database connectivity
-func checkNeptuneHealth(ctx context.Context, neptuneClient graph.NeptuneClient) ServiceHealth {
+// checkS3Health verifies S3 storage connectivity
+func checkS3Health(ctx context.Context, s3Client graph.S3Client) ServiceHealth {
 	start := time.Now()
 
 	// Create context with timeout
-	neptuneCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	s3Ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	err := neptuneClient.HealthCheck(neptuneCtx)
+	err := s3Client.HealthCheck(s3Ctx)
 	responseTime := time.Since(start)
 
 	if err != nil {
-		log.Printf("Neptune health check failed: %v", err)
+		log.Printf("S3 health check failed: %v", err)
 		return ServiceHealth{
 			Status:       "unhealthy",
 			ResponseTime: responseTime.String(),

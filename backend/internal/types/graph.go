@@ -2,7 +2,7 @@ package types
 
 import "time"
 
-// GraphContext represents basic user context from Neptune
+// GraphContext represents basic user context from S3
 type GraphContext struct {
 	UserID      string    `json:"userId"`
 	LastUpdated time.Time `json:"lastUpdated"`

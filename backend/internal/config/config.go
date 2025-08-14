@@ -17,8 +17,8 @@ type Config struct {
 	OpenRouter OpenRouterConfig `json:"openrouter"`
 	OpenAI     OpenAIConfig     `json:"openai"`
 
-	// Database
-	Neptune NeptuneConfig `json:"neptune"`
+	// Storage
+	S3 S3Config `json:"s3"`
 }
 
 // OpenRouterConfig holds OpenRouter API configuration
@@ -34,11 +34,10 @@ type OpenAIConfig struct {
 	Model  string `json:"model"`
 }
 
-// NeptuneConfig holds basic Neptune configuration
-type NeptuneConfig struct {
-	Endpoint string `json:"endpoint"`
-	Port     int    `json:"port"`
-	Region   string `json:"region"`
+// S3Config holds basic S3 configuration
+type S3Config struct {
+	Bucket string `json:"bucket"`
+	Region string `json:"region"`
 }
 
 // LoadConfig loads configuration from environment variables
@@ -58,10 +57,9 @@ func LoadConfig() (*Config, error) {
 			Model:  getEnvOrDefault("OPENAI_MODEL", "text-embedding-3-small"),
 		},
 
-		Neptune: NeptuneConfig{
-			Endpoint: getEnvOrDefault("NEPTUNE_ENDPOINT", "localhost"),
-			Port:     getEnvAsInt("NEPTUNE_PORT", 8182),
-			Region:   getEnvOrDefault("NEPTUNE_REGION", "us-west-2"),
+		S3: S3Config{
+			Bucket: getEnvOrDefault("S3_BUCKET", "innerworld-dev-bucket"),
+			Region: getEnvOrDefault("S3_REGION", "us-west-2"),
 		},
 	}
 
@@ -87,9 +85,12 @@ func validateConfig(config *Config) error {
 		}
 	}
 
-	// Validate numeric values
-	if config.Neptune.Port <= 0 {
-		errors = append(errors, "NEPTUNE_PORT must be a positive integer")
+	// Validate S3 configuration
+	if config.S3.Bucket == "" {
+		errors = append(errors, "S3_BUCKET is required")
+	}
+	if config.S3.Region == "" {
+		errors = append(errors, "S3_REGION is required")
 	}
 
 	if len(errors) > 0 {

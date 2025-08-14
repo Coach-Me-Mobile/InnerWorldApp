@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"innerworld-backend/internal/config"
+
 	// TODO: Uncomment when GraphRAG is implemented in Phase 2
 	// "innerworld-backend/internal/embeddings"
 	// "innerworld-backend/internal/graph"
@@ -36,8 +37,8 @@ var (
 	openRouterClient *llm.OpenRouterClient
 	// TODO: Implement openAIClient for embeddings when GraphRAG is added
 	// openAIClient     *embeddings.OpenAIEmbeddingsClient
-	// TODO: Implement neptuneClient for graph operations when GraphRAG is added
-	// neptuneClient    graph.NeptuneClient
+	// TODO: Implement s3Client for graph operations when GraphRAG is added
+	// s3Client    graph.S3Client
 )
 
 // init runs once when Lambda container starts
@@ -66,9 +67,9 @@ func init() {
 	//	log.Println("OpenAI API key not provided - embeddings disabled")
 	// }
 
-	// TODO: Initialize Neptune client when GraphRAG is implemented
-	// neptuneClient = graph.NewMockNeptuneClient()
-	log.Println("GraphRAG components (OpenAI/Neptune) disabled in Phase 1")
+	// TODO: Initialize S3 client when GraphRAG is implemented
+	// s3Client = graph.NewMockS3Client()
+	log.Println("GraphRAG components (OpenAI/S3) disabled in Phase 1")
 }
 
 // handleConversationRequest processes basic conversation requests
