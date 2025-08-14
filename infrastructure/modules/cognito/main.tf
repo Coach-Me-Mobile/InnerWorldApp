@@ -179,7 +179,7 @@ resource "aws_cognito_user_pool_client" "ios_app" {
   ]
 
   # Supported identity providers
-  supported_identity_providers = var.enable_apple_signin && var.apple_client_id != "" ? ["COGNITO", "SignInWithApple"] : ["COGNITO"]
+  supported_identity_providers = var.enable_apple_signin ? ["COGNITO", "SignInWithApple"] : ["COGNITO"]
 
   # Security settings - values are in their respective units
   refresh_token_validity = 30 # 30 days
@@ -231,7 +231,7 @@ resource "aws_cognito_user_pool_client" "ios_app" {
 # ==============================================================================
 
 resource "aws_cognito_identity_provider" "apple" {
-  count = var.enable_apple_signin && var.apple_client_id != "" && var.apple_team_id != "" ? 1 : 0
+  count = var.enable_apple_signin ? 1 : 0
 
   user_pool_id  = aws_cognito_user_pool.main.id
   provider_name = "SignInWithApple"
@@ -270,7 +270,7 @@ resource "aws_cognito_identity_pool" "main" {
   }
 
   # Apple Sign-In provider
-  supported_login_providers = var.enable_apple_signin && var.apple_client_id != "" ? {
+  supported_login_providers = var.enable_apple_signin ? {
     "appleid.apple.com" = var.apple_client_id
   } : {}
 
@@ -444,7 +444,7 @@ resource "aws_cognito_identity_pool_roles_attachment" "main" {
 
   # Role mappings for different identity providers
   dynamic "role_mapping" {
-    for_each = var.enable_apple_signin && var.apple_client_id != "" ? [1] : []
+    for_each = var.enable_apple_signin ? [1] : []
     content {
       identity_provider         = "appleid.apple.com"
       ambiguous_role_resolution = "AuthenticatedRole"

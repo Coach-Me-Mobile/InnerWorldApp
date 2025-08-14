@@ -111,16 +111,15 @@ output "cognito_info" {
   sensitive = false
 }
 
-# API endpoints output - commented out for minimal deployment
-# output "api_endpoints" {
-#   description = "API endpoints for iOS app integration"
-#   value = {
-#     rest_api_url     = module.infrastructure.api_endpoints.rest_api_base_url
-#     websocket_url    = module.infrastructure.api_endpoints.websocket_url
-#     health_check_url = module.infrastructure.api_endpoints.health_check_url
-#   }
-#   sensitive = false
-# }
+output "api_endpoints" {
+  description = "API endpoints for iOS app integration"
+  value = {
+    rest_api_url     = module.infrastructure.api_endpoints.rest_api_base_url
+    websocket_url    = module.infrastructure.api_endpoints.websocket_url
+    health_check_url = module.infrastructure.api_endpoints.health_check_url
+  }
+  sensitive = false
+}
 
 output "secrets_info" {
   description = "Secrets Manager ARNs for Lambda access"

@@ -120,6 +120,44 @@ resource "aws_secretsmanager_secret_version" "apple_signin_key" {
 }
 
 # ==============================================================================
+# APP STORE CONNECT API KEY
+# ==============================================================================
+
+resource "aws_secretsmanager_secret" "app_store_connect_key" {
+  name        = "${var.name_prefix}/appstoreconnect/api-key"
+  description = "App Store Connect API key for TestFlight and App Store management"
+
+  recovery_window_in_days = var.recovery_window_days
+
+  replica {
+    region = var.aws_region
+  }
+
+  tags = merge(var.tags, {
+    Name        = "${var.name_prefix}-appstoreconnect-api-key"
+    Type        = "APIKey"
+    Service     = "AppStoreConnect"
+    Sensitivity = "High"
+  })
+}
+
+resource "aws_secretsmanager_secret_version" "app_store_connect_key" {
+  secret_id = aws_secretsmanager_secret.app_store_connect_key.id
+  secret_string = jsonencode({
+    issuer_id   = var.app_store_connect_issuer_id != "" ? var.app_store_connect_issuer_id : "REPLACE_WITH_ISSUER_ID"
+    key_id      = var.app_store_connect_key_id != "" ? var.app_store_connect_key_id : "REPLACE_WITH_KEY_ID"
+    private_key = var.app_store_connect_private_key != "" ? var.app_store_connect_private_key : "REPLACE_WITH_PRIVATE_KEY"
+    app_id      = var.app_store_connect_app_id != "" ? var.app_store_connect_app_id : "REPLACE_WITH_APP_ID"
+    bundle_id   = var.apple_client_id != "" ? var.apple_client_id : "com.gauntletai.innerworld"
+    created_at  = timestamp()
+  })
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
+# ==============================================================================
 # JWT SECRET FOR TOKEN SIGNING
 # ==============================================================================
 

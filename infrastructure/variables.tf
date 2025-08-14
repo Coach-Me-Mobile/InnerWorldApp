@@ -207,7 +207,13 @@ variable "backup_config" {
 # ==============================================================================
 
 variable "enable_codepipeline" {
-  description = "Enable AWS CodePipeline for CI/CD"
+  description = "Enable AWS CodePipeline for CI/CD (legacy)"
+  type        = bool
+  default     = false
+}
+
+variable "enable_ios_pipeline" {
+  description = "Enable iOS CI/CD pipeline for TestFlight deployment"
   type        = bool
   default     = true
 }

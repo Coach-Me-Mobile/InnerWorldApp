@@ -108,3 +108,31 @@ variable "apple_client_id" {
   default     = ""
   sensitive   = true
 }
+
+variable "app_store_connect_issuer_id" {
+  description = "App Store Connect API Issuer ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "app_store_connect_key_id" {
+  description = "App Store Connect API Key ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "app_store_connect_private_key" {
+  description = "App Store Connect API Private Key"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "app_store_connect_app_id" {
+  description = "App Store Connect App ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

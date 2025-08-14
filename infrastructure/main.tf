@@ -121,6 +121,22 @@ module "secrets" {
   tags = local.common_tags
 }
 
+# S3 module - App assets and TestFlight build storage
+module "s3" {
+  source = "./modules/s3"
+
+  name_prefix = local.name_prefix
+  environment = var.environment
+
+  # S3 configuration
+  enable_cloudfront                 = var.environment == "prod" ? true : false
+  cloudfront_price_class            = var.environment == "prod" ? "PriceClass_100" : "PriceClass_100"
+  app_assets_lifecycle_enabled      = true
+  testflight_builds_retention_days  = var.environment == "prod" ? 90 : 30
+
+  tags = local.common_tags
+}
+
 # Cognito module - Authentication and authorization
 module "cognito" {
   source = "./modules/cognito"
@@ -149,10 +165,10 @@ module "cognito" {
   tags = local.common_tags
 }
 
-# CodePipeline module - CI/CD pipeline
-module "codepipeline" {
-  count  = var.enable_codepipeline ? 1 : 0
-  source = "./modules/codepipeline"
+# iOS Pipeline module - CI/CD pipeline for TestFlight deployment
+module "ios_pipeline" {
+  count  = var.enable_ios_pipeline ? 1 : 0
+  source = "./modules/ios_pipeline"
 
   name_prefix  = local.name_prefix
   project_name = var.project_name
@@ -164,14 +180,25 @@ module "codepipeline" {
   github_repository     = var.github_repository
   github_branch         = var.github_branch
 
-  log_retention_days = var.log_retention_days
+  # S3 bucket configuration for TestFlight builds
+  testflight_builds_bucket_name = module.s3.testflight_builds_bucket_name
+  testflight_builds_bucket_arn  = module.s3.testflight_builds_bucket_arn
+
+  # Apple secrets configuration
+  apple_developer_secrets_arn    = module.secrets.apple_signin_key_arn
+  app_store_connect_secrets_arn  = module.secrets.app_store_connect_key_arn
+
+  # Pipeline configuration
+  require_manual_approval = var.environment == "prod" ? true : false
+  log_retention_days      = var.log_retention_days
 
   tags = local.common_tags
+
+  depends_on = [module.s3, module.secrets]
 }
 
-# Neptune module - Graph database for GraphRAG
-# COMMENTED OUT FOR MINIMAL TESTFLIGHT DEPLOYMENT
-# Uncomment this when you need GraphRAG functionality
+# Neptune module - Graph database for GraphRAG (TEMPORARILY DISABLED FOR TESTFLIGHT)
+# Uncomment when ready for production GraphRAG features ($526/month cost)
 # module "neptune" {
 #   source = "./modules/neptune"
 #
@@ -198,69 +225,82 @@ module "codepipeline" {
 # }
 
 # DynamoDB module - Real-time conversation storage
-# COMMENTED OUT FOR MINIMAL TESTFLIGHT DEPLOYMENT
-# Uncomment this when you need conversation storage functionality
-# module "dynamodb" {
-#   source = "./modules/dynamodb"
-#
-#   name_prefix = local.name_prefix
-#   environment = var.environment
-#
-#   # DynamoDB configuration
-#   billing_mode                  = "ON_DEMAND"
-#   enable_streams                = true # For post-session processing
-#   enable_point_in_time_recovery = var.environment == "prod" ? true : false
-#
-#   # TTL configuration
-#   live_conversations_ttl_hours      = 24 # 24 hours for processing
-#   websocket_connections_ttl_minutes = 30 # 30 minutes for connection cleanup
-#   session_context_ttl_hours         = 1  # 1 hour for context cache
-#
-#   alarm_actions = [] # Add SNS topic ARNs if needed
-#
-#   tags = local.common_tags
-# }
+module "dynamodb" {
+  source = "./modules/dynamodb"
+
+  name_prefix = local.name_prefix
+  environment = var.environment
+
+  # DynamoDB configuration
+  billing_mode                  = "ON_DEMAND"
+  enable_streams                = true # For post-session processing
+  enable_point_in_time_recovery = var.environment == "prod" ? true : false
+
+  # TTL configuration
+  live_conversations_ttl_hours      = 24 # 24 hours for processing
+  websocket_connections_ttl_minutes = 30 # 30 minutes for connection cleanup
+  session_context_ttl_hours         = 1  # 1 hour for context cache
+
+  alarm_actions = [] # Add SNS topic ARNs if needed
+
+  tags = local.common_tags
+}
 
 # Lambda module - Lambda functions with API Gateway
-# COMMENTED OUT FOR MINIMAL TESTFLIGHT DEPLOYMENT
-# Uncomment this when you need backend API functionality
-# module "lambda" {
-#   source = "./modules/lambda"
-#
-#   name_prefix = local.name_prefix
-#   environment = var.environment
-#   aws_region  = var.aws_region
-#   account_id  = local.account_id
-#
-#   # Networking configuration - use existing VPC resources
-#   vpc_id                   = module.networking.vpc_id
-#   private_subnet_ids       = module.networking.private_subnet_ids
-#   lambda_security_group_id = module.networking.lambda_security_group_id
-#
-#   # Secrets Manager ARNs for Lambda permissions
-#   secrets_manager_arns = [
-#     module.secrets.openai_api_key_arn,
-#     module.secrets.apple_signin_key_arn,
-#     module.secrets.jwt_secret_arn
-#   ]
-#
-#   # Cognito configuration for JWT authentication
-#   cognito_user_pool_id        = module.cognito.user_pool_id
-#   cognito_user_pool_client_id = module.cognito.user_pool_client_id
-#
-#   # Lambda configuration with database table names
-#   lambda_environment_variables = merge({
-#     ENVIRONMENT = var.environment
-#     DEBUG       = var.environment == "prod" ? "false" : "true"
-#     AWS_REGION  = var.aws_region
-#
-#     # Cognito configuration
-#     COGNITO_USER_POOL_ID        = module.cognito.user_pool_id
-#     COGNITO_USER_POOL_CLIENT_ID = module.cognito.user_pool_client_id
-#   }, var.lambda_environment_variables)
-#
-#   log_retention_days  = var.log_retention_days
-#   enable_xray_tracing = var.enable_xray_tracing
-#
-#   tags = local.common_tags
-# }
+module "lambda" {
+  source = "./modules/lambda"
+
+  name_prefix = local.name_prefix
+  environment = var.environment
+  aws_region  = var.aws_region
+  account_id  = local.account_id
+
+  # Networking configuration - use existing VPC resources
+  vpc_id                   = module.networking.vpc_id
+  private_subnet_ids       = module.networking.private_subnet_ids
+  lambda_security_group_id = module.networking.lambda_security_group_id
+
+  # Secrets Manager ARNs for Lambda permissions
+  secrets_manager_arns = [
+    module.secrets.openai_api_key_arn,
+    module.secrets.apple_signin_key_arn,
+    module.secrets.jwt_secret_arn
+  ]
+
+  # Cognito configuration for JWT authentication
+  cognito_user_pool_id        = module.cognito.user_pool_id
+  cognito_user_pool_client_id = module.cognito.user_pool_client_id
+
+  # Lambda configuration with database table names
+  lambda_environment_variables = merge({
+    ENVIRONMENT = var.environment
+    DEBUG       = var.environment == "prod" ? "false" : "true"
+    AWS_REGION  = var.aws_region
+
+    # Neptune configuration (DISABLED FOR TESTFLIGHT - uncomment when Neptune is enabled)
+    # NEPTUNE_ENDPOINT        = module.neptune.cluster_endpoint
+    # NEPTUNE_READER_ENDPOINT = module.neptune.cluster_reader_endpoint
+    # NEPTUNE_PORT            = "8182"
+    # NEPTUNE_IAM_AUTH        = "true"
+
+    # DynamoDB table names
+    LIVE_CONVERSATIONS_TABLE    = module.dynamodb.live_conversations_table_name
+    WEBSOCKET_CONNECTIONS_TABLE = module.dynamodb.websocket_connections_table_name
+    SESSION_CONTEXT_TABLE       = module.dynamodb.session_context_table_name
+
+    # Cognito configuration
+    COGNITO_USER_POOL_ID        = module.cognito.user_pool_id
+    COGNITO_USER_POOL_CLIENT_ID = module.cognito.user_pool_client_id
+  }, var.lambda_environment_variables)
+
+  log_retention_days  = var.log_retention_days
+  enable_xray_tracing = var.enable_xray_tracing
+
+  tags = local.common_tags
+
+  # Ensure databases are created before Lambda
+  depends_on = [
+    # module.neptune,  # Disabled for TestFlight
+    module.dynamodb
+  ]
+}

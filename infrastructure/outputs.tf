@@ -77,16 +77,35 @@ output "cognito_urls" {
 }
 
 # ==============================================================================
+# S3 OUTPUTS
+# ==============================================================================
+
+output "s3" {
+  description = "S3 buckets and CloudFront distribution information"
+  value = {
+    app_assets_bucket_name           = module.s3.app_assets_bucket_name
+    app_assets_bucket_arn            = module.s3.app_assets_bucket_arn
+    testflight_builds_bucket_name    = module.s3.testflight_builds_bucket_name
+    testflight_builds_bucket_arn     = module.s3.testflight_builds_bucket_arn
+    cloudfront_distribution_id       = module.s3.cloudfront_distribution_id
+    cloudfront_domain_name           = module.s3.cloudfront_domain_name
+    s3_access_policy_arn             = module.s3.s3_access_policy_arn
+  }
+  sensitive = false
+}
+
+# ==============================================================================
 # SECRETS MANAGER OUTPUTS
 # ==============================================================================
 
 output "secrets" {
   description = "AWS Secrets Manager secret ARNs and names"
   value = {
-    openai_api_key_arn    = module.secrets.openai_api_key_arn
-    neptune_config_arn = module.secrets.neptune_config_arn
-    apple_signin_key_arn  = module.secrets.apple_signin_key_arn
-    jwt_secret_arn        = module.secrets.jwt_secret_arn
+    openai_api_key_arn           = module.secrets.openai_api_key_arn
+    neptune_config_arn           = module.secrets.neptune_config_arn
+    apple_signin_key_arn         = module.secrets.apple_signin_key_arn
+    app_store_connect_key_arn    = module.secrets.app_store_connect_key_arn
+    jwt_secret_arn               = module.secrets.jwt_secret_arn
   }
   sensitive = false
 }
@@ -110,12 +129,26 @@ output "iam_roles" {
 # ==============================================================================
 
 output "codepipeline" {
-  description = "CodePipeline and build infrastructure"
+  description = "CodePipeline and build infrastructure (legacy)"
   value = var.enable_codepipeline ? {
     pipeline_name          = module.codepipeline[0].pipeline_name
     pipeline_arn           = module.codepipeline[0].pipeline_arn
     codebuild_project_name = module.codepipeline[0].codebuild_project_name
     s3_artifacts_bucket    = module.codepipeline[0].s3_artifacts_bucket
+  } : null
+  sensitive = false
+}
+
+output "ios_pipeline" {
+  description = "iOS CI/CD pipeline and build infrastructure for TestFlight"
+  value = var.enable_ios_pipeline ? {
+    pipeline_name              = module.ios_pipeline[0].pipeline_name
+    pipeline_arn               = module.ios_pipeline[0].pipeline_arn
+    ios_build_project_name     = module.ios_pipeline[0].ios_build_project_name
+    ios_test_project_name      = module.ios_pipeline[0].ios_test_project_name
+    testflight_deploy_project_name = module.ios_pipeline[0].testflight_deploy_project_name
+    artifacts_bucket_name      = module.ios_pipeline[0].artifacts_bucket_name
+    requires_manual_approval   = var.environment == "prod" ? true : false
   } : null
   sensitive = false
 }
@@ -169,27 +202,26 @@ output "cost_tracking" {
 # ==============================================================================
 # LAMBDA OUTPUTS
 # ==============================================================================
-# COMMENTED OUT FOR MINIMAL TESTFLIGHT DEPLOYMENT
 
-# output "lambda" {
-#   description = "Lambda functions information"
-#   value = {
-#     functions          = module.lambda.lambda_functions_summary
-#     api_gateways       = module.lambda.api_gateways_summary
-#     execution_role_arn = module.lambda.lambda_execution_role_arn
-#   }
-#   sensitive = false
-# }
+output "lambda" {
+  description = "Lambda functions information"
+  value = {
+    functions          = module.lambda.lambda_functions_summary
+    api_gateways       = module.lambda.api_gateways_summary
+    execution_role_arn = module.lambda.lambda_execution_role_arn
+  }
+  sensitive = false
+}
 
-# output "api_endpoints" {
-#   description = "API endpoint URLs for testing and integration"
-#   value = {
-#     rest_api_base_url = module.lambda.rest_api_endpoint
-#     health_check_url  = module.lambda.rest_api_health_endpoint
-#     websocket_url     = module.lambda.websocket_api_endpoint
-#   }
-#   sensitive = false
-# }
+output "api_endpoints" {
+  description = "API endpoint URLs for testing and integration"
+  value = {
+    rest_api_base_url = module.lambda.rest_api_endpoint
+    health_check_url  = module.lambda.rest_api_health_endpoint
+    websocket_url     = module.lambda.websocket_api_endpoint
+  }
+  sensitive = false
+}
 
 # ==============================================================================
 # CONFIGURATION SUMMARY
@@ -202,7 +234,7 @@ output "infrastructure_summary" {
     vpc_created           = true
     cognito_configured    = true
     secrets_manager_setup = true
-    lambda_deployed       = false # Commented out for minimal deployment
+    lambda_deployed       = true
 
     # Optional features
     codepipeline_enabled  = var.enable_codepipeline
@@ -217,9 +249,9 @@ output "infrastructure_summary" {
     mfa_configuration = var.cognito_config.mfa_configuration
     backup_enabled    = var.backup_config.enable_backups
 
-    # API endpoints - commented out for minimal deployment
-    # rest_api_url  = module.lambda.rest_api_endpoint
-    # websocket_url = module.lambda.websocket_api_endpoint
+    # API endpoints
+    rest_api_url  = module.lambda.rest_api_endpoint
+    websocket_url = module.lambda.websocket_api_endpoint
   }
   sensitive = false
 }

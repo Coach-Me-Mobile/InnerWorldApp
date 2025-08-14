@@ -23,6 +23,11 @@ output "apple_signin_key_arn" {
   value       = aws_secretsmanager_secret.apple_signin_key.arn
 }
 
+output "app_store_connect_key_arn" {
+  description = "ARN of the App Store Connect API key secret"
+  value       = aws_secretsmanager_secret.app_store_connect_key.arn
+}
+
 output "jwt_secret_arn" {
   description = "ARN of the JWT secret"
   value       = aws_secretsmanager_secret.jwt_secret.arn

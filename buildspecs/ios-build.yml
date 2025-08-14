@@ -1,0 +1,211 @@
+# ==============================================================================
+# BUILDSPEC FOR IOS BUILD
+# ==============================================================================
+# AWS CodeBuild buildspec for building InnerWorld iOS app
+# This handles Xcode build, code signing, and artifact creation
+# ==============================================================================
+
+version: 0.2
+
+env:
+  variables:
+    # Build configuration
+    XCODE_SCHEME: "InnerWorld"
+    XCODE_WORKSPACE: "ios/InnerWorld.xcodeproj"
+    XCODE_CONFIGURATION: "Release"
+    DERIVED_DATA_PATH: "/tmp/xcode-derived-data"
+    BUILD_OUTPUT_PATH: "/tmp/build-output"
+    
+    # iOS version settings
+    IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+    SWIFT_VERSION: "5.0"
+    
+  parameter-store:
+    - name: APPLE_TEAM_ID
+      value: /${PROJECT_NAME}/apple/team-id
+    - name: BUNDLE_ID
+      value: /${PROJECT_NAME}/app/bundle-id
+      
+  secrets-manager:
+    APPLE_DEVELOPER_SECRETS: $APPLE_DEVELOPER_SECRETS_ARN
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - echo "Installing build dependencies..."
+      - echo "Build started on `date`"
+      - echo "Environment - $ENVIRONMENT"
+      - echo "Project - $PROJECT_NAME" 
+      - echo "AWS Region - $AWS_REGION"
+      
+      # Install required tools
+      - apt-get update
+      - apt-get install -y jq curl unzip
+      
+      # Install AWS CLI v2 if not present
+      - |
+        if ! command -v aws &> /dev/null; then
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          ./aws/install
+        fi
+      
+      # Note: For actual iOS builds, you'd need macOS runners with Xcode
+      # This is a demonstration buildspec that would work with actual macOS CodeBuild
+      - echo "Note: iOS builds require macOS runners with Xcode installed"
+      
+  pre_build:
+    commands:
+      - echo "Preparing for iOS build..."
+      - echo "Validating build environment..."
+      
+      # Create necessary directories
+      - mkdir -p $DERIVED_DATA_PATH
+      - mkdir -p $BUILD_OUTPUT_PATH
+      
+      # Parse Apple Developer secrets
+      - echo "Retrieving Apple Developer credentials..."
+      - export APPLE_DEV_SECRETS=$(echo $APPLE_DEVELOPER_SECRETS | jq -r '.')
+      - export SIGNING_IDENTITY=$(echo $APPLE_DEV_SECRETS | jq -r '.signing_identity // "iPhone Distribution"')
+      - export PROVISIONING_PROFILE_UUID=$(echo $APPLE_DEV_SECRETS | jq -r '.provisioning_profile_uuid')
+      
+      # Validate iOS project structure
+      - |
+        if [ ! -d "ios" ]; then
+          echo "ERROR: iOS directory not found"
+          exit 1
+        fi
+        
+        if [ ! -f "$XCODE_WORKSPACE" ]; then
+          echo "ERROR: Xcode project not found at $XCODE_WORKSPACE"
+          exit 1
+        fi
+      
+      # Set build version from Git commit
+      - export BUILD_NUMBER=$(git rev-parse --short HEAD)
+      - export VERSION_NUMBER=$(date '+%Y.%m.%d')
+      - echo "Build Number: $BUILD_NUMBER"
+      - echo "Version Number: $VERSION_NUMBER"
+      
+      # Log environment for debugging
+      - echo "=== Build Environment ==="
+      - echo "Xcode Scheme: $XCODE_SCHEME"
+      - echo "Xcode Workspace: $XCODE_WORKSPACE"
+      - echo "Configuration: $XCODE_CONFIGURATION"
+      - echo "Team ID: $APPLE_TEAM_ID"
+      - echo "Bundle ID: $BUNDLE_ID"
+      - echo "=========================="
+      
+  build:
+    commands:
+      - echo "Starting iOS build process..."
+      
+      # NOTE: The following commands would work on macOS CodeBuild runners
+      # For demonstration, we'll simulate the build process
+      
+      - echo "Simulating iOS build (requires macOS runner for actual build)..."
+      
+      # Clean build directory
+      - echo "Cleaning previous builds..."
+      # xcodebuild clean -project "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -configuration "$XCODE_CONFIGURATION"
+      
+      # Build for simulator (for testing)
+      - echo "Building for iOS Simulator..."
+      # xcodebuild build -project "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -configuration "$XCODE_CONFIGURATION" -destination "platform=iOS Simulator,name=iPhone 15 Pro" -derivedDataPath "$DERIVED_DATA_PATH"
+      
+      # Archive for device (actual app store build)
+      - echo "Creating archive for device..."
+      # xcodebuild archive -project "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -configuration "$XCODE_CONFIGURATION" -destination "generic/platform=iOS" -archivePath "$BUILD_OUTPUT_PATH/InnerWorld.xcarchive" -derivedDataPath "$DERIVED_DATA_PATH" CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" PROVISIONING_PROFILE="$PROVISIONING_PROFILE_UUID" DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
+      
+      # Export IPA
+      - echo "Exporting IPA..."
+      - |
+        cat > export_options.plist << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>$APPLE_TEAM_ID</string>
+            <key>provisioningProfiles</key>
+            <dict>
+                <key>$BUNDLE_ID</key>
+                <string>$PROVISIONING_PROFILE_UUID</string>
+            </dict>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>stripSwiftSymbols</key>
+            <true/>
+            <key>thinning</key>
+            <string>&lt;none&gt;</string>
+        </dict>
+        </plist>
+        EOF
+      
+      # Export the IPA file
+      # xcodebuild -exportArchive -archivePath "$BUILD_OUTPUT_PATH/InnerWorld.xcarchive" -exportPath "$BUILD_OUTPUT_PATH" -exportOptionsPlist export_options.plist
+      
+      # For demonstration, create a mock IPA file
+      - echo "Creating mock IPA for demonstration..."
+      - mkdir -p "$BUILD_OUTPUT_PATH"
+      - echo "Mock IPA content" > "$BUILD_OUTPUT_PATH/InnerWorld.ipa"
+      - echo "Build timestamp: $(date)" >> "$BUILD_OUTPUT_PATH/build_info.txt"
+      - echo "Git commit: $BUILD_NUMBER" >> "$BUILD_OUTPUT_PATH/build_info.txt"
+      - echo "Version: $VERSION_NUMBER" >> "$BUILD_OUTPUT_PATH/build_info.txt"
+      
+      # Upload build artifacts to S3
+      - echo "Uploading build artifacts to S3..."
+      - aws s3 cp "$BUILD_OUTPUT_PATH/" s3://$TESTFLIGHT_BUILDS_BUCKET/builds/$BUILD_NUMBER/ --recursive
+      
+      # Create build manifest
+      - |
+        cat > build_manifest.json << EOF
+        {
+          "build_number": "$BUILD_NUMBER",
+          "version_number": "$VERSION_NUMBER",
+          "git_commit": "$(git rev-parse HEAD)",
+          "git_branch": "$(git rev-parse --abbrev-ref HEAD)",
+          "build_timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "environment": "$ENVIRONMENT",
+          "project_name": "$PROJECT_NAME",
+          "bundle_id": "$BUNDLE_ID",
+          "team_id": "$APPLE_TEAM_ID",
+          "artifacts": {
+            "ipa_path": "s3://$TESTFLIGHT_BUILDS_BUCKET/builds/$BUILD_NUMBER/InnerWorld.ipa",
+            "build_info": "s3://$TESTFLIGHT_BUILDS_BUCKET/builds/$BUILD_NUMBER/build_info.txt"
+          }
+        }
+        EOF
+      
+      - cat build_manifest.json
+      - aws s3 cp build_manifest.json s3://$TESTFLIGHT_BUILDS_BUCKET/builds/$BUILD_NUMBER/
+      
+  post_build:
+    commands:
+      - echo "iOS build completed"
+      - echo "Build artifacts uploaded to S3"
+      - echo "Build Number: $BUILD_NUMBER"
+      - echo "S3 Location: s3://$TESTFLIGHT_BUILDS_BUCKET/builds/$BUILD_NUMBER/"
+      
+      # Set output variables for next stage
+      - echo "export BUILD_NUMBER=$BUILD_NUMBER" >> build_env.sh
+      - echo "export VERSION_NUMBER=$VERSION_NUMBER" >> build_env.sh
+      - echo "export IPA_S3_PATH=s3://$TESTFLIGHT_BUILDS_BUCKET/builds/$BUILD_NUMBER/InnerWorld.ipa" >> build_env.sh
+
+artifacts:
+  files:
+    - build_manifest.json
+    - build_env.sh
+    - export_options.plist
+  base-directory: $CODEBUILD_SRC_DIR
+  name: ios-build-artifacts-$BUILD_NUMBER
+
+cache:
+  paths:
+    - '/root/.npm/**/*'
+    - 'ios/Pods/**/*'
+    - '$DERIVED_DATA_PATH/**/*'
