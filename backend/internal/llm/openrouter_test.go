@@ -5,7 +5,7 @@ import (
 )
 
 func TestNewOpenRouterClient(t *testing.T) {
-	client := NewOpenRouterClient("test-api-key")
+	client := NewOpenRouterClient("test-api-key", "openai/gpt-4o-mini")
 	
 	if client == nil {
 		t.Fatal("Expected client to be created, got nil")
@@ -13,6 +13,10 @@ func TestNewOpenRouterClient(t *testing.T) {
 	
 	if client.apiKey != "test-api-key" {
 		t.Errorf("Expected API key to be 'test-api-key', got '%s'", client.apiKey)
+	}
+	
+	if client.model != "openai/gpt-4o-mini" {
+		t.Errorf("Expected model to be 'openai/gpt-4o-mini', got '%s'", client.model)
 	}
 	
 	if client.baseURL != "https://openrouter.ai/api/v1" {

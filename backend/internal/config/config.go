@@ -49,7 +49,7 @@ func LoadConfig() (*Config, error) {
 		OpenRouter: OpenRouterConfig{
 			APIKey:  getEnvOrDefault("OPENROUTER_API_KEY", ""),
 			BaseURL: getEnvOrDefault("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
-			Model:   getEnvOrDefault("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet"),
+			Model:   getEnvOrDefault("OPENROUTER_MODEL", "openai/gpt-4o-mini"),
 		},
 
 		OpenAI: OpenAIConfig{

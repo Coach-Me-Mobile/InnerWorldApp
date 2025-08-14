@@ -70,26 +70,27 @@ This project implements comprehensive security and code quality measures:
 
 ### Tech Stack
 - **iOS**: Swift, RealityKit, ARKit
-- **Backend**: Cloud Neo4j Aura for GraphRAG
-- **AI**: Claude (LLM), OpenAI (embeddings)
-- **Distribution**: TestFlight for beta testing
+- **Backend**: AWS serverless (Lambda, DynamoDB, Cognito) - cost-optimized
+- **AI**: OpenRouter Claude (LLM), OpenAI (embeddings)
+- **Infrastructure**: Terraform with manual deployment (~$180/month)
+- **CI/CD**: GitHub Actions for TestFlight deployment
 
 ### Project Structure
 ```
 InnerWorldApp/
-├── Sources/                    # Swift source code
-├── Tests/                      # Unit, integration, and UI tests
-├── Resources/                  # Assets, 3D models, configurations
-├── documentation/              # Project documentation
+├── ios/                        # iOS Swift source code, tests, assets
+├── backend/                    # Go Lambda functions and infrastructure
+├── infrastructure/             # Terraform infrastructure as code
+├── docs/                       # Deployment and setup documentation
 ├── scripts/                    # Development and validation scripts
-├── fastlane/                   # Deployment automation
-└── .github/workflows/          # CI/CD pipeline
+└── .github/workflows/          # GitHub Actions CI/CD pipeline
 ```
 
 ## 🔒 Security Features
 
 ### Secret Management
-- **Gitleaks Configuration**: Custom rules for OpenAI, Neo4j, iOS certificates
+- **Gitleaks Configuration**: Custom rules for OpenRouter, Apple certificates, AWS credentials
+- **AWS Secrets Manager**: Secure cloud storage for API keys
 - **Environment Variables**: All secrets externalized
 - **Keychain Integration**: Secure on-device storage
 - **API Key Rotation**: Support for key rotation
@@ -101,9 +102,9 @@ InnerWorldApp/
 - **Compliance**: Age-appropriate messaging and disclaimers
 
 ### Data Protection
-- **GraphRAG**: Per-user knowledge graphs in Neo4j
+- **DynamoDB**: Conversation storage with TTL cleanup
 - **Encryption**: Data encrypted in transit and at rest
-- **Retention**: 30-day limit for free users
+- **Retention**: Configurable TTL for conversation data
 - **Deletion**: User-controlled data removal
 
 ## 👥 Personas
@@ -132,24 +133,30 @@ pre-commit run --all-files
 ./scripts/validate-crisis-resources.sh
 ```
 
-### Fastlane Commands
+### GitHub Actions CI/CD
 ```bash
-# Run all tests
-bundle exec fastlane test
+# Trigger CI/CD pipeline
+git add .
+git commit -m "feat: trigger TestFlight deployment"
+git push origin main
 
-# Build for testing
-bundle exec fastlane build_for_testing
-
-# Deploy to TestFlight
-bundle exec fastlane beta
+# Monitor deployment
+# Visit GitHub repository > Actions tab to watch progress
 ```
 
 ## 🚀 Deployment
 
+### Infrastructure Setup
+Follow the complete manual deployment guide: [`docs/MANUAL_DEPLOYMENT_GUIDE.md`](docs/MANUAL_DEPLOYMENT_GUIDE.md)
+- Cost-optimized AWS infrastructure (~$180/month)
+- Manual deployment with full control
+- GitHub Actions for iOS CI/CD
+
 ### TestFlight Beta
-1. Configure Apple Developer credentials in `fastlane/Appfile`
-2. Run: `bundle exec fastlane beta`
-3. Manage testers through App Store Connect
+1. Deploy infrastructure following the manual guide
+2. Configure GitHub repository secrets
+3. Push to main branch to trigger automated TestFlight deployment
+4. Manage testers through App Store Connect
 
 ### App Store Release
 - Follow Apple's review guidelines

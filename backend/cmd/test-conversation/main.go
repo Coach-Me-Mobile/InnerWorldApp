@@ -39,18 +39,13 @@ func main() {
 
 	// Initialize OpenRouter client if API key is available
 	if cfg.OpenRouter.APIKey != "" && cfg.OpenRouter.APIKey != "your-openrouter-api-key-here" {
-		openRouterClient = llm.NewOpenRouterClient(cfg.OpenRouter.APIKey)
-		log.Println("Initialized OpenRouter client")
+		openRouterClient = llm.NewOpenRouterClient(cfg.OpenRouter.APIKey, cfg.OpenRouter.Model)
+		log.Printf("Initialized OpenRouter client with model: %s", cfg.OpenRouter.Model)
 	} else {
 		log.Println("OpenRouter API key not provided - will use mock responses")
 	}
 
-	// Note: We don't need OpenAI or S3 for this basic conversation test
-	if cfg.OpenAI.APIKey != "" && cfg.OpenAI.APIKey != "your-openai-api-key-here" {
-		log.Println("OpenAI API key found (embeddings available)")
-	} else {
-		log.Println("OpenAI API key not provided - embeddings disabled")
-	}
+	// Note: We don't need Neptune for this basic conversation test
 
 	// Mock S3 client is available but not used in this test
 	_ = graph.NewMockS3Client()

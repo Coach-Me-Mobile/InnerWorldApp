@@ -1,33 +1,38 @@
 # InnerWorld iOS CI/CD with GitHub Actions
 
-Complete setup guide for automated iOS CI/CD using GitHub Actions for TestFlight deployment.
+**Simple iOS CI/CD setup guide using GitHub Actions for TestFlight deployment.**
+
+> 📋 **For infrastructure deployment, see**: [`docs/MANUAL_DEPLOYMENT_GUIDE.md`](./MANUAL_DEPLOYMENT_GUIDE.md)
+> 
+> ✨ **Deployment Style**: Manual setup with complete control - no automation scripts
 
 ## Overview
 
-GitHub Actions provides a much better solution for iOS CI/CD compared to AWS CodePipeline:
+GitHub Actions provides the optimal solution for iOS CI/CD with our cost-optimized infrastructure:
 
-### ✅ **Advantages of GitHub Actions:**
+### ✅ **GitHub Actions Benefits:**
 - **Native macOS Runners**: Xcode pre-installed with iOS simulators
-- **Cost-Effective**: Free for public repos, $0.08/minute for private (vs CodePipeline $1/month + build costs)
-- **Better iOS Support**: Native Xcode, fastlane, TestFlight tools
-- **Easier Configuration**: YAML workflows in repository
-- **Rich Marketplace**: Thousands of pre-built actions
+- **Cost-Effective**: $0.08/minute for private repos (much cheaper than CodePipeline)
+- **Simple Configuration**: YAML workflows in repository
+- **No AWS Complexity**: Direct iOS build and TestFlight deployment
 - **Better Debugging**: Real-time logs and artifact downloads
+- **Manual Control**: Complete visibility into every deployment step
 
-### 🏗️ **Infrastructure Architecture:**
-- **AWS Backend**: Cognito, Lambda, DynamoDB, S3 (unchanged)
-- **GitHub Actions**: iOS build, test, and deployment pipeline
-- **AWS Integration**: S3 artifact storage, Secrets Manager for credentials
+### 🏗️ **Simple Architecture:**
+- **AWS Backend**: Cost-optimized infrastructure (~$180/month)
+- **GitHub Actions**: iOS build, test, and deployment pipeline  
+- **Manual Deployment**: Full control over infrastructure and CI/CD setup
 
 ## Prerequisites
 
-### 1. AWS Infrastructure
-- Terraform infrastructure deployed (S3, Secrets, Cognito, Lambda, DynamoDB)
-- AWS credentials for GitHub Actions created
-- Apple Developer and App Store Connect credentials stored in AWS Secrets Manager
+### 1. AWS Infrastructure Deployed
+Follow [`docs/MANUAL_DEPLOYMENT_GUIDE.md`](./MANUAL_DEPLOYMENT_GUIDE.md) to deploy:
+- Cost-optimized infrastructure (~$180/month)
+- AWS credentials for GitHub Actions
+- Secrets Manager with Apple/OpenRouter credentials
 
 ### 2. Apple Developer Requirements
-- Apple Developer Program membership
+- Apple Developer Program membership ($99/year)
 - App registered in App Store Connect
 - Code signing certificates
 - Provisioning profiles
