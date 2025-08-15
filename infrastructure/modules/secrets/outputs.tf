@@ -28,10 +28,7 @@ output "app_store_connect_key_arn" {
   value       = aws_secretsmanager_secret.app_store_connect_key.arn
 }
 
-output "jwt_secret_arn" {
-  description = "ARN of the JWT secret"
-  value       = aws_secretsmanager_secret.jwt_secret.arn
-}
+# JWT secret removed - using Cognito JWT authentication
 
 output "webhook_secret_arn" {
   description = "ARN of the webhook secret"
@@ -67,10 +64,7 @@ output "apple_signin_key_name" {
   value       = aws_secretsmanager_secret.apple_signin_key.name
 }
 
-output "jwt_secret_name" {
-  description = "Name of the JWT secret"
-  value       = aws_secretsmanager_secret.jwt_secret.name
-}
+# JWT secret removed - using Cognito JWT authentication
 
 # ==============================================================================
 # IAM POLICY OUTPUT
@@ -100,9 +94,6 @@ output "secrets_summary" {
       arn  = aws_secretsmanager_secret.apple_signin_key.arn
       name = aws_secretsmanager_secret.apple_signin_key.name
     }
-    jwt_secret = {
-      arn  = aws_secretsmanager_secret.jwt_secret.arn
-      name = aws_secretsmanager_secret.jwt_secret.name
-    }
+# jwt_secret removed - using Cognito JWT authentication
   }
 }

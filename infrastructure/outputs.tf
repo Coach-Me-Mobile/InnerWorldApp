@@ -105,7 +105,7 @@ output "secrets" {
     neptune_config_arn        = module.secrets.neptune_config_arn
     apple_signin_key_arn      = module.secrets.apple_signin_key_arn
     app_store_connect_key_arn = module.secrets.app_store_connect_key_arn
-    jwt_secret_arn            = module.secrets.jwt_secret_arn
+    # jwt_secret_arn removed - using Cognito JWT authentication
   }
   sensitive = false
 }

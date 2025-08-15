@@ -253,8 +253,8 @@ module "lambda" {
   # Secrets Manager ARNs for Lambda permissions
   secrets_manager_arns = [
     module.secrets.openrouter_api_key_arn,
-    module.secrets.apple_signin_key_arn,
-    module.secrets.jwt_secret_arn
+    module.secrets.apple_signin_key_arn
+    # jwt_secret_arn removed - using Cognito JWT authentication
   ]
 
   # Cognito configuration for JWT authentication

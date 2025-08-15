@@ -157,41 +157,8 @@ resource "aws_secretsmanager_secret_version" "app_store_connect_key" {
 }
 
 # ==============================================================================
-# JWT SECRET FOR TOKEN SIGNING
-# ==============================================================================
-
-resource "random_password" "jwt_secret" {
-  length  = 64
-  special = true
-}
-
-resource "aws_secretsmanager_secret" "jwt_secret" {
-  name        = "${var.name_prefix}/jwt/secret"
-  description = "JWT secret key for token signing and verification"
-
-  recovery_window_in_days = var.recovery_window_days
-
-  replica {
-    region = var.aws_region
-  }
-
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-jwt-secret"
-    Type        = "TokenSecret"
-    Service     = "JWT"
-    Sensitivity = "High"
-  })
-}
-
-resource "aws_secretsmanager_secret_version" "jwt_secret" {
-  secret_id = aws_secretsmanager_secret.jwt_secret.id
-  secret_string = jsonencode({
-    secret     = random_password.jwt_secret.result
-    algorithm  = "HS256"
-    expiry     = "24h"
-    created_at = timestamp()
-  })
-}
+# JWT authentication handled by Cognito + API Gateway JWT authorizer
+# No custom JWT secret needed
 
 # ==============================================================================
 # WEBHOOK SECRETS
@@ -316,7 +283,6 @@ data "aws_iam_policy_document" "secrets_access" {
       aws_secretsmanager_secret.openrouter_api_key.arn,
       aws_secretsmanager_secret.neptune_config.arn,
       aws_secretsmanager_secret.apple_signin_key.arn,
-      aws_secretsmanager_secret.jwt_secret.arn,
       aws_secretsmanager_secret.webhook_secret.arn,
       aws_secretsmanager_secret.encryption_key.arn,
       aws_secretsmanager_secret.session_key.arn
