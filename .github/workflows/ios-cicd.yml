@@ -180,10 +180,12 @@ jobs:
             
             # Check for Mac Catalyst support for basic unit testing
             if xcodebuild -project "$WORKSPACE_PATH" -scheme "$SCHEME_NAME" -showdestinations 2>/dev/null | grep -q "platform:macOS.*variant:Designed for"; then
-              MAC_DESTINATION=$(xcodebuild -project "$WORKSPACE_PATH" -scheme "$SCHEME_NAME" -showdestinations 2>/dev/null | \
-                grep "platform:macOS.*variant:Designed for" | head -1 | \
-                sed -n 's/.*{ \(.*\) }.*/\1/p')
-              echo "✅ Found Mac Catalyst destination for unit testing: $MAC_DESTINATION"
+              echo "✅ Found Mac Catalyst support for unit testing"
+              
+              # Use generic macOS destination (works for Mac Catalyst)
+              MAC_DESTINATION="platform=macOS"
+              
+              echo "🎯 Using generic Mac Catalyst destination: $MAC_DESTINATION"
               echo "destination=$MAC_DESTINATION" >> $GITHUB_OUTPUT
               echo "test_mode=mac_catalyst" >> $GITHUB_OUTPUT
             else
