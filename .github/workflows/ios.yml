@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy_to_testflight:
-        description: 'Verify TestFlight Readiness'
+        description: 'Deploy to TestFlight'
         required: false
         default: false
         type: boolean
@@ -37,8 +37,8 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
-  verify-testflight-ready:
-    name: Verify TestFlight Readiness
+  deploy:
+    name: Deploy to TestFlight
     runs-on: macos-14
     needs: build
     if: github.ref == 'refs/heads/main' || github.event.inputs.deploy_to_testflight == 'true'
@@ -58,12 +58,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
       
-      - name: Check verification trigger
+      - name: Check deployment trigger
         run: |
           if [ "${{ github.event.inputs.deploy_to_testflight }}" == "true" ]; then
-            echo "🚀 Manual TestFlight readiness verification triggered"
+            echo "🚀 Manual TestFlight deployment triggered"
           else
-            echo "🔄 Automatic TestFlight readiness verification (main branch)"
+            echo "🔄 Automatic TestFlight deployment (main branch)"
           fi
       
       - name: Get Apple credentials
@@ -94,7 +94,38 @@ jobs:
           echo "ASC_KEY_ID=$ASC_KEY_ID" >> $GITHUB_ENV
           echo "ASC_ISSUER_ID=$ASC_ISSUER_ID" >> $GITHUB_ENV
       
-      - name: Build verification for TestFlight readiness
+      - name: Import Apple certificates
+        run: |
+          echo "🔐 Setting up code signing..."
+          
+          # Create temporary keychain
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          
+          # Import certificate if available
+          if [ -n "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" ]; then
+            echo "📱 Importing Apple Developer certificate..."
+            echo "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" | base64 --decode > certificate.p12
+            security import certificate.p12 -k build.keychain -P "${{ secrets.APPLE_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+            security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+            echo "✅ Certificate imported"
+          else
+            echo "⚠️  No certificate found - will build without signing"
+          fi
+          
+          # Install provisioning profile if available
+          if [ -n "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" ]; then
+            echo "📋 Installing provisioning profile..."
+            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+            echo "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/InnerWorld.mobileprovision
+            echo "✅ Provisioning profile installed"
+          else
+            echo "⚠️  No provisioning profile found"
+          fi
+      
+      - name: Build and archive for TestFlight
         run: |
           cd ios
           
@@ -102,28 +133,84 @@ jobs:
           BUILD_NUMBER="${GITHUB_SHA:0:8}"
           VERSION_NUMBER="$(date '+%Y.%m.%d')"
           
-          echo "📱 Building iOS app for verification..."
+          echo "📱 Building iOS app..."
           echo "Team ID: $APPLE_TEAM_ID"
           echo "Build: $BUILD_NUMBER"
           echo "Version: $VERSION_NUMBER"
           
-          # Build for verification (no code signing in CI)
-          xcodebuild \
-            -project InnerWorld.xcodeproj \
-            -scheme InnerWorld \
-            -destination "generic/platform=iOS" \
-            -configuration Release \
-            MARKETING_VERSION="$VERSION_NUMBER" \
-            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-            CODE_SIGNING_ALLOWED=NO \
-            build
-          
-          echo "✅ iOS app builds successfully!"
-          echo "📋 Build Summary:"
-          echo "   Build Number: $BUILD_NUMBER"
-          echo "   Version: $VERSION_NUMBER"
-          echo "   Configuration: Release"
-          echo ""
-          echo "🚀 Ready for TestFlight:"
-          echo "   To deploy to TestFlight, you'll need to set up code signing certificates."
-          echo "   This build verification confirms your app compiles correctly."
+          # Determine if we can code sign
+          if [ -n "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" ] && [ -n "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" ]; then
+            echo "🔐 Building with code signing..."
+            
+            # Archive with code signing
+            xcodebuild \
+              -project InnerWorld.xcodeproj \
+              -scheme InnerWorld \
+              -destination "generic/platform=iOS" \
+              -configuration Release \
+              -archivePath InnerWorld.xcarchive \
+              MARKETING_VERSION="$VERSION_NUMBER" \
+              CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+              CODE_SIGN_STYLE=Manual \
+              DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+              PROVISIONING_PROFILE_SPECIFIER="InnerWorld" \
+              archive
+            
+            # Export IPA
+            echo "📦 Creating export options..."
+            cat > ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>teamID</key>
+              <string>$APPLE_TEAM_ID</string>
+          </dict>
+          </plist>
+          EOF
+            
+            echo "📤 Exporting archive to IPA..."
+            xcodebuild \
+              -exportArchive \
+              -archivePath InnerWorld.xcarchive \
+              -exportPath export \
+              -exportOptionsPlist ExportOptions.plist
+            
+            # Upload to TestFlight
+            echo "🚀 Uploading to TestFlight..."
+            xcrun altool --upload-app \
+              --type ios \
+              --file export/InnerWorld.ipa \
+              --apiKey "$ASC_KEY_ID" \
+              --apiIssuer "$ASC_ISSUER_ID" \
+              --verbose
+            
+            echo "✅ Deployed to TestFlight: Build $BUILD_NUMBER, Version $VERSION_NUMBER"
+            
+          else
+            echo "⚠️  Missing certificates - building without code signing for verification..."
+            
+            # Build without code signing
+            xcodebuild \
+              -project InnerWorld.xcodeproj \
+              -scheme InnerWorld \
+              -destination "generic/platform=iOS" \
+              -configuration Release \
+              MARKETING_VERSION="$VERSION_NUMBER" \
+              CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+              CODE_SIGNING_ALLOWED=NO \
+              build
+            
+            echo "✅ iOS app builds successfully!"
+            echo "📋 To enable TestFlight deployment, add these GitHub secrets:"
+            echo "   - APPLE_CERTIFICATE_P12_BASE64"
+            echo "   - APPLE_CERTIFICATE_PASSWORD"
+            echo "   - APPLE_PROVISIONING_PROFILE_BASE64"
+          fi
+      
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          security delete-keychain build.keychain || true
