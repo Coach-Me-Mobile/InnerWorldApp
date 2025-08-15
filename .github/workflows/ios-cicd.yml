@@ -34,7 +34,7 @@ on:
 env:
   # iOS Configuration
   XCODE_VERSION: '16.1'
-  IOS_SIMULATOR_DESTINATION: 'platform=iOS Simulator,name=Any iOS Simulator Device'
+  IOS_SIMULATOR_DESTINATION: 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.5'
   SCHEME_NAME: 'InnerWorld'
   WORKSPACE_PATH: 'ios/InnerWorld.xcodeproj'
   

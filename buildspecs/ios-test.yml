@@ -13,7 +13,7 @@ env:
     XCODE_SCHEME: "InnerWorld"
     XCODE_WORKSPACE: "ios/InnerWorld.xcodeproj"
     XCODE_CONFIGURATION: "Debug"
-    TEST_DESTINATION: "platform=iOS Simulator,name=Any iOS Simulator Device"
+    TEST_DESTINATION: "platform=iOS Simulator,name=iPhone 15 Pro,OS=17.5"
     DERIVED_DATA_PATH: "/tmp/xcode-derived-data"
     TEST_RESULTS_PATH: "/tmp/test-results"
     
