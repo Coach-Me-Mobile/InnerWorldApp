@@ -34,7 +34,7 @@ on:
 env:
   # iOS Configuration
   XCODE_VERSION: '16.1'
-  IOS_SIMULATOR_DEVICE: 'Any iOS Simulator Device'
+  IOS_SIMULATOR_DEVICE: 'iPhone 15'
   IOS_SIMULATOR_OS: 'latest'
   SCHEME_NAME: 'InnerWorld'
   WORKSPACE_PATH: 'ios/InnerWorld.xcodeproj'
@@ -178,7 +178,7 @@ jobs:
           set -o pipefail && xcodebuild \
             -project "$WORKSPACE_PATH" \
             -scheme "$SCHEME_NAME" \
-            -destination "platform=iOS Simulator,name=Any iOS Simulator Device" \
+            -destination "platform=iOS Simulator,name=iPhone 15,OS=latest" \
             -configuration Debug \
             MARKETING_VERSION="${{ needs.setup.outputs.version_number }}" \
             CURRENT_PROJECT_VERSION="${{ needs.setup.outputs.build_number }}" \
@@ -251,7 +251,7 @@ jobs:
           set -o pipefail && xcodebuild \
             -project "$WORKSPACE_PATH" \
             -scheme "$SCHEME_NAME" \
-            -destination "platform=iOS Simulator,name=Any iOS Simulator Device" \
+            -destination "platform=iOS Simulator,name=iPhone 15,OS=latest" \
             -configuration Debug \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
