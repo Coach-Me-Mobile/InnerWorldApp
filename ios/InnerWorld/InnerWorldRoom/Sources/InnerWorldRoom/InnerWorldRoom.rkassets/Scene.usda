@@ -38,16 +38,9 @@ def Xform "Root"
         )
         {
             reorder nameChildren = ["BlackABSPlastic", "DarkBlueDenimFabric"]
-            rel material:binding = </Root/SkyDome/Dome_01/DarkBlueDenimFabric> (
+            rel material:binding = </Root/floor/Material_2> (
                 bindMaterialAs = "weakerThanDescendants"
             )
-
-            def "DarkBlueDenimFabric" (
-                active = true
-                prepend references = @DarkBlueDenimFabric.usdz@
-            )
-            {
-            }
         }
     }
 
@@ -126,8 +119,8 @@ def Xform "Root"
         prepend apiSchemas = ["MaterialBindingAPI"]
     )
     {
-        reorder nameChildren = ["BlackABSPlastic", "Collider", "RigidBody"]
-        rel material:binding = </Root/SkyDome/Dome_01/DarkBlueDenimFabric> (
+        reorder nameChildren = ["Collider", "RigidBody", "Material_2"]
+        rel material:binding = </Root/big_plant_1/Materials/Plant_Green> (
             bindMaterialAs = "weakerThanDescendants"
         )
         double size = 0.2
@@ -170,14 +163,189 @@ def Xform "Root"
             }
         }
 
-        def "DarkBlueDenimFabric" (
-            active = true
-            prepend references = @DarkBlueDenimFabric.usdz@
-        )
+        def Material "Material_2"
         {
-            token outputs:mtlx:surface.connect = </Root/floor/DarkBlueDenimFabric/PreviewSurface.outputs:out>
-            float2 ui:nodegraph:node:pos = (32.36331, 471.47977)
-            int ui:nodegraph:node:stackingOrder = 1
+            token outputs:mtlx:surface.connect = </Root/floor/Material_2/PreviewSurface.outputs:out>
+            token outputs:realitykit:vertex
+            float2 ui:nodegraph:realitykit:subgraphOutputs:pos = (843.65497, 256.406)
+            int ui:nodegraph:realitykit:subgraphOutputs:stackingOrder = 21
+
+            def Shader "PreviewSurface"
+            {
+                uniform token info:id = "ND_UsdPreviewSurface_surfaceshader"
+                color3f inputs:diffuseColor.connect = </Root/floor/Material_2/Mix.outputs:out>
+                float inputs:metallic
+                float3 inputs:normal
+                float inputs:opacity
+                float inputs:roughness
+                token outputs:out
+                float2 ui:nodegraph:node:pos = (604.4159, -48.653774)
+                int ui:nodegraph:node:stackingOrder = 756
+            }
+
+            def Shader "Fractal3D"
+            {
+                uniform token info:id = "ND_fractal3d_float"
+                float inputs:amplitude = 3
+                float inputs:diminish = 0.5
+                float inputs:lacunarity = 0.8
+                int inputs:octaves = 2
+                float3 inputs:position.connect = </Root/floor/Material_2/Add.outputs:out>
+                float outputs:out
+                float2 ui:nodegraph:node:pos = (-133.16522, -31.013107)
+                int ui:nodegraph:node:stackingOrder = 810
+            }
+
+            def Shader "Fractal3D_1"
+            {
+                uniform token info:id = "ND_fractal3d_float"
+                float inputs:amplitude = 3
+                float inputs:diminish = 0.4
+                float inputs:lacunarity = 0.8
+                int inputs:octaves = 1
+                float3 inputs:position.connect = </Root/floor/Material_2/Add_1.outputs:out>
+                float outputs:out
+                float2 ui:nodegraph:node:pos = (-113.93628, 201.79346)
+                int ui:nodegraph:node:stackingOrder = 820
+                string[] ui:nodegraph:realitykit:node:attributesShowingChildren = ["inputs:position"]
+            }
+
+            def Shader "Abs"
+            {
+                uniform token info:id = "ND_absval_float"
+                float inputs:in.connect = </Root/floor/Material_2/Multiply.outputs:out>
+                float outputs:out
+                float2 ui:nodegraph:node:pos = (95.36455, -25.045792)
+                int ui:nodegraph:node:stackingOrder = 822
+            }
+
+            def Shader "Position"
+            {
+                uniform token info:id = "ND_position_vector3"
+                float3 outputs:out
+                float2 ui:nodegraph:node:pos = (-705.6593, 33.059925)
+                int ui:nodegraph:node:stackingOrder = 611
+            }
+
+            def Shader "Time"
+            {
+                uniform token info:id = "ND_time_float"
+                float outputs:out
+                float2 ui:nodegraph:node:pos = (-681.9048, 192.46695)
+                int ui:nodegraph:node:stackingOrder = 581
+            }
+
+            def Shader "Mix"
+            {
+                uniform token info:id = "ND_mix_color3"
+                color3f inputs:bg = (0.20994294, 0.06594047, 0.44400233) (
+                    colorSpace = "srgb_texture"
+                )
+                color3f inputs:fg = (0.07152062, 0.07152062, 0.07152062) (
+                    colorSpace = "srgb_texture"
+                )
+                float inputs:mix.connect = </Root/floor/Material_2/Remap.outputs:out>
+                color3f outputs:out
+                float2 ui:nodegraph:node:pos = (521.7897, 166.9661)
+                int ui:nodegraph:node:stackingOrder = 764
+                string[] ui:nodegraph:realitykit:node:attributesShowingChildren = ["inputs:fg", "inputs:bg"]
+            }
+
+            def Shader "Multiply_3"
+            {
+                uniform token info:id = "ND_multiply_float"
+                float inputs:in1.connect = </Root/floor/Material_2/Time.outputs:out>
+                float inputs:in2 = 0.5
+                float outputs:out
+                float2 ui:nodegraph:node:pos = (-531.2239, 205.5904)
+                int ui:nodegraph:node:stackingOrder = 686
+                string[] ui:nodegraph:realitykit:node:attributesShowingChildren = ["inputs:in1"]
+            }
+
+            def Shader "Add"
+            {
+                uniform token info:id = "ND_add_vector3FA"
+                float3 inputs:in1.connect = </Root/floor/Material_2/Multiply_1.outputs:out>
+                float inputs:in2.connect = </Root/floor/Material_2/Multiply_2.outputs:out>
+                float3 outputs:out
+                float2 ui:nodegraph:node:pos = (-328.93527, 36.6734)
+                int ui:nodegraph:node:stackingOrder = 662
+            }
+
+            def Shader "Add_1"
+            {
+                uniform token info:id = "ND_add_vector3FA"
+                float3 inputs:in1.connect = </Root/floor/Material_2/Position.outputs:out>
+                float inputs:in2.connect = </Root/floor/Material_2/Multiply_3.outputs:out>
+                float3 outputs:out
+                float2 ui:nodegraph:node:pos = (-384.53036, 196.71577)
+                int ui:nodegraph:node:stackingOrder = 705
+            }
+
+            def Shader "Multiply"
+            {
+                uniform token info:id = "ND_multiply_float"
+                float inputs:in1.connect = </Root/floor/Material_2/Fractal3D.outputs:out>
+                float inputs:in2.connect = </Root/floor/Material_2/Fractal3D_1.outputs:out>
+                float outputs:out
+                float2 ui:nodegraph:node:pos = (66.47656, -105.796875)
+                int ui:nodegraph:node:stackingOrder = 799
+                string[] ui:nodegraph:realitykit:node:attributesShowingChildren = []
+            }
+
+            def Shader "Multiply_1"
+            {
+                uniform token info:id = "ND_multiply_vector3"
+                float3 inputs:in1.connect = </Root/floor/Material_2/Position.outputs:out>
+                float3 inputs:in2 = (0.001, 0.001, 0.001)
+                float3 outputs:out
+                float2 ui:nodegraph:node:pos = (-484.04688, 2.8242188)
+                int ui:nodegraph:node:stackingOrder = 826
+            }
+
+            def Shader "Multiply_2"
+            {
+                uniform token info:id = "ND_multiply_float"
+                float inputs:in1.connect = </Root/floor/Material_2/Multiply_3.outputs:out>
+                float inputs:in2 = 0.5
+                float outputs:out
+                float2 ui:nodegraph:node:pos = (-404.85156, 115.78516)
+                int ui:nodegraph:node:stackingOrder = 723
+            }
+
+            def Shader "SmoothStep"
+            {
+                uniform token info:id = "ND_smoothstep_float"
+                float inputs:high = 0.65
+                float inputs:in.connect = </Root/floor/Material_2/Abs.outputs:out>
+                float inputs:low = 0.35
+                float outputs:out
+                float2 ui:nodegraph:node:pos = (298.14844, -52.98047)
+                int ui:nodegraph:node:stackingOrder = 816
+            }
+
+            def Shader "Power"
+            {
+                uniform token info:id = "ND_power_float"
+                float inputs:in1.connect = </Root/floor/Material_2/SmoothStep.outputs:out>
+                float inputs:in2 = 2
+                float outputs:out
+                float2 ui:nodegraph:node:pos = (320.1875, 61.10547)
+                int ui:nodegraph:node:stackingOrder = 818
+            }
+
+            def Shader "Remap"
+            {
+                uniform token info:id = "ND_remap_float"
+                float inputs:in.connect = </Root/floor/Material_2/Power.outputs:out>
+                float inputs:inhigh = 0.7
+                float inputs:inlow = 0.3
+                float inputs:outhigh
+                float inputs:outlow
+                float outputs:out
+                float2 ui:nodegraph:node:pos = (312.9453, 188.32422)
+                int ui:nodegraph:node:stackingOrder = 807
+            }
         }
     }
 
@@ -491,7 +659,7 @@ def Xform "Root"
         customData = {
             float3 rotationEulerHint = (0, 1.919862, 0)
         }
-        prepend references = @chest_open.usdz@
+        references = @chest_open.usdz@
     )
     {
         quatf xformOp:orient = (0.57357645, 0, 0.819152, 0)
@@ -505,7 +673,7 @@ def Xform "Root"
         customData = {
             float3 rotationEulerHint = (0, 0.34906587, 0)
         }
-        prepend references = @bigshelf.usdz@
+        references = @bigshelf.usdz@
     )
     {
         quatf xformOp:orient = (0.9848077, 0, 0.17364818, 0)

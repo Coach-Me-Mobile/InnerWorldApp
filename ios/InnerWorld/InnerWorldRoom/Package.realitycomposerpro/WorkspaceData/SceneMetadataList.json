@@ -1,4 +1,54 @@
 {
+  "297EA08E-F558-4A14-A999-ADEAD8B616A0" : {
+    "objectMetadataList" : [
+      [
+        "297EA08E-F558-4A14-A999-ADEAD8B616A0",
+        "Root",
+        "SkyDome"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "297EA08E-F558-4A14-A999-ADEAD8B616A0",
+        "Root",
+        "SkyDome",
+        "Dome_01"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "297EA08E-F558-4A14-A999-ADEAD8B616A0",
+        "Root",
+        "floor"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "297EA08E-F558-4A14-A999-ADEAD8B616A0",
+        "Root",
+        "floor",
+        "Material_2"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "297EA08E-F558-4A14-A999-ADEAD8B616A0",
+        "Root"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      }
+    ]
+  },
   "C269EFB1-F8BB-4B25-9698-BF0D12F050F7" : {
     "objectMetadataList" : [
 
