@@ -10,14 +10,8 @@ name: iOS CI/CD Pipeline
 on:
   push:
     branches: [ main, develop ]
-    paths:
-      - 'ios/**'
-      - '.github/workflows/ios-cicd.yml'
   pull_request:
     branches: [ main, develop ]
-    paths:
-      - 'ios/**'
-      - '.github/workflows/ios-cicd.yml'
   workflow_dispatch:
     inputs:
       deploy_to_testflight:
