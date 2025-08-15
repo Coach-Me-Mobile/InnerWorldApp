@@ -69,9 +69,12 @@ jobs:
       - name: Get Apple credentials
         run: |
           # Get Apple Team ID
-          APPLE_TEAM_ID=$(aws secretsmanager get-secret-value \
+          APPLE_SECRETS=$(aws secretsmanager get-secret-value \
             --secret-id "innerworld-prod/apple/signin-key" \
-            --query SecretString --output text | jq -r '.team_id')
+            --query SecretString --output text)
+          APPLE_TEAM_ID=$(echo "$APPLE_SECRETS" | jq -r '.team_id')
+          
+          echo "🔍 Retrieved Apple Team ID: $APPLE_TEAM_ID"
           echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> $GITHUB_ENV
           
           # Get App Store Connect API key
@@ -81,6 +84,9 @@ jobs:
           
           ASC_KEY_ID=$(echo "$ASC_SECRETS" | jq -r '.key_id')
           ASC_ISSUER_ID=$(echo "$ASC_SECRETS" | jq -r '.issuer_id')
+          
+          echo "🔑 App Store Connect Key ID: $ASC_KEY_ID"
+          echo "🏢 App Store Connect Issuer ID: $ASC_ISSUER_ID"
           
           mkdir -p ~/.appstoreconnect/private_keys
           echo "$ASC_SECRETS" | jq -r '.private_key' > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
@@ -96,13 +102,19 @@ jobs:
           BUILD_NUMBER="${GITHUB_SHA:0:8}"
           VERSION_NUMBER="$(date '+%Y.%m.%d')"
           
-          # Archive
+          echo "📱 Building iOS app..."
+          echo "Team ID: $APPLE_TEAM_ID"
+          echo "Build: $BUILD_NUMBER"
+          echo "Version: $VERSION_NUMBER"
+          
+          # Archive with automatic signing
           xcodebuild \
             -project InnerWorld.xcodeproj \
             -scheme InnerWorld \
             -destination "generic/platform=iOS" \
             -configuration Release \
             -archivePath InnerWorld.xcarchive \
+            -allowProvisioningUpdates \
             MARKETING_VERSION="$VERSION_NUMBER" \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             CODE_SIGN_STYLE=Automatic \
@@ -110,6 +122,7 @@ jobs:
             archive
           
           # Export IPA
+          echo "📦 Creating export options..."
           cat > ExportOptions.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -123,6 +136,10 @@ jobs:
           </plist>
           EOF
           
+          echo "📋 Export options content:"
+          cat ExportOptions.plist
+          
+          echo "📤 Exporting archive to IPA..."
           xcodebuild \
             -exportArchive \
             -archivePath InnerWorld.xcarchive \
