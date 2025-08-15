@@ -178,7 +178,7 @@ jobs:
           set -o pipefail && xcodebuild \
             -project "$WORKSPACE_PATH" \
             -scheme "$SCHEME_NAME" \
-            -destination "platform=iOS Simulator" \
+            -destination "platform=iOS Simulator,name=Any iOS Simulator Device" \
             -configuration Debug \
             MARKETING_VERSION="${{ needs.setup.outputs.version_number }}" \
             CURRENT_PROJECT_VERSION="${{ needs.setup.outputs.build_number }}" \
@@ -251,7 +251,7 @@ jobs:
           set -o pipefail && xcodebuild \
             -project "$WORKSPACE_PATH" \
             -scheme "$SCHEME_NAME" \
-            -destination "platform=iOS Simulator" \
+            -destination "platform=iOS Simulator,name=Any iOS Simulator Device" \
             -configuration Debug \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
