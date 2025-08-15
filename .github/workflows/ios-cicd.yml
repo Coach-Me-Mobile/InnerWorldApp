@@ -164,6 +164,38 @@ jobs:
           # Version/build numbers are set via xcodebuild build settings, not manual plist editing
           echo "✅ Using auto-generated Info.plist with build settings"
       
+      - name: Detect available simulators
+        id: simulators
+        run: |
+          echo "🔍 Detecting available iOS simulators..."
+          
+          # List all available destinations for this scheme
+          echo "📱 Available destinations:"
+          xcodebuild -project "$WORKSPACE_PATH" -scheme "$SCHEME_NAME" -showdestinations
+          
+          # Try to find "Any iOS Simulator Device" first (most compatible)
+          if xcodebuild -project "$WORKSPACE_PATH" -scheme "$SCHEME_NAME" -showdestinations 2>/dev/null | grep -q "Any iOS Simulator Device"; then
+            DESTINATION="platform=iOS Simulator,name=Any iOS Simulator Device"
+            echo "✅ Using 'Any iOS Simulator Device' for maximum compatibility"
+          else
+            # Find the first specific iOS simulator (excluding placeholders)
+            AVAILABLE_SIMULATOR=$(xcodebuild -project "$WORKSPACE_PATH" -scheme "$SCHEME_NAME" -showdestinations 2>/dev/null | \
+              grep "iOS Simulator" | grep -v "placeholder" | grep -v "Any iOS" | head -1 | \
+              sed -n 's/.*{ \(.*\) }.*/\1/p' || echo "")
+            
+            if [ -n "$AVAILABLE_SIMULATOR" ]; then
+              DESTINATION="$AVAILABLE_SIMULATOR"
+              echo "✅ Found specific iOS simulator: $AVAILABLE_SIMULATOR"
+            else
+              # Fall back to generic destination
+              DESTINATION="generic/platform=iOS Simulator"
+              echo "⚠️  Using generic iOS Simulator destination as fallback"
+            fi
+          fi
+          
+          echo "destination=$DESTINATION" >> $GITHUB_OUTPUT
+          echo "🎯 Final destination: $DESTINATION"
+      
       - name: Build and test
         run: |
           echo "🏗️ Building for testing..."
@@ -173,12 +205,16 @@ jobs:
           mkdir -p "$DERIVED_DATA_PATH"
           echo "Using derived data path: $DERIVED_DATA_PATH"
           
-          # Build for testing using simulator destination
+          # Use the detected destination from previous step
+          DESTINATION="${{ steps.simulators.outputs.destination }}"
+          echo "🎯 Target destination: $DESTINATION"
+          
+          # Build for testing using detected simulator destination
           echo "📋 Step 1: Building for testing..."
           set -o pipefail && xcodebuild \
             -project "$WORKSPACE_PATH" \
             -scheme "$SCHEME_NAME" \
-            -destination "platform=iOS Simulator,name=iPhone 16 Pro,OS=latest" \
+            -destination "$DESTINATION" \
             -configuration Debug \
             -derivedDataPath "$DERIVED_DATA_PATH" \
             -quiet \
@@ -193,7 +229,7 @@ jobs:
           set -o pipefail && xcodebuild \
             -project "$WORKSPACE_PATH" \
             -scheme "$SCHEME_NAME" \
-            -destination "platform=iOS Simulator,name=iPhone 16 Pro,OS=latest" \
+            -destination "$DESTINATION" \
             -configuration Debug \
             -derivedDataPath "$DERIVED_DATA_PATH" \
             -quiet \
