@@ -26,8 +26,8 @@ resource "aws_cognito_user_pool" "main" {
     temporary_password_validity_days = 7
   }
 
-  # MFA configuration
-  mfa_configuration = var.mfa_configuration
+  # MFA configuration - disabled for initial deployment
+  mfa_configuration = "OFF"
 
   # Account recovery
   account_recovery_setting {
