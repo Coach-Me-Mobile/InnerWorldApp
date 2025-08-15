@@ -46,8 +46,8 @@ variable "tags" {
 # API KEYS AND CREDENTIALS (optional - will be set to placeholder if not provided)
 # ==============================================================================
 
-variable "openai_api_key" {
-  description = "OpenAI/OpenRouter API key"
+variable "openrouter_api_key" {
+  description = "OpenRouter API key for LLM conversations and embeddings"
   type        = string
   default     = ""
   sensitive   = true
@@ -108,3 +108,26 @@ variable "apple_client_id" {
   default     = ""
   sensitive   = true
 }
+
+variable "app_store_connect_issuer_id" {
+  description = "App Store Connect API Issuer ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "app_store_connect_key_id" {
+  description = "App Store Connect API Key ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "app_store_connect_private_key" {
+  description = "App Store Connect API Private Key"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+

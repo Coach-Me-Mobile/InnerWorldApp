@@ -8,25 +8,24 @@
 # SECRET ARNS
 # ==============================================================================
 
-output "openai_api_key_arn" {
-  description = "ARN of the OpenAI/OpenRouter API key secret"
-  value       = aws_secretsmanager_secret.openai_api_key.arn
+output "openrouter_api_key_arn" {
+  description = "ARN of the OpenRouter API key secret"
+  value       = aws_secretsmanager_secret.openrouter_api_key.arn
 }
 
-output "neptune_config_arn" {
-  description = "ARN of the Neptune configuration secret"
-  value       = aws_secretsmanager_secret.neptune_config.arn
-}
+# Neptune config output removed - Neptune disabled
 
 output "apple_signin_key_arn" {
   description = "ARN of the Apple Sign-In key secret"
   value       = aws_secretsmanager_secret.apple_signin_key.arn
 }
 
-output "jwt_secret_arn" {
-  description = "ARN of the JWT secret"
-  value       = aws_secretsmanager_secret.jwt_secret.arn
+output "app_store_connect_key_arn" {
+  description = "ARN of the App Store Connect API key secret"
+  value       = aws_secretsmanager_secret.app_store_connect_key.arn
 }
+
+# JWT secret removed - using Cognito JWT authentication
 
 output "webhook_secret_arn" {
   description = "ARN of the webhook secret"
@@ -47,25 +46,19 @@ output "session_key_arn" {
 # SECRET NAMES
 # ==============================================================================
 
-output "openai_api_key_name" {
-  description = "Name of the OpenAI/OpenRouter API key secret"
-  value       = aws_secretsmanager_secret.openai_api_key.name
+output "openrouter_api_key_name" {
+  description = "Name of the OpenRouter API key secret"
+  value       = aws_secretsmanager_secret.openrouter_api_key.name
 }
 
-output "neptune_config_name" {
-  description = "Name of the Neptune configuration secret"
-  value       = aws_secretsmanager_secret.neptune_config.name
-}
+# Neptune config name output removed - Neptune disabled
 
 output "apple_signin_key_name" {
   description = "Name of the Apple Sign-In key secret"
   value       = aws_secretsmanager_secret.apple_signin_key.name
 }
 
-output "jwt_secret_name" {
-  description = "Name of the JWT secret"
-  value       = aws_secretsmanager_secret.jwt_secret.name
-}
+# JWT secret removed - using Cognito JWT authentication
 
 # ==============================================================================
 # IAM POLICY OUTPUT
@@ -83,21 +76,15 @@ output "secrets_access_policy_arn" {
 output "secrets_summary" {
   description = "Summary of all secrets created"
   value = {
-    openai_api_key = {
-      arn  = aws_secretsmanager_secret.openai_api_key.arn
-      name = aws_secretsmanager_secret.openai_api_key.name
+    openrouter_api_key = {
+      arn  = aws_secretsmanager_secret.openrouter_api_key.arn
+      name = aws_secretsmanager_secret.openrouter_api_key.name
     }
-    neptune_config = {
-      arn  = aws_secretsmanager_secret.neptune_config.arn
-      name = aws_secretsmanager_secret.neptune_config.name
-    }
+    # neptune_config removed - Neptune disabled
     apple_signin_key = {
       arn  = aws_secretsmanager_secret.apple_signin_key.arn
       name = aws_secretsmanager_secret.apple_signin_key.name
     }
-    jwt_secret = {
-      arn  = aws_secretsmanager_secret.jwt_secret.arn
-      name = aws_secretsmanager_secret.jwt_secret.name
-    }
+# jwt_secret removed - using Cognito JWT authentication
   }
 }

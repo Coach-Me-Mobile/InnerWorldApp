@@ -53,8 +53,8 @@ func init() {
 
 	// Initialize OpenRouter client if API key is available
 	if cfg.OpenRouter.APIKey != "" && cfg.OpenRouter.APIKey != "your-openrouter-api-key-here" {
-		openRouterClient = llm.NewOpenRouterClient(cfg.OpenRouter.APIKey)
-		log.Println("Initialized OpenRouter client")
+		openRouterClient = llm.NewOpenRouterClient(cfg.OpenRouter.APIKey, cfg.OpenRouter.Model)
+		log.Printf("Initialized OpenRouter client with model: %s", cfg.OpenRouter.Model)
 	} else {
 		log.Println("OpenRouter API key not provided - will use mock responses")
 	}

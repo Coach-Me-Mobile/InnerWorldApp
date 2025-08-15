@@ -26,8 +26,8 @@ resource "aws_cognito_user_pool" "main" {
     temporary_password_validity_days = 7
   }
 
-  # MFA configuration
-  mfa_configuration = var.mfa_configuration
+  # MFA configuration - disabled for initial deployment
+  mfa_configuration = "OFF"
 
   # Account recovery
   account_recovery_setting {
@@ -97,12 +97,7 @@ resource "aws_cognito_user_pool" "main" {
     }
   }
 
-  schema {
-    attribute_data_type = "DateTime"
-    name                = "birthdate"
-    required            = false
-    mutable             = true
-  }
+# birthdate is a standard Cognito attribute - no custom schema needed
 
   # Custom attributes for app-specific data
   schema {
@@ -230,6 +225,16 @@ resource "aws_cognito_user_pool_client" "ios_app" {
 # APPLE SIGN-IN IDENTITY PROVIDER
 # ==============================================================================
 
+# Read Apple Sign-In credentials from Secrets Manager
+data "aws_secretsmanager_secret_version" "apple_signin" {
+  count     = var.enable_apple_signin ? 1 : 0
+  secret_id = "${var.name_prefix}/apple/signin-key"
+}
+
+locals {
+  apple_credentials = var.enable_apple_signin ? jsondecode(data.aws_secretsmanager_secret_version.apple_signin[0].secret_string) : {}
+}
+
 resource "aws_cognito_identity_provider" "apple" {
   count = var.enable_apple_signin ? 1 : 0
 
@@ -239,10 +244,10 @@ resource "aws_cognito_identity_provider" "apple" {
 
   provider_details = {
     authorize_scopes = "email name"
-    client_id        = var.apple_client_id
-    team_id          = var.apple_team_id
-    key_id           = var.apple_key_id
-    private_key      = var.apple_private_key
+    client_id        = local.apple_credentials.client_id
+    team_id          = local.apple_credentials.team_id
+    key_id           = local.apple_credentials.key_id
+    private_key      = local.apple_credentials.private_key
   }
 
   # Attribute mapping
@@ -271,7 +276,7 @@ resource "aws_cognito_identity_pool" "main" {
 
   # Apple Sign-In provider
   supported_login_providers = var.enable_apple_signin ? {
-    "appleid.apple.com" = var.apple_client_id
+    "appleid.apple.com" = local.apple_credentials.client_id
   } : {}
 
   tags = merge(var.tags, {
@@ -453,7 +458,7 @@ resource "aws_cognito_identity_pool_roles_attachment" "main" {
       mapping_rule {
         claim      = "aud"
         match_type = "Equals"
-        value      = var.apple_client_id
+        value      = local.apple_credentials.client_id
         role_arn   = aws_iam_role.authenticated.arn
       }
     }

@@ -118,7 +118,42 @@ module "secrets" {
   recovery_window_days   = var.secrets_config.recovery_window_days
   enable_secret_rotation = false # Enable later if needed
 
+  # Pass through all secret variables
+  openrouter_api_key            = var.openrouter_api_key
+  apple_team_id                 = var.apple_team_id
+  apple_key_id                  = var.apple_key_id
+  apple_private_key             = var.apple_private_key
+  apple_client_id               = var.apple_client_id
+  app_store_connect_issuer_id   = var.app_store_connect_issuer_id
+  app_store_connect_key_id      = var.app_store_connect_key_id
+  app_store_connect_private_key = var.app_store_connect_private_key
+
   tags = local.common_tags
+}
+
+# S3 module - App assets and TestFlight build storage
+module "s3" {
+  source = "./modules/s3"
+
+  name_prefix = local.name_prefix
+  environment = var.environment
+
+  # S3 configuration
+  enable_cloudfront                = var.environment == "prod" ? true : false
+  cloudfront_price_class           = var.environment == "prod" ? "PriceClass_100" : "PriceClass_100"
+  app_assets_lifecycle_enabled     = true
+  testflight_builds_retention_days = var.environment == "prod" ? 90 : 30
+
+  # Secrets Manager ARNs for GitHub Actions access
+  secrets_manager_arns = [
+    module.secrets.apple_signin_key_arn,
+    module.secrets.app_store_connect_key_arn,
+    module.secrets.openrouter_api_key_arn
+  ]
+
+  tags = local.common_tags
+
+  depends_on = [module.secrets]
 }
 
 # Cognito module - Authentication and authorization
@@ -149,51 +184,35 @@ module "cognito" {
   tags = local.common_tags
 }
 
-# CodePipeline module - CI/CD pipeline
-module "codepipeline" {
-  count  = var.enable_codepipeline ? 1 : 0
-  source = "./modules/codepipeline"
+# iOS CI/CD is now handled by GitHub Actions
+# S3 buckets and secrets are still available for GitHub Actions to use
 
-  name_prefix  = local.name_prefix
-  project_name = var.project_name
-  environment  = var.environment
-  aws_region   = var.aws_region
-
-  # GitHub configuration - these will need to be set via terraform.tfvars
-  github_connection_arn = var.github_connection_arn
-  github_repository     = var.github_repository
-  github_branch         = var.github_branch
-
-  log_retention_days = var.log_retention_days
-
-  tags = local.common_tags
-}
-
-# Neptune module - Graph database for GraphRAG
-module "neptune" {
-  source = "./modules/neptune"
-
-  name_prefix = local.name_prefix
-  environment = var.environment
-
-  # Networking configuration
-  subnet_ids         = module.networking.database_subnet_ids
-  security_group_ids = [module.networking.neptune_security_group_id]
-
-  # Neptune configuration
-  instance_class               = var.environment == "prod" ? "db.r5.large" : "db.t3.medium"
-  instance_count               = var.environment == "prod" ? 2 : 1
-  backup_retention_period      = var.backup_config.backup_retention_days
-  deletion_protection          = var.environment == "prod" ? true : false
-  iam_auth_enabled             = true
-  enable_audit_log             = true
-  performance_insights_enabled = var.environment == "prod" ? true : false
-
-  log_retention_days = var.log_retention_days
-  alarm_actions      = [] # Add SNS topic ARNs if needed
-
-  tags = local.common_tags
-}
+# Neptune module - Graph database for GraphRAG (TEMPORARILY DISABLED FOR TESTFLIGHT)
+# Uncomment when ready for production GraphRAG features ($526/month cost)
+# module "neptune" {
+#   source = "./modules/neptune"
+#
+#   name_prefix = local.name_prefix
+#   environment = var.environment
+#
+#   # Networking configuration
+#   subnet_ids         = module.networking.database_subnet_ids
+#   security_group_ids = [module.networking.neptune_security_group_id]
+#
+#   # Neptune configuration
+#   instance_class               = var.environment == "prod" ? "db.r5.large" : "db.t3.medium"
+#   instance_count               = var.environment == "prod" ? 2 : 1
+#   backup_retention_period      = var.backup_config.backup_retention_days
+#   deletion_protection          = var.environment == "prod" ? true : false
+#   iam_auth_enabled             = true
+#   enable_audit_log             = true
+#   performance_insights_enabled = var.environment == "prod" ? true : false
+#
+#   log_retention_days = var.log_retention_days
+#   alarm_actions      = [] # Add SNS topic ARNs if needed
+#
+#   tags = local.common_tags
+# }
 
 # DynamoDB module - Real-time conversation storage
 module "dynamodb" {
@@ -233,9 +252,9 @@ module "lambda" {
 
   # Secrets Manager ARNs for Lambda permissions
   secrets_manager_arns = [
-    module.secrets.openai_api_key_arn,
-    module.secrets.apple_signin_key_arn,
-    module.secrets.jwt_secret_arn
+    module.secrets.openrouter_api_key_arn,
+    module.secrets.apple_signin_key_arn
+    # jwt_secret_arn removed - using Cognito JWT authentication
   ]
 
   # Cognito configuration for JWT authentication
@@ -246,13 +265,13 @@ module "lambda" {
   lambda_environment_variables = merge({
     ENVIRONMENT = var.environment
     DEBUG       = var.environment == "prod" ? "false" : "true"
-    AWS_REGION  = var.aws_region
+    # AWS_REGION is automatically provided by Lambda runtime
 
-    # Neptune configuration
-    NEPTUNE_ENDPOINT        = module.neptune.cluster_endpoint
-    NEPTUNE_READER_ENDPOINT = module.neptune.cluster_reader_endpoint
-    NEPTUNE_PORT            = "8182"
-    NEPTUNE_IAM_AUTH        = "true"
+    # Neptune configuration (DISABLED FOR TESTFLIGHT - uncomment when Neptune is enabled)
+    # NEPTUNE_ENDPOINT        = module.neptune.cluster_endpoint
+    # NEPTUNE_READER_ENDPOINT = module.neptune.cluster_reader_endpoint
+    # NEPTUNE_PORT            = "8182"
+    # NEPTUNE_IAM_AUTH        = "true"
 
     # DynamoDB table names
     LIVE_CONVERSATIONS_TABLE    = module.dynamodb.live_conversations_table_name
@@ -271,7 +290,7 @@ module "lambda" {
 
   # Ensure databases are created before Lambda
   depends_on = [
-    module.neptune,
+    # module.neptune,  # Disabled for TestFlight
     module.dynamodb
   ]
 }

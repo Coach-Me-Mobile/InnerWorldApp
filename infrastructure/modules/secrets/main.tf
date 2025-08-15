@@ -6,31 +6,29 @@
 # ==============================================================================
 
 # ==============================================================================
-# OPENAI/OPENROUTER API KEY
+# OPENROUTER API KEY
 # ==============================================================================
 
-resource "aws_secretsmanager_secret" "openai_api_key" {
-  name        = "${var.name_prefix}/openai/api-key"
-  description = "OpenAI/OpenRouter API key for LLM and embeddings"
+resource "aws_secretsmanager_secret" "openrouter_api_key" {
+  name        = "${var.name_prefix}/openrouter/api-key"
+  description = "OpenRouter API key for LLM conversations and embeddings"
 
   recovery_window_in_days = var.recovery_window_days
 
-  replica {
-    region = var.aws_region
-  }
+# Replica removed - not needed for single-region deployment
 
   tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-openai-api-key"
+    Name        = "${var.name_prefix}-openrouter-api-key"
     Type        = "APIKey"
-    Service     = "OpenAI"
+    Service     = "OpenRouter"
     Sensitivity = "High"
   })
 }
 
-resource "aws_secretsmanager_secret_version" "openai_api_key" {
-  secret_id = aws_secretsmanager_secret.openai_api_key.id
+resource "aws_secretsmanager_secret_version" "openrouter_api_key" {
+  secret_id = aws_secretsmanager_secret.openrouter_api_key.id
   secret_string = jsonencode({
-    api_key        = var.openai_api_key != "" ? var.openai_api_key : "REPLACE_WITH_ACTUAL_KEY"
+    api_key        = var.openrouter_api_key != "" ? var.openrouter_api_key : "sk-or-v1-REPLACE_WITH_ACTUAL_KEY"
     provider       = "openrouter"
     base_url       = "https://openrouter.ai/api/v1"
     model_primary  = "anthropic/claude-3.5-sonnet"
@@ -43,44 +41,7 @@ resource "aws_secretsmanager_secret_version" "openai_api_key" {
   }
 }
 
-# ==============================================================================
-# NEPTUNE CONFIGURATION
-# ==============================================================================
-
-resource "aws_secretsmanager_secret" "neptune_config" {
-  name        = "${var.name_prefix}/neptune/config"
-  description = "Neptune graph database configuration for GraphRAG"
-
-  recovery_window_in_days = var.recovery_window_days
-
-  replica {
-    region = var.aws_region
-  }
-
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-neptune-config"
-    Type        = "DatabaseConfiguration"
-    Service     = "Neptune"
-    Sensitivity = "Medium"
-  })
-}
-
-resource "aws_secretsmanager_secret_version" "neptune_config" {
-  secret_id = aws_secretsmanager_secret.neptune_config.id
-  secret_string = jsonencode({
-    # These will be populated by Terraform outputs after Neptune creation
-    cluster_endpoint = "POPULATED_BY_TERRAFORM"
-    reader_endpoint  = "POPULATED_BY_TERRAFORM"
-    port             = "8182"
-    iam_auth_enabled = "true"
-    ssl_enabled      = "true"
-    created_at       = timestamp()
-  })
-
-  lifecycle {
-    ignore_changes = [secret_string]
-  }
-}
+# Neptune configuration removed - Neptune disabled for initial deployment
 
 # ==============================================================================
 # APPLE SIGN-IN CONFIGURATION
@@ -92,9 +53,7 @@ resource "aws_secretsmanager_secret" "apple_signin_key" {
 
   recovery_window_in_days = var.recovery_window_days
 
-  replica {
-    region = var.aws_region
-  }
+# Replica removed - not needed for single-region deployment
 
   tags = merge(var.tags, {
     Name        = "${var.name_prefix}-apple-signin-key"
@@ -120,41 +79,43 @@ resource "aws_secretsmanager_secret_version" "apple_signin_key" {
 }
 
 # ==============================================================================
-# JWT SECRET FOR TOKEN SIGNING
+# APP STORE CONNECT API KEY
 # ==============================================================================
 
-resource "random_password" "jwt_secret" {
-  length  = 64
-  special = true
-}
-
-resource "aws_secretsmanager_secret" "jwt_secret" {
-  name        = "${var.name_prefix}/jwt/secret"
-  description = "JWT secret key for token signing and verification"
+resource "aws_secretsmanager_secret" "app_store_connect_key" {
+  name        = "${var.name_prefix}/appstoreconnect/api-key"
+  description = "App Store Connect API key for TestFlight and App Store management"
 
   recovery_window_in_days = var.recovery_window_days
 
-  replica {
-    region = var.aws_region
-  }
+# Replica removed - not needed for single-region deployment
 
   tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-jwt-secret"
-    Type        = "TokenSecret"
-    Service     = "JWT"
+    Name        = "${var.name_prefix}-appstoreconnect-api-key"
+    Type        = "APIKey"
+    Service     = "AppStoreConnect"
     Sensitivity = "High"
   })
 }
 
-resource "aws_secretsmanager_secret_version" "jwt_secret" {
-  secret_id = aws_secretsmanager_secret.jwt_secret.id
+resource "aws_secretsmanager_secret_version" "app_store_connect_key" {
+  secret_id = aws_secretsmanager_secret.app_store_connect_key.id
   secret_string = jsonencode({
-    secret     = random_password.jwt_secret.result
-    algorithm  = "HS256"
-    expiry     = "24h"
-    created_at = timestamp()
+    issuer_id   = var.app_store_connect_issuer_id != "" ? var.app_store_connect_issuer_id : "REPLACE_WITH_ISSUER_ID"
+    key_id      = var.app_store_connect_key_id != "" ? var.app_store_connect_key_id : "REPLACE_WITH_KEY_ID"
+    private_key = var.app_store_connect_private_key != "" ? var.app_store_connect_private_key : "REPLACE_WITH_PRIVATE_KEY"
+    bundle_id   = var.apple_client_id != "" ? var.apple_client_id : "com.gauntletai.innerworld"
+    created_at  = timestamp()
   })
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
 }
+
+# ==============================================================================
+# JWT authentication handled by Cognito + API Gateway JWT authorizer
+# No custom JWT secret needed
 
 # ==============================================================================
 # WEBHOOK SECRETS
@@ -171,9 +132,7 @@ resource "aws_secretsmanager_secret" "webhook_secret" {
 
   recovery_window_in_days = var.recovery_window_days
 
-  replica {
-    region = var.aws_region
-  }
+# Replica removed - not needed for single-region deployment
 
   tags = merge(var.tags, {
     Name        = "${var.name_prefix}-webhook-secret"
@@ -206,9 +165,7 @@ resource "aws_secretsmanager_secret" "encryption_key" {
 
   recovery_window_in_days = var.recovery_window_days
 
-  replica {
-    region = var.aws_region
-  }
+# Replica removed - not needed for single-region deployment
 
   tags = merge(var.tags, {
     Name        = "${var.name_prefix}-encryption-key"
@@ -242,9 +199,7 @@ resource "aws_secretsmanager_secret" "session_key" {
 
   recovery_window_in_days = var.recovery_window_days
 
-  replica {
-    region = var.aws_region
-  }
+# Replica removed - not needed for single-region deployment
 
   tags = merge(var.tags, {
     Name        = "${var.name_prefix}-session-key"
@@ -276,10 +231,9 @@ data "aws_iam_policy_document" "secrets_access" {
     ]
 
     resources = [
-      aws_secretsmanager_secret.openai_api_key.arn,
-      aws_secretsmanager_secret.neptune_config.arn,
+      aws_secretsmanager_secret.openrouter_api_key.arn,
+      # neptune_config.arn removed - Neptune disabled
       aws_secretsmanager_secret.apple_signin_key.arn,
-      aws_secretsmanager_secret.jwt_secret.arn,
       aws_secretsmanager_secret.webhook_secret.arn,
       aws_secretsmanager_secret.encryption_key.arn,
       aws_secretsmanager_secret.session_key.arn

@@ -138,7 +138,7 @@ resource "aws_route" "public_internet" {
 
 # Associate public subnets with public route table
 resource "aws_route_table_association" "public" {
-  count = length(aws_subnet.public)
+  count = length(var.availability_zones)
 
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
@@ -158,7 +158,7 @@ resource "aws_route_table" "private" {
 
 # Private routes to NAT Gateway (if enabled)
 resource "aws_route" "private_nat" {
-  count = var.enable_nat_gateway ? length(aws_route_table.private) : 0
+  count = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(var.availability_zones)) : 0
 
   route_table_id         = aws_route_table.private[count.index].id
   destination_cidr_block = "0.0.0.0/0"
@@ -167,7 +167,7 @@ resource "aws_route" "private_nat" {
 
 # Associate private subnets with private route tables
 resource "aws_route_table_association" "private" {
-  count = length(aws_subnet.private)
+  count = length(var.availability_zones)
 
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private[var.single_nat_gateway ? 0 : count.index].id
@@ -185,7 +185,7 @@ resource "aws_route_table" "database" {
 
 # Associate database subnets with database route table
 resource "aws_route_table_association" "database" {
-  count = length(aws_subnet.database)
+  count = length(var.availability_zones)
 
   subnet_id      = aws_subnet.database[count.index].id
   route_table_id = aws_route_table.database.id
@@ -275,29 +275,30 @@ resource "aws_security_group" "lambda" {
 
 
 # Neptune/RDS security group (renamed for clarity)
-resource "aws_security_group" "neptune" {
-  name_prefix = "${var.name_prefix}-neptune-"
-  vpc_id      = aws_vpc.main.id
-  description = "Security group for Neptune graph database"
-
-  # Allow Lambda access to Neptune port 8182
-  ingress {
-    from_port       = 8182
-    to_port         = 8182
-    protocol        = "tcp"
-    security_groups = [aws_security_group.lambda.id]
-    description     = "Neptune access from Lambda"
-  }
-
-  tags = merge(var.tags, {
-    Name = "${var.name_prefix}-neptune-sg"
-    Type = "SecurityGroup"
-  })
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
+# Neptune security group removed - disabled for initial deployment
+# resource "aws_security_group" "neptune" {
+#   name_prefix = "${var.name_prefix}-neptune-"
+#   vpc_id      = aws_vpc.main.id
+#   description = "Security group for Neptune graph database"
+#
+#   # Allow Lambda access to Neptune port 8182
+#   ingress {
+#     from_port       = 8182
+#     to_port         = 8182
+#     protocol        = "tcp"
+#     security_groups = [aws_security_group.lambda.id]
+#     description     = "Neptune access from Lambda"
+#   }
+#
+#   tags = merge(var.tags, {
+#     Name = "${var.name_prefix}-neptune-sg"
+#     Type = "SecurityGroup"
+#   })
+#
+#   lifecycle {
+#     create_before_destroy = true
+#   }
+# }
 
 # ==============================================================================
 # VPC ENDPOINTS (for better security and cost optimization)
@@ -410,7 +411,7 @@ resource "aws_network_acl" "public" {
 
 # Associate public subnets with public NACL
 resource "aws_network_acl_association" "public" {
-  count = length(aws_subnet.public)
+  count = length(var.availability_zones)
 
   network_acl_id = aws_network_acl.public.id
   subnet_id      = aws_subnet.public[count.index].id

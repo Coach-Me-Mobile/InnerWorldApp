@@ -3,15 +3,39 @@
 **Prepared for:** GauntletAI InnerWorld Project  
 **Report Date:** December 2024  
 **Analysis Period:** Projected Monthly Operating Costs (2024-2025)  
-**Scope:** Infrastructure scaling from 10 to 100,000 concurrent users
+**Scope:** Cost-optimized TestFlight deployment + Full production scaling analysis
 
 ---
 
-## Executive Summary
+## Current Cost-Optimized Deployment
 
-This report provides a comprehensive analysis of InnerWorld's AWS infrastructure costs across various user scaling scenarios. The analysis is based on current AWS pricing (Q4 2024) and the project's specific architecture requirements for a teen-focused VR mental wellness application.
+**For TestFlight and early development, we've implemented a streamlined infrastructure:**
 
-### Key Findings
+### ✅ **Current Monthly Cost: ~$180**
+
+| Component | Cost/Month | Purpose |
+|-----------|------------|---------|
+| Multi-AZ VPC & NAT Gateways | $135 | High availability networking |
+| DynamoDB (on-demand) | $15 | Conversation storage |
+| Lambda Functions | $20 | WebSocket API handlers |
+| S3 Storage | $5 | App assets + TestFlight builds |
+| Secrets Manager | $3 | API keys and credentials |
+| CloudWatch (minimal) | $2 | Basic logging |
+
+### ❌ **Disabled for Cost Savings (~$235/month saved):**
+- **Neptune GraphRAG**: ~$200+/month (can enable for full production)
+- **VPC Flow Logs**: ~$15/month
+- **Enhanced CloudWatch**: ~$20/month
+
+**Migration Path**: When ready for full production, enable Neptune and enhanced monitoring for complete GraphRAG functionality.
+
+---
+
+## Full Production Cost Analysis
+
+**The following analysis represents costs when scaling to full production with all features enabled:**
+
+### Key Findings (Full Production)
 
 - **Cost Range:** $528/month (10 concurrent users) to $182,556/month (100,000 concurrent users)
 - **Economies of Scale:** Cost per active user decreases by 97% from $44 to $1.22 as the platform scales

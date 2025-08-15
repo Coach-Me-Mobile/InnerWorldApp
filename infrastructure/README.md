@@ -1,19 +1,19 @@
 # InnerWorldApp Infrastructure
 
-This directory contains the production-ready Terraform Infrastructure as Code (IaC) for the InnerWorldApp project. The infrastructure is designed to support a secure, scalable iOS VR application with real-time teen chat, AI personas, and GraphRAG user context intelligence.
+This directory contains the **cost-optimized** Terraform Infrastructure as Code (IaC) for the InnerWorldApp project. The infrastructure is designed to support TestFlight deployment with minimal cost while maintaining production-ready patterns.
 
 ## Overview
 
-The infrastructure provides a complete serverless backend for teen VR conversations:
+The infrastructure provides a **simple, cost-effective** serverless backend for iOS VR conversations:
 
-- **VPC & Networking**: Multi-AZ VPC with public/private/database subnets and security groups
+- **VPC & Networking**: Multi-AZ VPC with public/private subnets and NAT gateways
 - **AWS Cognito**: Teen authentication with Apple Sign-In and email/password support
-- **Neptune GraphRAG**: Graph database for storing user context and conversation patterns
-- **DynamoDB**: Real-time conversation storage with TTL cleanup (24h/30min/1h)
+- **DynamoDB**: Real-time conversation storage with TTL cleanup
 - **WebSocket API**: JWT-secured real-time chat with Lambda handlers
+- **S3 Storage**: App assets and TestFlight build storage
+- **GitHub Actions**: Simple CI/CD pipeline for iOS deployment
 - **Secrets Manager**: Secure storage for API keys and credentials
-- **CloudWatch**: Comprehensive monitoring, logging, and alerting
-- **Cost-Optimized**: Production-ready architecture starting at $400/month for 100 teens
+- **Cost-Optimized**: **~$180/month** with minimal monitoring and Neptune disabled
 
 ## Infrastructure Architecture
 
@@ -21,18 +21,24 @@ The infrastructure provides a complete serverless backend for teen VR conversati
 
 ![InnerWorld Infrastructure Architecture](../docs/images/infrastructure-architecture.png)
 
-**Architecture Overview:**
-- **Client Layer**: iOS VR App with RealityKit, Livestream, Teen Chat, Sessions
+**Current Architecture Overview:**
+- **Client Layer**: iOS VR App with RealityKit, Teen Chat, Sessions
 - **Authentication**: AWS Cognito User Pool with Apple Sign-In integration
 - **API Gateway**: WebSocket API with JWT authentication for real-time chat
 - **Compute Layer**: Go Lambda Functions (Connect, Disconnect, Conversation, Health Check)
-- **Database Layer**: 
-  - **Neptune GraphRAG Cluster**: Primary + Reader instances (db.r5.large) with replication
-  - **DynamoDB Tables**: LiveConversations (24h TTL), WebSocketConnections (30min TTL), SessionContext (1h TTL)
+- **Database Layer**: DynamoDB for live conversation storage with TTL
+- **Storage Layer**: S3 buckets for app assets and TestFlight builds
 - **External Services**: OpenRouter API (Claude 3.5 Sonnet), Apple Authentication
 - **Security**: AWS Secrets Manager for API keys and configuration
-- **Monitoring**: CloudWatch Alarms, Logs, and Lambda Errors tracking
-- **Networking**: VPC with Public/Private subnets, NAT Gateways, Internet Gateway
+- **CI/CD**: GitHub Actions for iOS deployment and TestFlight automation
+- **Networking**: Multi-AZ VPC with Public/Private subnets, NAT Gateways
+
+**Cost Optimizations Applied:**
+- ❌ **Neptune GraphRAG**: Disabled (saves ~$200+/month) - can be enabled later
+- ❌ **VPC Flow Logs**: Disabled (saves ~$15/month)
+- ❌ **Enhanced CloudWatch**: Minimal logging (saves ~$20/month)
+- ❌ **Multiple DynamoDB tables**: Simplified to core conversation storage
+- ✅ **Multi-AZ NAT**: Maintained for reliability (as requested)
 
 ### Terraform Module Structure
 
@@ -41,7 +47,7 @@ The infrastructure provides a complete serverless backend for teen VR conversati
 │                          │    │                │
 │ └── prod/               │ => │ networking     │
 │     ├── main.tf         │    │ cognito        │
-│     └── terraform.tfvars│    │ neptune        │
+│     └── terraform.tfvars│    │ s3             │
 │                          │    │ dynamodb       │
 └──────────────────────────┘    │ lambda         │
                                 │ secrets        │
@@ -127,45 +133,48 @@ SessionContext:
 
 ## Quick Start
 
+> 📋 **For complete step-by-step instructions, see**: [`docs/MANUAL_DEPLOYMENT_GUIDE.md`](../docs/MANUAL_DEPLOYMENT_GUIDE.md)
+
 ### Prerequisites
 
-1. **AWS CLI configured** with appropriate permissions
+1. **AWS CLI configured** with admin permissions
 2. **Terraform >= 1.5** installed
-3. **Apple Developer Account** (for Apple Sign-In)
-4. **OpenRouter API Key** (for Claude conversations)
+3. **Apple Developer Account** with Team ID, certificates, and App Store Connect API key
+4. **OpenRouter API Key** for LLM conversations
+5. **GitHub repository** with admin access for CI/CD
 
-### Step 1: Create Backend Infrastructure
-
-First, create the S3 bucket and DynamoDB table for Terraform state:
+### Simple Deployment Process
 
 ```bash
+# 1. Deploy shared backend infrastructure
 cd infrastructure/shared
-terraform init
-terraform plan
-terraform apply
-```
+terraform init && terraform apply
 
-This creates:
-- S3 bucket for Terraform state: `innerworld-prod-terraform-state`
-- DynamoDB table for state locking: `innerworld-prod-terraform-locks`
-- IAM policies for backend access
-
-### Step 2: Deploy Production Environment
-
-```bash
-cd infrastructure/environments/prod
-
-# Copy and configure variables
+# 2. Configure and deploy main infrastructure  
+cd ../environments/prod
 cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with your Apple and OpenRouter credentials
+# Edit terraform.tfvars with your credentials
+terraform init && terraform apply -var-file=terraform.tfvars
 
-# Initialize with backend
-terraform init
-
-# Plan and apply
-terraform plan
-terraform apply
+# 3. Configure GitHub Actions for iOS CI/CD
+# Follow complete instructions in MANUAL_DEPLOYMENT_GUIDE.md
 ```
+
+### What Gets Deployed (~$180/month)
+
+✅ **Core Infrastructure:**
+- Multi-AZ VPC with NAT gateways (as requested)
+- AWS Cognito for Apple Sign-In authentication
+- Lambda functions for WebSocket API and conversation handling
+- DynamoDB for real-time conversation storage with TTL
+- S3 buckets for app assets and TestFlight build storage
+- Secrets Manager for secure credential storage
+- GitHub Actions integration for iOS CI/CD
+
+❌ **Disabled for Cost Optimization:**
+- Neptune GraphRAG (~$200/month saved, can enable later)
+- VPC Flow Logs (~$15/month saved)
+- Enhanced CloudWatch monitoring (~$20/month saved)
 
 ### Step 3: Configure Secrets
 
@@ -311,36 +320,38 @@ infrastructure/
 
 ## COST ANALYSIS & SCALABILITY
 
-### Infrastructure Cost Summary (December 2024)
+### Current Cost-Optimized Infrastructure
 
-**Comprehensive Analysis**: See [Infrastructure Cost Analysis Report](../docs/InnerWorld_Infrastructure_Cost_Analysis_Report.md) for detailed breakdown.
+**Current Configuration**: Cost-optimized for TestFlight deployment with Neptune disabled.
 
-**Key Cost Insights**:
-- **LLM API calls represent 60-70% of total operational costs** (OpenRouter Claude 3.5 Sonnet)
-- **Infrastructure costs scale efficiently** with excellent economies of scale
-- **Cost per user drops from $44 to $1.22** as platform scales from 10 to 100K concurrent users
+**Monthly Cost Breakdown (~$180/month)**:
+- **Multi-AZ VPC & NAT Gateways**: $135/month (3 NAT gateways for reliability)
+- **DynamoDB (on-demand)**: $15/month (conversation storage)
+- **Lambda Functions**: $20/month (WebSocket API handlers)
+- **S3 Storage**: $5/month (app assets + TestFlight builds)
+- **Secrets Manager**: $3/month (API keys and credentials)
+- **CloudWatch (minimal)**: $2/month (basic logging only)
 
-### Monthly Cost Overview by User Scale
+**Cost Savings Applied**:
+- ❌ **Neptune GraphRAG**: ~$200+/month saved (can enable for full production)
+- ❌ **VPC Flow Logs**: ~$15/month saved
+- ❌ **Enhanced Monitoring**: ~$20/month saved
+- ✅ **Multi-AZ Reliability**: Maintained as requested
 
-| Concurrent Users | Monthly Infrastructure Cost | Cost per User | Primary Cost Drivers |
-|-----------------|----------------------------|---------------|---------------------|
-| 1,000 | $2,309 | $1.93 | LLM API (52%), Neptune (22%), WebSocket (18%) |
-| 10,000 | $18,504 | $1.23 | LLM API (66%), WebSocket (22%), DynamoDB (8%) |
-| 50,000 | $91,630 | $1.22 | LLM API (67%), WebSocket (22%), DynamoDB (8%) |
-| 100,000 | $182,556 | $1.22 | LLM API (68%), WebSocket (22%), DynamoDB (8%) |
+### Scaling to Full Production
 
-### Key Infrastructure Costs
+When ready to scale beyond TestFlight:
 
-#### Neptune GraphRAG Cluster (Fixed Costs)
+#### Enable Neptune GraphRAG (~$400-600/month total)
 - **Primary Instance (db.r5.large)**: $254/month
 - **Reader Replica (db.r5.large)**: $254/month  
-- **Storage & I/O**: $18/month
-- **Neptune Total**: **$526/month** (scales to $1,543/month at 100K users)
+- **Storage & I/O**: $18-50/month
+- **Enhanced Infrastructure**: $100-150/month
 
-#### LLM API Services (Variable Costs - Primary Driver)
+#### LLM API Costs (Variable - Primary Driver at Scale)
 - **OpenRouter Claude 3.5 Sonnet**: $3/1M input + $15/1M output tokens
 - **OpenAI Text Embeddings**: $0.02/1M tokens
-- **Monthly LLM Costs**: $1,209 (1K users) → $123,925 (100K users)
+- **Estimated Monthly LLM Costs**: $500-5,000/month depending on usage
 
 #### AWS Infrastructure (Variable Costs)
 - **DynamoDB Tables**: On-demand → Provisioned at scale

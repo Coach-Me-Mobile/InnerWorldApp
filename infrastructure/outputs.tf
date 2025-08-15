@@ -43,7 +43,7 @@ output "security_groups" {
   value = {
     default_sg_id = module.networking.default_security_group_id
     lambda_sg_id  = module.networking.lambda_security_group_id
-    neptune_sg_id = module.networking.neptune_security_group_id
+    # neptune_sg_id removed - Neptune disabled
   }
   sensitive = false
 }
@@ -77,16 +77,35 @@ output "cognito_urls" {
 }
 
 # ==============================================================================
+# S3 OUTPUTS
+# ==============================================================================
+
+output "s3" {
+  description = "S3 buckets and CloudFront distribution information"
+  value = {
+    app_assets_bucket_name        = module.s3.app_assets_bucket_name
+    app_assets_bucket_arn         = module.s3.app_assets_bucket_arn
+    testflight_builds_bucket_name = module.s3.testflight_builds_bucket_name
+    testflight_builds_bucket_arn  = module.s3.testflight_builds_bucket_arn
+    cloudfront_distribution_id    = module.s3.cloudfront_distribution_id
+    cloudfront_domain_name        = module.s3.cloudfront_domain_name
+    s3_access_policy_arn          = module.s3.s3_access_policy_arn
+  }
+  sensitive = false
+}
+
+# ==============================================================================
 # SECRETS MANAGER OUTPUTS
 # ==============================================================================
 
 output "secrets" {
   description = "AWS Secrets Manager secret ARNs and names"
   value = {
-    openai_api_key_arn    = module.secrets.openai_api_key_arn
-    neptune_config_arn = module.secrets.neptune_config_arn
-    apple_signin_key_arn  = module.secrets.apple_signin_key_arn
-    jwt_secret_arn        = module.secrets.jwt_secret_arn
+    openrouter_api_key_arn    = module.secrets.openrouter_api_key_arn
+    # neptune_config_arn removed - Neptune disabled
+    apple_signin_key_arn      = module.secrets.apple_signin_key_arn
+    app_store_connect_key_arn = module.secrets.app_store_connect_key_arn
+    # jwt_secret_arn removed - using Cognito JWT authentication
   }
   sensitive = false
 }
@@ -109,15 +128,39 @@ output "iam_roles" {
 # CODEPIPELINE OUTPUTS
 # ==============================================================================
 
-output "codepipeline" {
-  description = "CodePipeline and build infrastructure"
-  value = var.enable_codepipeline ? {
-    pipeline_name          = module.codepipeline[0].pipeline_name
-    pipeline_arn           = module.codepipeline[0].pipeline_arn
-    codebuild_project_name = module.codepipeline[0].codebuild_project_name
-    s3_artifacts_bucket    = module.codepipeline[0].s3_artifacts_bucket
-  } : null
+# ==============================================================================
+# GITHUB ACTIONS INTEGRATION
+# ==============================================================================
+
+output "github_actions_resources" {
+  description = "AWS resources available for GitHub Actions CI/CD"
+  value = {
+    # S3 buckets for artifacts and builds
+    app_assets_bucket        = module.s3.app_assets_bucket_name
+    testflight_builds_bucket = module.s3.testflight_builds_bucket_name
+
+    # Secrets for GitHub Actions
+    apple_signin_secret_arn      = module.secrets.apple_signin_key_arn
+    app_store_connect_secret_arn = module.secrets.app_store_connect_key_arn
+    openrouter_api_secret_arn    = module.secrets.openrouter_api_key_arn
+
+    # AWS region for GitHub Actions
+    aws_region = var.aws_region
+
+    # GitHub Actions IAM user
+    github_actions_user = module.s3.github_actions_user_name
+  }
   sensitive = false
+}
+
+output "github_actions_credentials" {
+  description = "AWS credentials for GitHub Actions (sensitive)"
+  value = {
+    access_key_id     = module.s3.github_actions_access_key_id
+    secret_access_key = module.s3.github_actions_secret_access_key
+    region            = var.aws_region
+  }
+  sensitive = true
 }
 
 # ==============================================================================
@@ -204,7 +247,7 @@ output "infrastructure_summary" {
     lambda_deployed       = true
 
     # Optional features
-    codepipeline_enabled  = var.enable_codepipeline
+    codepipeline_enabled  = false
     cloudwatch_enabled    = var.enable_cloudwatch_logs
     vpc_flow_logs_enabled = var.enable_vpc_flow_logs
 

@@ -70,10 +70,7 @@ output "lambda_security_group_id" {
   value       = aws_security_group.lambda.id
 }
 
-output "neptune_security_group_id" {
-  description = "ID of the Neptune security group"
-  value       = aws_security_group.neptune.id
-}
+# Neptune security group output removed - Neptune disabled
 
 # ==============================================================================
 # VPC ENDPOINT OUTPUTS

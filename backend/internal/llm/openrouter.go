@@ -14,14 +14,16 @@ import (
 type OpenRouterClient struct {
 	apiKey     string
 	baseURL    string
+	model      string
 	httpClient *http.Client
 }
 
 // NewOpenRouterClient creates a new OpenRouter API client
-func NewOpenRouterClient(apiKey string) *OpenRouterClient {
+func NewOpenRouterClient(apiKey, model string) *OpenRouterClient {
 	return &OpenRouterClient{
 		apiKey:  apiKey,
 		baseURL: "https://openrouter.ai/api/v1",
+		model:   model,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -72,7 +74,7 @@ func (c *OpenRouterClient) GenerateResponse(ctx context.Context, userMessage str
 	systemMessage := "You are a helpful AI assistant for a teen wellness app called InnerWorld. Be supportive and encouraging."
 
 	request := ChatRequest{
-		Model:       "anthropic/claude-3.5-sonnet",
+		Model:       c.model, // Use configured model from environment
 		Temperature: 0.7,
 		MaxTokens:   150,
 		Messages: []ChatMessage{

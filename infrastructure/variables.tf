@@ -206,11 +206,8 @@ variable "backup_config" {
 # FEATURE FLAGS
 # ==============================================================================
 
-variable "enable_codepipeline" {
-  description = "Enable AWS CodePipeline for CI/CD"
-  type        = bool
-  default     = true
-}
+# CI/CD is handled by GitHub Actions
+# No AWS CodePipeline variables needed
 
 variable "enable_xray_tracing" {
   description = "Enable AWS X-Ray tracing for Lambda functions"
@@ -238,26 +235,10 @@ variable "cost_optimization" {
 }
 
 # ==============================================================================
-# CODEPIPELINE CONFIGURATION
+# GITHUB ACTIONS CONFIGURATION
 # ==============================================================================
-
-variable "github_connection_arn" {
-  description = "ARN of the GitHub CodeStar connection (must be created manually)"
-  type        = string
-  default     = ""
-}
-
-variable "github_repository" {
-  description = "GitHub repository in format 'owner/repo'"
-  type        = string
-  default     = "GauntletAI/InnerWorldApp"
-}
-
-variable "github_branch" {
-  description = "GitHub branch to monitor"
-  type        = string
-  default     = "main"
-}
+# GitHub Actions handles CI/CD directly from the repository
+# No additional AWS configuration needed
 
 # ==============================================================================
 # LAMBDA CONFIGURATION
@@ -268,3 +249,65 @@ variable "lambda_environment_variables" {
   type        = map(string)
   default     = {}
 }
+
+# ==============================================================================
+# SECRETS CONFIGURATION (passed to secrets module)
+# ==============================================================================
+
+variable "openrouter_api_key" {
+  description = "OpenRouter API key for LLM conversations"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "apple_team_id" {
+  description = "Apple Developer Team ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "apple_key_id" {
+  description = "Apple Key ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "apple_private_key" {
+  description = "Apple Private Key"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "apple_client_id" {
+  description = "Apple Client ID (Bundle ID)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "app_store_connect_issuer_id" {
+  description = "App Store Connect Issuer ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "app_store_connect_key_id" {
+  description = "App Store Connect Key ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "app_store_connect_private_key" {
+  description = "App Store Connect Private Key"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+

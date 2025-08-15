@@ -11,10 +11,41 @@ struct Configuration {
     
     // MARK: - Rate Limiting
     
-    /// Rate limiter for API requests to prevent abuse
-    private static let rateLimitSemaphore = DispatchSemaphore(value: 10) // Max 10 concurrent requests
-    private static var lastRequestTime: Date = Date.distantPast
-    private static let minRequestInterval: TimeInterval = 0.1 // Throttle: min 100ms between requests
+    /// Async-compatible rate limiter for API requests to prevent abuse
+    private actor RateLimiter {
+        private var activeTasks: Set<UUID> = []
+        private let maxConcurrentTasks = 10
+        private var lastRequestTime: Date = Date.distantPast
+        private let minRequestInterval: TimeInterval = 0.1 // Throttle: min 100ms between requests
+        
+        func acquirePermission() async -> UUID {
+            // Wait until we have capacity for more concurrent requests
+            while activeTasks.count >= maxConcurrentTasks {
+                try? await Task.sleep(nanoseconds: 10_000_000) // 10ms
+            }
+            
+            // Throttle requests to prevent rapid fire
+            let now = Date()
+            let timeSinceLastRequest = now.timeIntervalSince(lastRequestTime)
+            if timeSinceLastRequest < minRequestInterval {
+                let delay = minRequestInterval - timeSinceLastRequest
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            }
+            lastRequestTime = Date()
+            
+            // Register this task
+            let taskId = UUID()
+            activeTasks.insert(taskId)
+            return taskId
+        }
+        
+        func releasePermission(_ taskId: UUID) {
+            activeTasks.remove(taskId)
+        }
+    }
+    
+    /// Shared rate limiter instance
+    private static let rateLimiter = RateLimiter()
     
     // MARK: - API Endpoints
     
@@ -216,7 +247,8 @@ enum ConfigurationError: LocalizedError {
         case .missingValue(let key):
             return "Missing required configuration value: \(key)"
         case .invalidValue(let message):
-                    return "Invalid configuration value: \(message)"
+            return "Invalid configuration value: \(message)"
+        }
     }
 }
 
@@ -226,18 +258,11 @@ extension Configuration {
     
     /// Rate limit API requests to prevent abuse and control costs
     static func rateLimit<T>(_ operation: @escaping () async throws -> T) async throws -> T {
-        // Acquire semaphore to limit concurrent requests
-        rateLimitSemaphore.wait()
-        defer { rateLimitSemaphore.signal() }
-        
-        // Throttle requests to prevent rapid fire
-        let now = Date()
-        let timeSinceLastRequest = now.timeIntervalSince(lastRequestTime)
-        if timeSinceLastRequest < minRequestInterval {
-            let delay = minRequestInterval - timeSinceLastRequest
-            try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+        // Acquire permission from async-compatible rate limiter
+        let taskId = await rateLimiter.acquirePermission()
+        defer { 
+            Task { await rateLimiter.releasePermission(taskId) }
         }
-        lastRequestTime = Date()
         
         logger.log(level: .info, "API request rate limited and throttled")
         
