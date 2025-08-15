@@ -17,7 +17,7 @@ enum Theme {
         let background: Color
         let foreground: Color
 
-        func makeBody(configuration: Configuration) -> some View {
+        func makeBody(configuration: ButtonStyleConfiguration) -> some View {
             configuration.label
                 .font(.system(size: 22, weight: .semibold, design: .rounded))
                 .foregroundColor(foreground)

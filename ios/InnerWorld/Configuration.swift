@@ -216,7 +216,8 @@ enum ConfigurationError: LocalizedError {
         case .missingValue(let key):
             return "Missing required configuration value: \(key)"
         case .invalidValue(let message):
-                    return "Invalid configuration value: \(message)"
+            return "Invalid configuration value: \(message)"
+        }
     }
 }
 
