@@ -157,14 +157,12 @@ jobs:
       # =============================================================================
       
       - name: Import Apple Code Signing Certificates
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
         uses: apple-actions/import-codesign-certs@v1
         with:
           p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
           p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
       
       - name: Install Provisioning Profile
-        if: ${{ secrets.APPLE_PROVISIONING_PROFILE != '' }}
         run: |
           # Create provisioning profile directory
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
