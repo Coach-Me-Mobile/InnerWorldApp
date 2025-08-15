@@ -245,6 +245,7 @@ jobs:
           elif [ "$TEST_MODE" = "mac_catalyst" ]; then
             echo "🖥️  Using Mac Catalyst for basic unit testing..."
             echo "📝 Note: ARKit features will be limited on Mac Catalyst"
+            echo "📝 Note: UI tests are not supported on Mac Catalyst"
             
             # Build for testing on Mac Catalyst
             echo "📋 Step 1: Building for Mac Catalyst testing..."
@@ -275,6 +276,7 @@ jobs:
               CURRENT_PROJECT_VERSION="${{ needs.setup.outputs.build_number }}" \
               CODE_SIGNING_ALLOWED=NO \
               -enableCodeCoverage YES \
+              -only-testing:InnerWorldTests \
               test-without-building | xcpretty --report junit --output test-results.xml
             
             echo "✅ Mac Catalyst unit tests completed"
