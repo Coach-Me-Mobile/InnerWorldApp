@@ -64,14 +64,24 @@ This guide documents the comprehensive optimization strategies implemented to dr
 -jobs $(sysctl -n hw.logicalcpu)  # Use all available CPU cores
 ```
 
-#### **Compiler Optimizations**
+#### **Build-Specific Optimizations**
+
+**Debug/Test Builds:**
 ```bash
 COMPILER_INDEX_STORE_ENABLE=NO          # Disable indexing (not needed in CI)
 DEBUG_INFORMATION_FORMAT=dwarf          # Faster debug format
 SWIFT_COMPILATION_MODE=wholemodule      # Better optimization
-ONLY_ACTIVE_ARCH=YES                    # Build only for target architecture
-ENABLE_BITCODE=NO                       # Disable bitcode for faster builds
+ONLY_ACTIVE_ARCH=YES                    # Build only for target architecture (debug)
 ```
+
+**Production Archive Builds:**
+```bash
+SWIFT_COMPILATION_MODE=wholemodule      # Better optimization
+ONLY_ACTIVE_ARCH=NO                     # Support all architectures (required for distribution)
+# Note: Archive builds use conservative settings for App Store compatibility
+```
+
+**⚠️ Important:** Archive builds use more conservative optimizations to ensure App Store compatibility and proper distribution requirements.
 
 ### **3. Local Testing Optimizations**
 

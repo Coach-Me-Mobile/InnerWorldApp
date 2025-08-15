@@ -340,10 +340,11 @@ jobs:
           mkdir -p build
           
           # =============================================================================
-          # BUILD OPTIMIZATION SETTINGS FOR ARCHIVE
+          # ARCHIVE BUILD SETTINGS - PRODUCTION READY
           # =============================================================================
           
-          echo "⚡ Configuring build optimizations for faster archive creation..."
+          echo "⚡ Configuring production archive settings..."
+          echo "📱 Building for App Store distribution with proper settings..."
           
           set -o pipefail && xcodebuild \
             -project "$WORKSPACE_PATH" \
@@ -355,11 +356,8 @@ jobs:
             -jobs $(sysctl -n hw.logicalcpu) \
             MARKETING_VERSION="${{ needs.setup.outputs.version_number }}" \
             CURRENT_PROJECT_VERSION="${{ needs.setup.outputs.build_number }}" \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            DEBUG_INFORMATION_FORMAT=dwarf \
-            ENABLE_BITCODE=NO \
-            SWIFT_COMPILATION_MODE=wholemodule \
             ONLY_ACTIVE_ARCH=NO \
+            SWIFT_COMPILATION_MODE=wholemodule \
             archive | xcpretty
       
       - name: Upload build artifacts
