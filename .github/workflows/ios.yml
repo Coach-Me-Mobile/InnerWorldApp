@@ -1,0 +1,139 @@
+name: iOS CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      deploy_to_testflight:
+        description: 'Deploy to TestFlight'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-14
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.1'
+      
+      - name: Build
+        run: |
+          cd ios
+          xcodebuild \
+            -project InnerWorld.xcodeproj \
+            -scheme InnerWorld \
+            -destination "generic/platform=iOS" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+  deploy:
+    name: Deploy to TestFlight
+    runs-on: macos-14
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.event.inputs.deploy_to_testflight == 'true'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.1'
+      
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      
+      - name: Check deployment trigger
+        run: |
+          if [ "${{ github.event.inputs.deploy_to_testflight }}" == "true" ]; then
+            echo "🚀 Manual TestFlight deployment triggered"
+          else
+            echo "🔄 Automatic TestFlight deployment (main branch)"
+          fi
+      
+      - name: Get Apple credentials
+        run: |
+          # Get Apple Team ID
+          APPLE_TEAM_ID=$(aws secretsmanager get-secret-value \
+            --secret-id "innerworld-prod/apple/signin-key" \
+            --query SecretString --output text | jq -r '.team_id')
+          echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> $GITHUB_ENV
+          
+          # Get App Store Connect API key
+          ASC_SECRETS=$(aws secretsmanager get-secret-value \
+            --secret-id "innerworld-prod/appstoreconnect/api-key" \
+            --query SecretString --output text)
+          
+          ASC_KEY_ID=$(echo "$ASC_SECRETS" | jq -r '.key_id')
+          ASC_ISSUER_ID=$(echo "$ASC_SECRETS" | jq -r '.issuer_id')
+          
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$ASC_SECRETS" | jq -r '.private_key' > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+          
+          echo "ASC_KEY_ID=$ASC_KEY_ID" >> $GITHUB_ENV
+          echo "ASC_ISSUER_ID=$ASC_ISSUER_ID" >> $GITHUB_ENV
+      
+      - name: Build and upload to TestFlight
+        run: |
+          cd ios
+          
+          # Build version info
+          BUILD_NUMBER="${GITHUB_SHA:0:8}"
+          VERSION_NUMBER="$(date '+%Y.%m.%d')"
+          
+          # Archive
+          xcodebuild \
+            -project InnerWorld.xcodeproj \
+            -scheme InnerWorld \
+            -destination "generic/platform=iOS" \
+            -configuration Release \
+            -archivePath InnerWorld.xcarchive \
+            MARKETING_VERSION="$VERSION_NUMBER" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            archive
+          
+          # Export IPA
+          cat > ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>teamID</key>
+              <string>$APPLE_TEAM_ID</string>
+          </dict>
+          </plist>
+          EOF
+          
+          xcodebuild \
+            -exportArchive \
+            -archivePath InnerWorld.xcarchive \
+            -exportPath export \
+            -exportOptionsPlist ExportOptions.plist
+          
+          # Upload to TestFlight
+          xcrun altool --upload-app \
+            --type ios \
+            --file export/InnerWorld.ipa \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID"
+          
+          echo "✅ Deployed to TestFlight: Build $BUILD_NUMBER, Version $VERSION_NUMBER"

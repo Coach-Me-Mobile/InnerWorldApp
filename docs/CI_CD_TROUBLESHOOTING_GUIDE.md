@@ -39,11 +39,14 @@ fi
 ❌ Code signing error
 ❌ No provisioning profile found
 ❌ Certificate not found in keychain
+❌ Apple Actions not found (apple-actions/import-codesign-certs@v2)
+❌ Invalid conditional syntax (if: env.APPLE_CERTIFICATE != '')
 ```
 
 **Root Cause:**
-- Missing code signing certificates in CI environment
-- Provisioning profiles not properly configured
+- Code signing setup in wrong job (sign-and-export instead of build)
+- Incorrect Apple Actions versions or non-existent actions
+- Wrong conditional syntax for checking secrets
 - Archive builds require proper code signing (unlike debug builds)
 
 **✅ Solution:**
@@ -62,15 +65,24 @@ Added comprehensive code signing setup:
     profile-type: IOS_APP_STORE
 ```
 
-**Required Secrets:**
-```
-APPLE_CERTIFICATE           # Base64 encoded .p12 certificate
+**Critical: Required Secrets Format:**
+```bash
+# ESSENTIAL (minimum for archive to work):
+APPLE_CERTIFICATE           # Base64 encoded .p12 certificate (from Keychain)
 APPLE_CERTIFICATE_PASSWORD  # Password for .p12 certificate  
-APPLE_TEAM_ID               # Apple Developer Team ID
-APPSTORE_ISSUER_ID          # App Store Connect API Issuer ID
-APPSTORE_KEY_ID             # App Store Connect API Key ID
-APPSTORE_PRIVATE_KEY        # App Store Connect API Private Key
+APPLE_TEAM_ID               # Apple Developer Team ID (10-character string)
+
+# OPTIONAL (for automated provisioning):
+APPLE_PROVISIONING_PROFILE  # Base64 encoded .mobileprovision file
+APPSTORE_ISSUER_ID          # App Store Connect API Issuer ID (UUID format)
+APPSTORE_KEY_ID             # App Store Connect API Key ID (10-character string)
+APPSTORE_PRIVATE_KEY        # App Store Connect API Private Key (.p8 file content)
 ```
+
+**⚠️ CRITICAL: Secret Format Requirements**
+- `APPLE_CERTIFICATE`: Must be base64 encoded .p12 file
+- `APPLE_TEAM_ID`: Must be exactly 10 characters (e.g., "ABC123DEF4")
+- `APPLE_PROVISIONING_PROFILE`: Must be base64 encoded .mobileprovision file
 
 ### **Problem 3: Build Optimization Conflicts**
 
@@ -163,6 +175,27 @@ fi
 - ✅ Validate archive creation after build
 
 ## 🧪 Testing & Validation
+
+### **Verify Secrets Configuration**
+
+**Check if secrets are properly set up:**
+1. Go to GitHub repository → Settings → Secrets and variables → Actions
+2. Verify these secrets exist and have values:
+   ```
+   ✅ APPLE_CERTIFICATE (should be ~4000+ characters, base64 encoded)
+   ✅ APPLE_CERTIFICATE_PASSWORD (your certificate password)
+   ✅ APPLE_TEAM_ID (exactly 10 characters)
+   ⚠️  APPLE_PROVISIONING_PROFILE (optional, base64 encoded)
+   ```
+
+**Test Secrets Format:**
+```bash
+# Test certificate format (should output binary data):
+echo "YOUR_APPLE_CERTIFICATE_SECRET" | base64 --decode | file -
+
+# Test team ID format (should be exactly 10 chars):
+echo "YOUR_APPLE_TEAM_ID" | wc -c  # Should output 11 (10 chars + newline)
+```
 
 ### **Local Testing**
 
