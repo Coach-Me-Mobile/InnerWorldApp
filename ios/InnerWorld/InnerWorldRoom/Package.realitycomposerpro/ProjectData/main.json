@@ -1,0 +1,13 @@
+{
+  "pathsToIds" : {
+    "InnerWorldRoom\/Sources\/InnerWorldRoom\/InnerWorldRoom.rkassets\/Cloud_chunk.usda" : "C269EFB1-F8BB-4B25-9698-BF0D12F050F7",
+    "InnerWorldRoom\/Sources\/InnerWorldRoom\/InnerWorldRoom.rkassets\/Scene.usda" : "297EA08E-F558-4A14-A999-ADEAD8B616A0",
+    "InnerWorldRoom\/Sources\/InnerWorldRoom\/InnerWorldRoom.rkassets\/Untitled Scene.usda" : "BD6933EF-3935-4759-A171-E211BF724FFD"
+  },
+  "projectID" : 395251574054576018,
+  "uuidToIntID" : {
+    "297EA08E-F558-4A14-A999-ADEAD8B616A0" : -946528096995803313,
+    "BD6933EF-3935-4759-A171-E211BF724FFD" : 7307674850163722840,
+    "C269EFB1-F8BB-4B25-9698-BF0D12F050F7" : 2826170051930647836
+  }
+}
