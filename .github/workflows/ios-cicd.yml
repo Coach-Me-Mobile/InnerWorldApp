@@ -34,7 +34,6 @@ on:
 env:
   # iOS Configuration
   XCODE_VERSION: '16.1'
-  IOS_SIMULATOR_DESTINATION: 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.5'
   SCHEME_NAME: 'InnerWorld'
   WORKSPACE_PATH: 'ios/InnerWorld.xcodeproj'
   
@@ -177,7 +176,7 @@ jobs:
           set -o pipefail && xcodebuild \
             -project "$WORKSPACE_PATH" \
             -scheme "$SCHEME_NAME" \
-            -destination "$IOS_SIMULATOR_DESTINATION" \
+            -destination "generic/platform=iOS" \
             -configuration Debug \
             MARKETING_VERSION="${{ needs.setup.outputs.version_number }}" \
             CURRENT_PROJECT_VERSION="${{ needs.setup.outputs.build_number }}" \
@@ -244,13 +243,45 @@ jobs:
             cd ..
           fi
       
+      - name: Detect available iOS simulator
+        run: |
+          echo "🔍 Detecting available iOS simulators..."
+          
+          # List all available simulators and find the first iPhone simulator
+          SIMULATOR_ID=$(xcrun simctl list devices available | grep "iPhone" | head -1 | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/')
+          
+          if [ -z "$SIMULATOR_ID" ]; then
+            # Fallback: try to find any iOS simulator
+            SIMULATOR_ID=$(xcrun simctl list devices available | grep "iOS" | head -1 | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/')
+          fi
+          
+          if [ -z "$SIMULATOR_ID" ]; then
+            echo "❌ No iOS simulators available"
+            echo "Available devices:"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          
+          echo "✅ Found simulator: $SIMULATOR_ID"
+          
+          # Boot the simulator if not already running
+          echo "🚀 Booting simulator..."
+          xcrun simctl boot "$SIMULATOR_ID" 2>/dev/null || true
+          
+          # Set environment variable for next steps
+          echo "DETECTED_SIMULATOR_ID=$SIMULATOR_ID" >> $GITHUB_ENV
+          echo "IOS_TEST_DESTINATION=id=$SIMULATOR_ID" >> $GITHUB_ENV
+      
       - name: Run unit tests
         run: |
           echo "🧪 Running unit tests..."
+          echo "Using simulator: $DETECTED_SIMULATOR_ID"
+          echo "Test destination: $IOS_TEST_DESTINATION"
+          
           set -o pipefail && xcodebuild \
             -project "$WORKSPACE_PATH" \
             -scheme "$SCHEME_NAME" \
-            -destination "$IOS_SIMULATOR_DESTINATION" \
+            -destination "$IOS_TEST_DESTINATION" \
             -configuration Debug \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
