@@ -97,12 +97,7 @@ resource "aws_cognito_user_pool" "main" {
     }
   }
 
-  schema {
-    attribute_data_type = "DateTime"
-    name                = "birthdate"
-    required            = false
-    mutable             = true
-  }
+# birthdate is a standard Cognito attribute - no custom schema needed
 
   # Custom attributes for app-specific data
   schema {

@@ -15,9 +15,7 @@ resource "aws_secretsmanager_secret" "openrouter_api_key" {
 
   recovery_window_in_days = var.recovery_window_days
 
-  replica {
-    region = var.aws_region
-  }
+# Replica removed - not needed for single-region deployment
 
   tags = merge(var.tags, {
     Name        = "${var.name_prefix}-openrouter-api-key"
@@ -53,9 +51,7 @@ resource "aws_secretsmanager_secret" "neptune_config" {
 
   recovery_window_in_days = var.recovery_window_days
 
-  replica {
-    region = var.aws_region
-  }
+# Replica removed - not needed for single-region deployment
 
   tags = merge(var.tags, {
     Name        = "${var.name_prefix}-neptune-config"
@@ -92,9 +88,7 @@ resource "aws_secretsmanager_secret" "apple_signin_key" {
 
   recovery_window_in_days = var.recovery_window_days
 
-  replica {
-    region = var.aws_region
-  }
+# Replica removed - not needed for single-region deployment
 
   tags = merge(var.tags, {
     Name        = "${var.name_prefix}-apple-signin-key"
@@ -129,9 +123,7 @@ resource "aws_secretsmanager_secret" "app_store_connect_key" {
 
   recovery_window_in_days = var.recovery_window_days
 
-  replica {
-    region = var.aws_region
-  }
+# Replica removed - not needed for single-region deployment
 
   tags = merge(var.tags, {
     Name        = "${var.name_prefix}-appstoreconnect-api-key"
@@ -175,9 +167,7 @@ resource "aws_secretsmanager_secret" "webhook_secret" {
 
   recovery_window_in_days = var.recovery_window_days
 
-  replica {
-    region = var.aws_region
-  }
+# Replica removed - not needed for single-region deployment
 
   tags = merge(var.tags, {
     Name        = "${var.name_prefix}-webhook-secret"
@@ -210,9 +200,7 @@ resource "aws_secretsmanager_secret" "encryption_key" {
 
   recovery_window_in_days = var.recovery_window_days
 
-  replica {
-    region = var.aws_region
-  }
+# Replica removed - not needed for single-region deployment
 
   tags = merge(var.tags, {
     Name        = "${var.name_prefix}-encryption-key"
@@ -246,9 +234,7 @@ resource "aws_secretsmanager_secret" "session_key" {
 
   recovery_window_in_days = var.recovery_window_days
 
-  replica {
-    region = var.aws_region
-  }
+# Replica removed - not needed for single-region deployment
 
   tags = merge(var.tags, {
     Name        = "${var.name_prefix}-session-key"
