@@ -42,17 +42,25 @@ print_error() {
     echo -e "${RED}❌ $1${NC}"
 }
 
-# Function to run xcodebuild with proper logging
+# Function to run xcodebuild with proper logging and optimizations
 run_xcodebuild() {
     local description="$1"
     shift  # Remove first argument, rest are xcodebuild args
     
     print_status "$description"
     
+    # Add build optimizations for faster local builds
+    local build_opts=(
+        "-jobs" "$(sysctl -n hw.logicalcpu)"
+        "COMPILER_INDEX_STORE_ENABLE=NO"
+        "DEBUG_INFORMATION_FORMAT=dwarf"
+        "SWIFT_COMPILATION_MODE=wholemodule"
+    )
+    
     if [ "$VERBOSE" = "true" ]; then
-        set -o pipefail && xcodebuild "$@" | xcpretty
+        set -o pipefail && xcodebuild "$@" "${build_opts[@]}" | xcpretty
     else
-        set -o pipefail && xcodebuild "$@" -quiet | xcpretty
+        set -o pipefail && xcodebuild "$@" "${build_opts[@]}" -quiet | xcpretty
     fi
 }
 
