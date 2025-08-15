@@ -1,0 +1,208 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "Reality Composer Pro Version 2.0 (448.120.2)"
+    }
+    defaultPrim = "Root"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "Root"
+{
+    def Xform "ParticleEmitter" (
+        customData = {
+            float3 rotationEulerHint = (0, 0, 0)
+        }
+    )
+    {
+        quatf xformOp:orient = (1, 0, 0, 0)
+        float3 xformOp:scale = (1, 0.0033333332, 1)
+        float3 xformOp:translate = (0, 0, -0.00031614304)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+        def RealityKitComponent "VFXEmitter"
+        {
+            token info:id = "RealityKit.VFXEmitter"
+
+            def RealityKitStruct "currentState"
+            {
+                token birthDirection = "Normal"
+                token birthLocation = "Volume"
+                float3 emissionDirection = (0, 1, 0)
+                double emissionDuration = 0.05
+                double emissionDurationVariation = 0
+                token emitterShape = "Sphere"
+                double idleDuration = 0
+                double idleDurationVariation = 0
+                bool isLocal = 1
+                bool isLocalFields = 1
+                bool isSpawningEnabled = 0
+                bool loops = 1
+                float particleSpeed = 0.5
+                float particleSpeedVariation = 0.1
+                float3 shapeSize = (0.08, 0.01, 0.001)
+                bool spawnInheritParentColor = 0
+                token spawnOccasion = "OnDeath"
+                float spawnSpreadFactor = 0
+                float spawnSpreadFactorVariation = 0
+                float spawnVelocityFactor = 1
+                double warmupDuration = 0
+
+                def RealityKitStruct "mainEmitter"
+                {
+                    float3 acceleration = (0, -0.05, 0)
+                    token animationRepeatMode = "PlayOnce"
+                    token billboardMode = "Billboard"
+                    float birthRate = 500
+                    float birthRateVariation = 0
+                    token blendMode = "Alpha"
+                    float colorEvolutionPower = 1
+                    int64 columnCount = 4
+                    float dampingFactor = 8
+                    float4 endColorA = (0.0013309671, 0.03458923, 1, 1)
+                    float4 endColorB = (0.11386989, 0.0064959256, 0.10626237, 1)
+                    float frameRate = 0
+                    float frameRateVariation = 0
+                    int64 initialFrame = 2
+                    int64 initialFrameVariation = 6
+                    bool isAnimated = 1
+                    bool isLightingEnabled = 0
+                    float noiseAnimationSpeed = 0
+                    float noiseScale = 1
+                    float noiseStrength = 0.1
+                    token opacityOverLife = "LinearFadeOut"
+                    float particleAngle = 0
+                    float particleAngleVariation = 0
+                    float particleAngularVelocity = 0
+                    float particleAngularVelocityVariation = 1
+                    asset particleImage = @ParticleEmitterPresetTextures/dustsheet.exr@
+                    double particleLifeSpan = 5
+                    double particleLifeSpanVariation = 1
+                    float particleMass = 1
+                    float particleMassVariation = 0.8
+                    float particleSize = 0.01
+                    float particleSizeVariation = 0
+                    float3 radialGravityCenter = (0, -0.1, 0)
+                    float radialGravityStrength = -0.1
+                    int64 rowCount = 4
+                    float sizeMultiplierAtEndOfLifespan = 8
+                    float sizeMultiplierAtEndOfLifespanPower = 0.2
+                    token sortOrder = "DecreasingDepth"
+                    float spreadingAngle = 0
+                    float4 startColorA = (0.0875165, 0.0058867233, 0.8868077, 0.26)
+                    float4 startColorB = (0.84309196, 0.8443395, 1, 0.07)
+                    float stretchFactor = 0
+                    bool useEndColor = 0
+                    bool useEndColorRange = 0
+                    bool useStartColorRange = 1
+                    float3 vortexDirection = (0, 1, 0)
+                    float vortexStrength = 0
+                }
+
+                def RealityKitStruct "spawnedEmitter"
+                {
+                }
+            }
+        }
+    }
+
+    def Material "Material"
+    {
+        token outputs:mtlx:surface.connect = </Root/Material/PreviewSurface.outputs:out>
+        token outputs:realitykit:vertex
+        string[] ui:nodegraph:realitykit:node:attributesShowingChildren = ["outputs:realitykit:vertex"]
+        float2 ui:nodegraph:realitykit:subgraphOutputs:pos = (873.60547, -37.98047)
+        int ui:nodegraph:realitykit:subgraphOutputs:stackingOrder = 154
+
+        def Shader "PreviewSurface"
+        {
+            uniform token info:id = "ND_UsdPreviewSurface_surfaceshader"
+            token outputs:out
+            float2 ui:nodegraph:node:pos = (638.1992, 8.332031)
+            int ui:nodegraph:node:stackingOrder = 156
+        }
+
+        def Shader "GeometricProperty"
+        {
+            uniform token info:id = "ND_geompropvalue_float"
+            float2 ui:nodegraph:node:pos = (-565.5469, -90.38672)
+            int ui:nodegraph:node:stackingOrder = 124
+        }
+
+        def Shader "Image2DGradient"
+        {
+            uniform token info:id = "ND_RealityKitTexture2DGradient_vector4"
+            string inputs:border_color
+            asset inputs:file
+            float2 inputs:gradient_dPdy
+            string inputs:mag_filter
+            int inputs:max_anisotropy
+            float inputs:max_lod_clamp
+            string inputs:min_filter
+            float inputs:min_lod_clamp
+            string inputs:mip_filter
+            bool inputs:no_flip_v = 1
+            int2 inputs:offset
+            string inputs:u_wrap_mode
+            string inputs:v_wrap_mode
+            float4 outputs:out
+            float2 ui:nodegraph:node:pos = (-338.4453, 77.52734)
+            int ui:nodegraph:node:stackingOrder = 160
+            string[] ui:nodegraph:realitykit:node:attributesShowingChildren = ["inputs:border_color"]
+        }
+
+        def Shader "UVTexture"
+        {
+            uniform token info:id = "ND_UsdUVTexture"
+            color4f inputs:bias
+            color4f inputs:fallback
+            asset inputs:file
+            color4f inputs:scale
+            float2 inputs:st
+            string inputs:wrapS
+            string inputs:wrapT
+            float2 ui:nodegraph:node:pos = (378.58984, 172.42578)
+            int ui:nodegraph:node:stackingOrder = 112
+        }
+
+        def Shader "Time"
+        {
+            uniform token info:id = "ND_time_float"
+            float outputs:out
+            float2 ui:nodegraph:node:pos = (-150.88672, -64.75391)
+            int ui:nodegraph:node:stackingOrder = 145
+        }
+
+        def Shader "Noise2D"
+        {
+            uniform token info:id = "ND_noise2d_color4"
+            float4 inputs:amplitude.connect = </Root/Material/Image2DGradient.outputs:out>
+            float inputs:pivot.connect = </Root/Material/Multiply.outputs:out>
+            float2 inputs:texcoord
+            color4f outputs:out
+            float2 ui:nodegraph:node:pos = (-5.6679688, 202.17188)
+            int ui:nodegraph:node:stackingOrder = 152
+        }
+
+        def Shader "Multiply"
+        {
+            uniform token info:id = "ND_multiply_float"
+            float inputs:in1.connect = </Root/Material/Time.outputs:out>
+            float inputs:in2.connect = </Root/Material/Time.outputs:out>
+            float outputs:out
+            float2 ui:nodegraph:node:pos = (-177.28125, 76.47656)
+            int ui:nodegraph:node:stackingOrder = 159
+            string[] ui:nodegraph:realitykit:node:attributesShowingChildren = ["inputs:in2"]
+        }
+
+        def Shader "Remap"
+        {
+            uniform token info:id = "ND_remap_color4"
+            color4f inputs:in.connect = </Root/Material/Noise2D.outputs:out>
+            float2 ui:nodegraph:node:pos = (205.77734, 188.85938)
+            int ui:nodegraph:node:stackingOrder = 149
+        }
+    }
+}
+

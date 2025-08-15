@@ -1,0 +1,562 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "Reality Composer Pro Version 2.0 (448.120.2)"
+    }
+    defaultPrim = "Root"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "Root"
+{
+    reorder nameChildren = ["Material", "SkyDome", "big_plant", "clipboard", "Hippo_Growl", "floor", "big_plant_1", "water_cooler", "trashcan", "Cardboard_Boxes", "bike", "stereostack", "drafting", "stair", "BulletinBoard", "whiteboard", "desk", "paper_stack", "paper_stacks", "tallish_plant", "plant_shelf", "watercan", "CabinetMiniGame"]
+    def Material "Material"
+    {
+        token outputs:mtlx:surface
+        token outputs:realitykit:vertex
+        prepend token outputs:surface.connect = </Root/Material/UsdPreviewSurface.outputs:surface>
+
+        def Shader "UsdPreviewSurface"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            token outputs:surface
+        }
+    }
+
+    def "SkyDome" (
+        active = true
+        references = @SkyDome.usdz@
+    )
+    {
+        float3 xformOp:scale = (0.005, 0.005, 0.005)
+        float3 xformOp:translate = (0, 0, 1.1097262)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+        over "Dome_01" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            reorder nameChildren = ["BlackABSPlastic", "DarkBlueDenimFabric"]
+            rel material:binding = </Root/SkyDome/Dome_01/DarkBlueDenimFabric> (
+                bindMaterialAs = "weakerThanDescendants"
+            )
+
+            def "DarkBlueDenimFabric" (
+                active = true
+                prepend references = @DarkBlueDenimFabric.usdz@
+            )
+            {
+            }
+        }
+    }
+
+    def "big_plant" (
+        active = true
+        references = @big_plant.usdz@
+    )
+    {
+        float3 xformOp:scale = (1, 1, 1)
+        float3 xformOp:translate = (4.3212175, 0.017685413, -1.2436064)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+        def RealityKitComponent "RigidBody"
+        {
+            uniform token info:id = "RealityKit.RigidBody"
+
+            def RealityKitStruct "massFrame"
+            {
+                def RealityKitStruct "m_pose"
+                {
+                }
+            }
+
+            def RealityKitStruct "material"
+            {
+            }
+        }
+
+        def RealityKitComponent "Collider"
+        {
+            uint group = 1
+            uniform token info:id = "RealityKit.Collider"
+            uint mask = 4294967295
+            token type = "Default"
+
+            def RealityKitStruct "Shape"
+            {
+                float3 extent = (1.1662462, 0.88185656, 1.2200592)
+                token shapeType = "Box"
+
+                def RealityKitStruct "pose"
+                {
+                    float3 position = (0.045137763, 0.44243062, 0.023981214)
+                }
+            }
+        }
+    }
+
+    def "clipboard" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (-1.0471053, 3.1236115, -1.5604134)
+        }
+        references = @clipboard.usdz@
+    )
+    {
+        quatf xformOp:orient = (0.35720512, 0.6059819, 0.6186966, 0.3498644)
+        float3 xformOp:scale = (1, 1, 1)
+        float3 xformOp:translate = (3.2445664, 0.94077, 5.07534)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "Hippo_Growl" (
+        active = true
+        references = @HippoGrowl.usdz@
+    )
+    {
+        quatf xformOp:orient = (1, 0, 0, 0)
+        float3 xformOp:scale = (1, 1, 1)
+        float3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def Cube "floor" (
+        active = true
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        reorder nameChildren = ["BlackABSPlastic", "Collider", "RigidBody"]
+        rel material:binding = </Root/SkyDome/Dome_01/DarkBlueDenimFabric> (
+            bindMaterialAs = "weakerThanDescendants"
+        )
+        double size = 0.2
+        float3 xformOp:scale = (60, 0.02, 60)
+        float3 xformOp:translate = (-0.118371315, 0, 1.1115317)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+        def RealityKitComponent "RigidBody"
+        {
+            uniform token info:id = "RealityKit.RigidBody"
+            token motionType = "Static"
+
+            def RealityKitStruct "massFrame"
+            {
+                def RealityKitStruct "m_pose"
+                {
+                }
+            }
+
+            def RealityKitStruct "material"
+            {
+            }
+        }
+
+        def RealityKitComponent "Collider"
+        {
+            uint group = 1
+            uniform token info:id = "RealityKit.Collider"
+            uint mask = 4294967295
+            token type = "Default"
+
+            def RealityKitStruct "Shape"
+            {
+                float3 extent = (0.2, 0.2, 0.2)
+                token shapeType = "Box"
+
+                def RealityKitStruct "pose"
+                {
+                }
+            }
+        }
+
+        def "DarkBlueDenimFabric" (
+            active = true
+            prepend references = @DarkBlueDenimFabric.usdz@
+        )
+        {
+            token outputs:mtlx:surface.connect = </Root/floor/DarkBlueDenimFabric/PreviewSurface.outputs:out>
+            float2 ui:nodegraph:node:pos = (32.36331, 471.47977)
+            int ui:nodegraph:node:stackingOrder = 1
+        }
+    }
+
+    def "big_plant_1" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (0, 1.2217305, 0)
+        }
+        references = @big_plant.usdz@
+    )
+    {
+        float2 ui:nodegraph:node:pos = (32.36331, 471.47977)
+        int ui:nodegraph:node:stackingOrder = 1
+        quatf xformOp:orient = (0.81915206, 0, 0.5735764, 0)
+        float3 xformOp:scale = (1.5, 1.5, 1.5)
+        float3 xformOp:translate = (-0.1137214, 0.04463595, 6.140442)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+        def RealityKitComponent "RigidBody"
+        {
+            uniform token info:id = "RealityKit.RigidBody"
+
+            def RealityKitStruct "massFrame"
+            {
+                def RealityKitStruct "m_pose"
+                {
+                }
+            }
+
+            def RealityKitStruct "material"
+            {
+            }
+        }
+
+        def RealityKitComponent "Collider"
+        {
+            uint group = 1
+            uniform token info:id = "RealityKit.Collider"
+            uint mask = 4294967295
+            token type = "Default"
+
+            def RealityKitStruct "Shape"
+            {
+                float3 extent = (1.1662462, 0.88185656, 1.2200592)
+                token shapeType = "Box"
+
+                def RealityKitStruct "pose"
+                {
+                    float3 position = (0.045137763, 0.44243062, 0.023981214)
+                }
+            }
+        }
+    }
+
+    def "water_cooler" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (0, 2.9670594, 0)
+        }
+        references = @water_cooler.usdz@
+    )
+    {
+        quatf xformOp:orient = (0.087155804, 0, 0.9961947, 0)
+        float3 xformOp:scale = (0.5, 0.5, 0.5)
+        float3 xformOp:translate = (5.2178903, -5.9604645e-8, 3.058227)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "trashcan" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (0, 4.363323, 0)
+        }
+        references = @trashcan.usdz@
+    )
+    {
+        quatf xformOp:orient = (0.5735765, 0, -0.81915194, 0)
+        float3 xformOp:scale = (1, 1, 1)
+        float3 xformOp:translate = (4.8186116, 0.015855119, 3.615451)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "Cardboard_Boxes" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (0, 0, 0)
+        }
+        references = @Cardboard_Boxes.usdz@
+    )
+    {
+        quatf xformOp:orient = (1, 0, 0, 0)
+        float3 xformOp:scale = (1.0256428, 1.0256428, 1.0256428)
+        float3 xformOp:translate = (3.7543848, 0.04767925, -2.4851866)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "bike" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (-0.048699733, 0.78539824, 1.3170892e-8)
+        }
+        references = @bike.usdz@
+    )
+    {
+        quatf xformOp:orient = (0.9236056, -0.022494122, 0.38257, 0.009317376)
+        float3 xformOp:scale = (1.5, 1.5, 1.5)
+        float3 xformOp:translate = (-2.4970593, 0.5718792, -1.2110885)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "stereostack" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (0, 5.9341187, 0)
+        }
+        references = @stereostack.usdz@
+    )
+    {
+        quatf xformOp:orient = (0.9848077, 0, -0.1736483, 0)
+        float3 xformOp:scale = (2, 2, 2)
+        float3 xformOp:translate = (2.1564965, 1.0394138, -3.2299078)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "drafting" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (0, 1.7453289, 0)
+        }
+        references = @drafting.usdz@
+    )
+    {
+        quatf xformOp:orient = (0.64278764, 0, 0.7660444, 0)
+        float3 xformOp:scale = (0.4, 0.4, 0.4)
+        float3 xformOp:translate = (4.705246, 0.69146115, 0.92336035)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "stair" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (0.034906585, 5.585053, 2.9178128e-8)
+        }
+        references = @stair.usdz@
+    )
+    {
+        quatf xformOp:orient = (0.9395495, 0.016399903, -0.34196812, 0.0059690895)
+        float3 xformOp:scale = (4, 4, 4)
+        float3 xformOp:translate = (-4.153935, 1.2790062, -0.97870106)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def Xform "BulletinBoard" (
+        active = true
+    )
+    {
+        def "polaroids" (
+            active = true
+            customData = {
+                float3 rotationEulerHint = (-6.452393e-9, 1.919862, 0)
+            }
+            references = @polaroids.usdz@
+        )
+        {
+            quatf xformOp:orient = (0.57357645, -1.8504703e-9, 0.819152, 2.6427451e-9)
+            float3 xformOp:scale = (0.49999997, 0.49999997, 0.49999997)
+            float3 xformOp:translate = (1.5873748, 1.7100687, 6.301778)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+        }
+
+        def "bulletin_board" (
+            active = true
+            customData = {
+                float3 rotationEulerHint = (0, 1.919862, 0)
+            }
+            references = @bulletin_board.usdz@
+        )
+        {
+            quatf xformOp:orient = (0.57357645, 0, 0.81915206, 0)
+            float3 xformOp:scale = (0.01, 0.01, 0.01)
+            float3 xformOp:translate = (1.3103548, 1.3091819, 6.4035854)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+        }
+    }
+
+    def "whiteboard" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (0, 3.6651914, 0)
+        }
+        references = @whiteboard.usdz@
+    )
+    {
+        quatf xformOp:orient = (-0.258819, 0, 0.9659258, 0)
+        float3 xformOp:scale = (0.15, 0.15, 0.15)
+        float3 xformOp:translate = (2.782093, 1.1433905, 5.8878546)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "desk" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (0, 4.0142574, 0)
+        }
+        references = @desk.usdz@
+    )
+    {
+        quatf xformOp:orient = (-0.42261833, 0, 0.90630776, 0)
+        float3 xformOp:scale = (2, 2, 2)
+        float3 xformOp:translate = (3.7664583, 0.5915188, 4.666809)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "paper_stack" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (0, 0, 0)
+        }
+        references = @paper_stack.usdz@
+    )
+    {
+        quatf xformOp:orient = (1, 0, 0, 0)
+        float3 xformOp:scale = (2, 2, 2)
+        float3 xformOp:translate = (4.2947907, 0.91535944, 4.1343246)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "paper_stacks" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (0, 5.2359877, 0)
+        }
+        references = @paper_stacks.usdz@
+    )
+    {
+        quatf xformOp:orient = (0.8660254, 0, -0.5, 0)
+        float3 xformOp:scale = (2, 2, 2)
+        float3 xformOp:translate = (4.0940657, 0.98892176, 4.915875)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "tallish_plant" (
+        active = true
+        references = @tallish_plant.usdz@
+    )
+    {
+        float3 xformOp:scale = (0.25, 0.25, 0.25)
+        float3 xformOp:translate = (5.087419, 0.2970764, 2.4676735)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "plant_shelf" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (0, 5.585053, 0)
+        }
+        references = @plant_shelf.usdz@
+    )
+    {
+        quatf xformOp:orient = (0.9396926, 0, -0.3420202, 0)
+        float3 xformOp:scale = (1.5, 1.5, 1.5)
+        float3 xformOp:translate = (-3.0268455, 1.4236554, 4.5043063)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "watercan" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (0, 3.1415927, 0)
+        }
+        references = @watercan.usdz@
+    )
+    {
+        quatf xformOp:orient = (-4.371139e-8, 0, 1, 0)
+        float3 xformOp:scale = (0.2, 0.2, 0.2)
+        float3 xformOp:translate = (-1.1425343, 0.52317774, 5.514333)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "Book_Stack" (
+        active = true
+        references = @Book_Stack.usdz@
+    )
+    {
+        float3 xformOp:scale = (1, 1, 1)
+        float3 xformOp:translate = (2.844206, 0.31876642, 5.7314343)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def Xform "Group" (
+        active = true
+    )
+    {
+        def "Cloud_chunk" (
+            active = true
+            customData = {
+                float3 rotationEulerHint = (0, 1.5707963, 0)
+            }
+            references = @Cloud_chunk.usda@
+        )
+        {
+            quatf xformOp:orient = (0.70710677, 0, 0.70710677, 0)
+            float3 xformOp:scale = (2, 2, 2)
+            float3 xformOp:translate = (-4.5757356, 0.4562545, 2.556375)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+        }
+    }
+
+    def "chest_open" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (0, 1.919862, 0)
+        }
+        prepend references = @chest_open.usdz@
+    )
+    {
+        quatf xformOp:orient = (0.57357645, 0, 0.819152, 0)
+        float3 xformOp:scale = (0.5, 0.5, 0.5)
+        float3 xformOp:translate = (-4.648549, 2.7567148e-7, 2.5452094)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def "bigshelf" (
+        active = true
+        customData = {
+            float3 rotationEulerHint = (0, 0.34906587, 0)
+        }
+        prepend references = @bigshelf.usdz@
+    )
+    {
+        quatf xformOp:orient = (0.9848077, 0, 0.17364818, 0)
+        float3 xformOp:scale = (3, 3, 3)
+        float3 xformOp:translate = (-0.57525355, 1.3614495, -3.1619797)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+    }
+
+    def Material "Material_1"
+    {
+        token outputs:mtlx:surface.connect = </Root/Material_1/PreviewSurface.outputs:out>
+        token outputs:realitykit:vertex
+        float2 ui:nodegraph:realitykit:subgraphOutputs:pos = (335.5, 100.5)
+
+        def Shader "PreviewSurface"
+        {
+            uniform token info:id = "ND_UsdPreviewSurface_surfaceshader"
+            token outputs:out
+            float2 ui:nodegraph:node:pos = (2.6054688, 92.40234)
+            int ui:nodegraph:node:stackingOrder = 2
+        }
+    }
+}
+
+def "AcousticGuitar" (
+    active = true
+    customData = {
+        float3 rotationEulerHint = (-0.2617992, -0.52359885, -2.5809568e-8)
+    }
+    references = @AcousticGuitar.usdz@
+)
+{
+    quatf xformOp:orient = (0.9576622, -0.12607853, -0.25660485, -0.033782657)
+    float3 xformOp:scale = (2, 2, 2)
+    float3 xformOp:translate = (3.3072515, 0.00901632, -1.5303566)
+    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+    def RealityKitComponent "RigidBody"
+    {
+        uniform token info:id = "RealityKit.RigidBody"
+
+        def RealityKitStruct "massFrame"
+        {
+            def RealityKitStruct "m_pose"
+            {
+            }
+        }
+
+        def RealityKitStruct "material"
+        {
+        }
+    }
+}
+
