@@ -149,9 +149,9 @@ jobs:
           echo "Build Number: ${{ needs.setup.outputs.build_number }}"
           echo "Version Number: ${{ needs.setup.outputs.version_number }}"
           
-          # Update build number and version in Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ needs.setup.outputs.version_number }}" ios/InnerWorld/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ needs.setup.outputs.build_number }}" ios/InnerWorld/Info.plist
+          # Note: This project uses GENERATE_INFOPLIST_FILE = YES
+          # Version/build numbers are set via xcodebuild build settings, not manual plist editing
+          echo "✅ Using auto-generated Info.plist with build settings"
       
       - name: Build for testing
         if: github.event.inputs.skip_tests != 'true'
@@ -162,6 +162,8 @@ jobs:
             -scheme "$SCHEME_NAME" \
             -destination "platform=iOS Simulator,name=$IOS_SIMULATOR_DEVICE,OS=$IOS_SIMULATOR_OS" \
             -configuration Debug \
+            MARKETING_VERSION="${{ needs.setup.outputs.version_number }}" \
+            CURRENT_PROJECT_VERSION="${{ needs.setup.outputs.build_number }}" \
             build-for-testing | xcpretty
       
       - name: Build for release
@@ -176,6 +178,8 @@ jobs:
             -configuration "$BUILD_CONFIGURATION" \
             -archivePath "$ARCHIVE_PATH" \
             -allowProvisioningUpdates \
+            MARKETING_VERSION="${{ needs.setup.outputs.version_number }}" \
+            CURRENT_PROJECT_VERSION="${{ needs.setup.outputs.build_number }}" \
             archive | xcpretty
       
       - name: Upload build artifacts
@@ -184,7 +188,6 @@ jobs:
           name: ios-build-${{ needs.setup.outputs.build_number }}
           path: |
             build/
-            ios/InnerWorld/Info.plist
           retention-days: 30
 
   # ---------------------------------------------------------------------------
@@ -232,6 +235,8 @@ jobs:
             -configuration Debug \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
+            MARKETING_VERSION="${{ needs.setup.outputs.version_number }}" \
+            CURRENT_PROJECT_VERSION="${{ needs.setup.outputs.build_number }}" \
             test | xcpretty --test --color
       
       - name: Generate test report
@@ -455,7 +460,6 @@ jobs:
     runs-on: macos-14
     needs: [setup, build, test, sign-and-export]
     if: always() && needs.sign-and-export.result == 'success'
-    environment: production
     
     steps:
       - name: Checkout code
