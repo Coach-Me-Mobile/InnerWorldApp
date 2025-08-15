@@ -153,25 +153,8 @@ jobs:
           xcode-version: ${{ env.XCODE_VERSION }}
       
       # =============================================================================
-      # CODE SIGNING SETUP - MUST BE IN BUILD JOB FOR ARCHIVE
+      # BUILD VERIFICATION ONLY - CODE SIGNING HANDLED IN SIGN-AND-EXPORT JOB
       # =============================================================================
-      
-      - name: Import Apple Code Signing Certificates
-        uses: apple-actions/import-codesign-certs@v1
-        with:
-          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
-          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-      
-      - name: Install Provisioning Profile
-        run: |
-          # Create provisioning profile directory
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          
-          # Decode and install provisioning profile
-          echo "${{ secrets.APPLE_PROVISIONING_PROFILE }}" | base64 --decode > /tmp/profile.mobileprovision
-          cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
-          
-          echo "✅ Provisioning profile installed"
       
       - name: Validate and fix iOS project file
         run: |
