@@ -56,6 +56,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "app_assets" {
     id     = "app_assets_lifecycle"
     status = "Enabled"
 
+    filter {
+      prefix = ""
+    }
+
     # Delete old versions after 30 days
     noncurrent_version_expiration {
       noncurrent_days = 30
@@ -125,6 +129,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "testflight_builds" {
   rule {
     id     = "testflight_builds_lifecycle"
     status = "Enabled"
+
+    filter {
+      prefix = ""
+    }
 
     # Delete current versions after 90 days
     expiration {

@@ -247,7 +247,7 @@ output "infrastructure_summary" {
     lambda_deployed       = true
 
     # Optional features
-    codepipeline_enabled  = var.enable_codepipeline
+    codepipeline_enabled  = false
     cloudwatch_enabled    = var.enable_cloudwatch_logs
     vpc_flow_logs_enabled = var.enable_vpc_flow_logs
 
