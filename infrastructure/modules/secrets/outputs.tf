@@ -13,10 +13,7 @@ output "openrouter_api_key_arn" {
   value       = aws_secretsmanager_secret.openrouter_api_key.arn
 }
 
-output "neptune_config_arn" {
-  description = "ARN of the Neptune configuration secret"
-  value       = aws_secretsmanager_secret.neptune_config.arn
-}
+# Neptune config output removed - Neptune disabled
 
 output "apple_signin_key_arn" {
   description = "ARN of the Apple Sign-In key secret"
@@ -54,10 +51,7 @@ output "openrouter_api_key_name" {
   value       = aws_secretsmanager_secret.openrouter_api_key.name
 }
 
-output "neptune_config_name" {
-  description = "Name of the Neptune configuration secret"
-  value       = aws_secretsmanager_secret.neptune_config.name
-}
+# Neptune config name output removed - Neptune disabled
 
 output "apple_signin_key_name" {
   description = "Name of the Apple Sign-In key secret"
@@ -86,10 +80,7 @@ output "secrets_summary" {
       arn  = aws_secretsmanager_secret.openrouter_api_key.arn
       name = aws_secretsmanager_secret.openrouter_api_key.name
     }
-    neptune_config = {
-      arn  = aws_secretsmanager_secret.neptune_config.arn
-      name = aws_secretsmanager_secret.neptune_config.name
-    }
+    # neptune_config removed - Neptune disabled
     apple_signin_key = {
       arn  = aws_secretsmanager_secret.apple_signin_key.arn
       name = aws_secretsmanager_secret.apple_signin_key.name

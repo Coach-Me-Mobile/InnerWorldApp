@@ -41,42 +41,7 @@ resource "aws_secretsmanager_secret_version" "openrouter_api_key" {
   }
 }
 
-# ==============================================================================
-# NEPTUNE CONFIGURATION
-# ==============================================================================
-
-resource "aws_secretsmanager_secret" "neptune_config" {
-  name        = "${var.name_prefix}/neptune/config"
-  description = "Neptune graph database configuration for GraphRAG"
-
-  recovery_window_in_days = var.recovery_window_days
-
-# Replica removed - not needed for single-region deployment
-
-  tags = merge(var.tags, {
-    Name        = "${var.name_prefix}-neptune-config"
-    Type        = "DatabaseConfiguration"
-    Service     = "Neptune"
-    Sensitivity = "Medium"
-  })
-}
-
-resource "aws_secretsmanager_secret_version" "neptune_config" {
-  secret_id = aws_secretsmanager_secret.neptune_config.id
-  secret_string = jsonencode({
-    # These will be populated by Terraform outputs after Neptune creation
-    cluster_endpoint = "POPULATED_BY_TERRAFORM"
-    reader_endpoint  = "POPULATED_BY_TERRAFORM"
-    port             = "8182"
-    iam_auth_enabled = "true"
-    ssl_enabled      = "true"
-    created_at       = timestamp()
-  })
-
-  lifecycle {
-    ignore_changes = [secret_string]
-  }
-}
+# Neptune configuration removed - Neptune disabled for initial deployment
 
 # ==============================================================================
 # APPLE SIGN-IN CONFIGURATION
@@ -267,7 +232,7 @@ data "aws_iam_policy_document" "secrets_access" {
 
     resources = [
       aws_secretsmanager_secret.openrouter_api_key.arn,
-      aws_secretsmanager_secret.neptune_config.arn,
+      # neptune_config.arn removed - Neptune disabled
       aws_secretsmanager_secret.apple_signin_key.arn,
       aws_secretsmanager_secret.webhook_secret.arn,
       aws_secretsmanager_secret.encryption_key.arn,

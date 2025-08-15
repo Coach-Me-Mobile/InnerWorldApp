@@ -275,29 +275,30 @@ resource "aws_security_group" "lambda" {
 
 
 # Neptune/RDS security group (renamed for clarity)
-resource "aws_security_group" "neptune" {
-  name_prefix = "${var.name_prefix}-neptune-"
-  vpc_id      = aws_vpc.main.id
-  description = "Security group for Neptune graph database"
-
-  # Allow Lambda access to Neptune port 8182
-  ingress {
-    from_port       = 8182
-    to_port         = 8182
-    protocol        = "tcp"
-    security_groups = [aws_security_group.lambda.id]
-    description     = "Neptune access from Lambda"
-  }
-
-  tags = merge(var.tags, {
-    Name = "${var.name_prefix}-neptune-sg"
-    Type = "SecurityGroup"
-  })
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
+# Neptune security group removed - disabled for initial deployment
+# resource "aws_security_group" "neptune" {
+#   name_prefix = "${var.name_prefix}-neptune-"
+#   vpc_id      = aws_vpc.main.id
+#   description = "Security group for Neptune graph database"
+#
+#   # Allow Lambda access to Neptune port 8182
+#   ingress {
+#     from_port       = 8182
+#     to_port         = 8182
+#     protocol        = "tcp"
+#     security_groups = [aws_security_group.lambda.id]
+#     description     = "Neptune access from Lambda"
+#   }
+#
+#   tags = merge(var.tags, {
+#     Name = "${var.name_prefix}-neptune-sg"
+#     Type = "SecurityGroup"
+#   })
+#
+#   lifecycle {
+#     create_before_destroy = true
+#   }
+# }
 
 # ==============================================================================
 # VPC ENDPOINTS (for better security and cost optimization)

@@ -43,7 +43,7 @@ output "security_groups" {
   value = {
     default_sg_id = module.networking.default_security_group_id
     lambda_sg_id  = module.networking.lambda_security_group_id
-    neptune_sg_id = module.networking.neptune_security_group_id
+    # neptune_sg_id removed - Neptune disabled
   }
   sensitive = false
 }
@@ -102,7 +102,7 @@ output "secrets" {
   description = "AWS Secrets Manager secret ARNs and names"
   value = {
     openrouter_api_key_arn    = module.secrets.openrouter_api_key_arn
-    neptune_config_arn        = module.secrets.neptune_config_arn
+    # neptune_config_arn removed - Neptune disabled
     apple_signin_key_arn      = module.secrets.apple_signin_key_arn
     app_store_connect_key_arn = module.secrets.app_store_connect_key_arn
     # jwt_secret_arn removed - using Cognito JWT authentication
