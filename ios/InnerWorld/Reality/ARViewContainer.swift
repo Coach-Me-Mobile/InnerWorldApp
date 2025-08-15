@@ -23,7 +23,7 @@ class ARViewContainer: ObservableObject {
     
     private func loadInnerWorldScene(in view: ARView) {
         do {
-            let projectPath = "/Users/home/Documents/projects/gauntlet/bounty/inner/ios/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/Scene.usda"
+            let projectPath = "/Users/home/Documents/projects/gauntlet/bounty/inner/ios/InnerWorldApp/ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/Scene.usda"
             let sceneURL = URL(fileURLWithPath: projectPath)
             
             if FileManager.default.fileExists(atPath: projectPath) {
