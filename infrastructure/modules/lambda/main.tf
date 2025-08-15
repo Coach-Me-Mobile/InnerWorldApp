@@ -132,7 +132,7 @@ resource "aws_lambda_function" "conversation_handler" {
   environment {
     variables = merge(var.lambda_environment_variables, {
       FUNCTION_NAME = "conversation-handler"
-      AWS_REGION    = var.aws_region
+      # AWS_REGION is automatically provided by Lambda runtime
     })
   }
 
@@ -163,7 +163,7 @@ resource "aws_lambda_function" "health_check" {
   environment {
     variables = merge(var.lambda_environment_variables, {
       FUNCTION_NAME = "health-check"
-      AWS_REGION    = var.aws_region
+      # AWS_REGION is automatically provided by Lambda runtime
     })
   }
 
@@ -267,18 +267,18 @@ resource "aws_apigatewayv2_api" "websocket" {
   tags = var.tags
 }
 
-# JWT Authorizer for WebSocket connections
-resource "aws_apigatewayv2_authorizer" "jwt_authorizer" {
-  api_id           = aws_apigatewayv2_api.websocket.id
-  authorizer_type  = "JWT"
-  identity_sources = ["route.request.header.Authorization"]
-  name             = "${var.name_prefix}-jwt-authorizer"
-
-  jwt_configuration {
-    audience = [var.cognito_user_pool_client_id]
-    issuer   = "https://cognito-idp.${var.aws_region}.amazonaws.com/${var.cognito_user_pool_id}"
-  }
-}
+# JWT Authorizer not supported for WebSocket APIs - authentication handled in Lambda
+# resource "aws_apigatewayv2_authorizer" "jwt_authorizer" {
+#   api_id           = aws_apigatewayv2_api.websocket.id
+#   authorizer_type  = "JWT"
+#   identity_sources = ["route.request.header.Authorization"]
+#   name             = "${var.name_prefix}-jwt-authorizer"
+#
+#   jwt_configuration {
+#     audience = [var.cognito_user_pool_client_id]
+#     issuer   = "https://cognito-idp.${var.aws_region}.amazonaws.com/${var.cognito_user_pool_id}"
+#   }
+# }
 
 # Separate Lambda functions for connection management
 resource "aws_lambda_function" "websocket_connect_handler" {
@@ -366,8 +366,8 @@ resource "aws_apigatewayv2_route" "connect" {
   route_key = "$connect"
   target    = "integrations/${aws_apigatewayv2_integration.connect_integration.id}"
 
-  authorization_type = "JWT"
-  authorizer_id      = aws_apigatewayv2_authorizer.jwt_authorizer.id
+  authorization_type = "NONE"
+  # authorizer_id removed - authentication handled in Lambda function
 }
 
 resource "aws_apigatewayv2_route" "disconnect" {
@@ -423,21 +423,21 @@ resource "aws_apigatewayv2_stage" "websocket" {
   deployment_id = aws_apigatewayv2_deployment.websocket.id
   name          = var.environment
 
-  # Access logging
-  access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.websocket_access_logs.arn
-    format = jsonencode({
-      requestId   = "$context.requestId"
-      ip          = "$context.identity.sourceIp"
-      caller      = "$context.identity.caller"
-      user        = "$context.identity.user"
-      requestTime = "$context.requestTime"
-      routeKey    = "$context.routeKey"
-      status      = "$context.status"
-      error       = "$context.error.message"
-      error_type  = "$context.error.messageString"
-    })
-  }
+  # Access logging disabled for initial deployment - requires CloudWatch Logs role ARN
+  # access_log_settings {
+  #   destination_arn = aws_cloudwatch_log_group.websocket_access_logs.arn
+  #   format = jsonencode({
+  #     requestId   = "$context.requestId"
+  #     ip          = "$context.identity.sourceIp"
+  #     caller      = "$context.identity.caller"
+  #     user        = "$context.identity.user"
+  #     requestTime = "$context.requestTime"
+  #     routeKey    = "$context.routeKey"
+  #     status      = "$context.status"
+  #     error       = "$context.error.message"
+  #     error_type  = "$context.error.messageString"
+  #   })
+  # }
 
   # Note: WebSocket API throttling is configured at the route level if needed
 

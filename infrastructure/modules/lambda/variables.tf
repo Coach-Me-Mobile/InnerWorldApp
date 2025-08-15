@@ -60,13 +60,13 @@ variable "lambda_security_group_id" {
 variable "conversation_handler_zip" {
   description = "Path to conversation handler zip file"
   type        = string
-  default     = "../../backend/bin/conversation-handler.zip"
+  default     = "../backend/bin/conversation-handler.zip"
 }
 
 variable "health_check_zip" {
   description = "Path to health check zip file"
   type        = string
-  default     = "../../backend/bin/health-check.zip"
+  default     = "../backend/bin/health-check.zip"
 }
 
 variable "lambda_environment_variables" {

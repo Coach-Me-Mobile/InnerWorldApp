@@ -265,7 +265,7 @@ module "lambda" {
   lambda_environment_variables = merge({
     ENVIRONMENT = var.environment
     DEBUG       = var.environment == "prod" ? "false" : "true"
-    AWS_REGION  = var.aws_region
+    # AWS_REGION is automatically provided by Lambda runtime
 
     # Neptune configuration (DISABLED FOR TESTFLIGHT - uncomment when Neptune is enabled)
     # NEPTUNE_ENDPOINT        = module.neptune.cluster_endpoint
