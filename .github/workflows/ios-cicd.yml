@@ -100,7 +100,7 @@ jobs:
             exit 1
           fi
           
-          if [ ! -f "$WORKSPACE_PATH" ]; then
+          if [ ! -d "$WORKSPACE_PATH" ]; then
             echo "❌ ERROR: Xcode project not found at $WORKSPACE_PATH"
             exit 1
           fi
