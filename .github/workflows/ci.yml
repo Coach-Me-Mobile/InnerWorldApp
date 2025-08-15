@@ -13,7 +13,7 @@ on:
     - cron: '0 2 * * *'
 
 env:
-  XCODE_VERSION: '15.1'
+  XCODE_VERSION: '16.0'
   IOS_SIMULATOR: 'iPhone 15 Pro'
   IOS_VERSION: '17.0'
 
