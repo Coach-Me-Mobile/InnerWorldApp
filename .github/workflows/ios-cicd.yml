@@ -164,17 +164,55 @@ jobs:
           # Version/build numbers are set via xcodebuild build settings, not manual plist editing
           echo "✅ Using auto-generated Info.plist with build settings"
       
-      - name: Build for testing
+      - name: Build and test
         run: |
           echo "🏗️ Building for testing..."
+          
+          # Create shared derived data directory
+          DERIVED_DATA_PATH="$HOME/Library/Developer/Xcode/DerivedData/InnerWorld-${{ github.run_id }}"
+          mkdir -p "$DERIVED_DATA_PATH"
+          echo "Using derived data path: $DERIVED_DATA_PATH"
+          
+          # Build for testing using simulator destination
+          echo "📋 Step 1: Building for testing..."
           set -o pipefail && xcodebuild \
             -project "$WORKSPACE_PATH" \
             -scheme "$SCHEME_NAME" \
-            -destination "generic/platform=iOS" \
+            -destination "platform=iOS Simulator,name=iPhone 15 Pro,OS=latest" \
             -configuration Debug \
+            -derivedDataPath "$DERIVED_DATA_PATH" \
+            -quiet \
             MARKETING_VERSION="${{ needs.setup.outputs.version_number }}" \
             CURRENT_PROJECT_VERSION="${{ needs.setup.outputs.build_number }}" \
+            CODE_SIGNING_ALLOWED=NO \
             build-for-testing | xcpretty
+          
+          echo "✅ Build for testing completed successfully"
+          
+          echo "🧪 Step 2: Running unit tests..."
+          set -o pipefail && xcodebuild \
+            -project "$WORKSPACE_PATH" \
+            -scheme "$SCHEME_NAME" \
+            -destination "platform=iOS Simulator,name=iPhone 15 Pro,OS=latest" \
+            -configuration Debug \
+            -derivedDataPath "$DERIVED_DATA_PATH" \
+            -quiet \
+            MARKETING_VERSION="${{ needs.setup.outputs.version_number }}" \
+            CURRENT_PROJECT_VERSION="${{ needs.setup.outputs.build_number }}" \
+            CODE_SIGNING_ALLOWED=NO \
+            -enableCodeCoverage YES \
+            test-without-building | xcpretty --report junit --output test-results.xml
+          
+          echo "✅ Unit tests completed successfully"
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ needs.setup.outputs.build_number }}
+          path: |
+            test-results.xml
+          retention-days: 30
       
       - name: Build for release
         run: |
