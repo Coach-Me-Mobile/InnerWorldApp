@@ -217,6 +217,14 @@ jobs:
               <string>app-store</string>
               <key>teamID</key>
               <string>$APPLE_TEAM_ID</string>
+              <key>signingStyle</key>
+              <string>automatic</string>
+              <key>uploadBitcode</key>
+              <false/>
+              <key>uploadSymbols</key>
+              <true/>
+              <key>compileBitcode</key>
+              <false/>
           </dict>
           </plist>
           EOF
