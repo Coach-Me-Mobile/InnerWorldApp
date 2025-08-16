@@ -123,7 +123,7 @@ brew install awscli
 aws configure
 # AWS Access Key ID: [PROVIDED_ACCESS_KEY]
 # AWS Secret Access Key: [PROVIDED_SECRET_KEY]
-# Default region: us-east-1
+# Default region: us-west-2
 # Default output format: json
 ```
 
@@ -176,7 +176,7 @@ Create a separate policy for production with additional restrictions:
             ],
             "Condition": {
                 "StringEquals": {
-                    "aws:RequestedRegion": "us-east-1"
+                    "aws:RequestedRegion": "us-west-2"
                 },
                 "DateGreaterThan": {
                     "aws:CurrentTime": "2024-01-01T00:00:00Z"

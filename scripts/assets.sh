@@ -20,7 +20,7 @@ fi
 # ==============================================================================
 
 # AWS region
-AWS_REGION="us-east-1"
+AWS_REGION="us-west-2"
 
 # Default AWS profile (can be overridden)
 AWS_PROFILE="${AWS_PROFILE:-default}"

@@ -10,7 +10,7 @@
 set -e
 
 # Configuration
-AWS_REGION="us-east-1"
+AWS_REGION="us-west-2"
 AWS_PROFILE="${AWS_PROFILE:-default}"
 ENVIRONMENT="prod"
 TARGET_PREFIX="assets/"

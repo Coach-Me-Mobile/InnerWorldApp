@@ -20,7 +20,7 @@ fi
 # ==============================================================================
 
 # AWS region
-AWS_REGION="us-east-1"
+AWS_REGION="us-west-2"
 
 # Function to get S3 bucket name for environment
 get_bucket_name() {

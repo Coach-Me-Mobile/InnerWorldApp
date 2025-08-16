@@ -128,7 +128,7 @@ You now have access to InnerWorld's S3 asset management system. Here's your setu
 ## Script Access (For asset.sh script)
 - Access Key ID: [ACCESS_KEY_ID]
 - Secret Access Key: [SECRET_ACCESS_KEY]
-- Region: us-east-1
+- Region: us-west-2
 
 ## Setup Instructions:
 
@@ -137,7 +137,7 @@ You now have access to InnerWorld's S3 asset management system. Here's your setu
    aws configure
    # Enter your Access Key ID
    # Enter your Secret Access Key
-   # Default region: us-east-1
+   # Default region: us-west-2
    # Default output format: json
    ```
 
@@ -200,7 +200,7 @@ For extra security on production, create a separate policy:
             ],
             "Condition": {
                 "StringEquals": {
-                    "aws:RequestedRegion": "us-east-1"
+                    "aws:RequestedRegion": "us-west-2"
                 }
             }
         }
@@ -281,7 +281,7 @@ aws s3 ls s3://innerworld-dev-app-assets/ --profile developer-profile
 ### **CloudFront Invalidation Fails**
 - **Check CloudFront permissions** in the IAM policy
 - **Verify distribution ID** is configured in the script
-- **Check AWS region** (CloudFront is global but API calls are us-east-1)
+- **Check AWS region** (CloudFront is global but API calls are us-west-2)
 
 ## 📊 **Monitoring & Auditing**
 

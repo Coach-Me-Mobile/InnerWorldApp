@@ -225,7 +225,7 @@ The script requires AWS credentials with these permissions:
 aws configure
 # AWS Access Key ID: [YOUR_ACCESS_KEY]
 # AWS Secret Access Key: [YOUR_SECRET_KEY]
-# Default region: us-east-1
+# Default region: us-west-2
 # Default output format: json
 
 # Test access
