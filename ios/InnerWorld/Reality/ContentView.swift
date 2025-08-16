@@ -16,6 +16,8 @@ struct ContentView : View {
     @State private var lastDragLocation: CGSize = .zero
     @State private var showDebugPanel = false
     @State private var showExportedPositions = false
+    @State private var showMovementWidget = false
+    @State private var showWelcomeOverlay = true
     
     var body: some View {
         ZStack {
@@ -24,8 +26,8 @@ struct ContentView : View {
                 .gesture(
                     DragGesture()
                         .onChanged { value in
-                            // Only allow panning when not zoomed to bookshelf
-                            if !arViewContainer.isZoomedToBookshelf {
+                            // Only allow panning when not zoomed and welcome overlay is dismissed
+                            if !arViewContainer.isZoomedToBookshelf && !arViewContainer.cameraState.isZoomed && !showWelcomeOverlay {
                                 let delta = CGSize(
                                     width: value.translation.width - lastDragLocation.width,
                                     height: value.translation.height - lastDragLocation.height
@@ -39,27 +41,48 @@ struct ContentView : View {
                         }
                 )
             
-            // Interaction hint overlay
+            // Interaction hint overlay - now clickable
             if let interactable = arViewContainer.interactableObjectNearby {
                 VStack {
                     Spacer()
                     
-                    HStack {
-                        Image(systemName: "hand.tap.fill")
-                            .font(.system(size: 20))
-                        Text(getInteractionText(for: interactable))
-                            .font(.system(size: 16, weight: .medium))
+                    Button(action: {
+                        // Trigger camera animation based on which object is nearby
+                        switch interactable {
+                        case "bigshelf":
+                            arViewContainer.animateToObject(.bookshelf)
+                            arViewContainer.lastTappedObject = "bigshelf"
+                        case "desk":
+                            arViewContainer.animateToObject(.desk)
+                            arViewContainer.lastTappedObject = "desk"
+                        case "chest_open":
+                            arViewContainer.animateToObject(.chest)
+                            arViewContainer.lastTappedObject = "chest_open"
+                        default:
+                            break
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "hand.tap.fill")
+                                .font(.system(size: 20))
+                            Text(getInteractionText(for: interactable))
+                                .font(.system(size: 16, weight: .medium))
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule()
+                                .fill(.ultraThinMaterial)
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                )
+                        )
+                        .foregroundColor(.primary)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(
-                        Capsule()
-                            .fill(.ultraThinMaterial)
-                            .overlay(
-                                Capsule()
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            )
-                    )
+                    .buttonStyle(PlainButtonStyle())
+                    .scaleEffect(1.0)
+                    .animation(.easeInOut(duration: 0.1), value: arViewContainer.interactableObjectNearby)
                     .padding(.bottom, 120)
                 }
                 .transition(.opacity.combined(with: .scale(scale: 0.9)))
@@ -93,8 +116,8 @@ struct ContentView : View {
                 }
             }
             
-            // Back button when zoomed to bookshelf
-            if arViewContainer.isZoomedToBookshelf {
+            // Back button when zoomed to any object
+            if arViewContainer.isZoomedToBookshelf || arViewContainer.cameraState.isZoomed {
                 VStack {
                     Spacer()
                     
@@ -125,19 +148,40 @@ struct ContentView : View {
                 .animation(.easeInOut(duration: 0.3), value: arViewContainer.isZoomedToBookshelf)
             }
             
-            // Debug button
+            // Debug and Movement buttons
             VStack {
                 HStack {
                     Spacer()
+                    
+                    // Movement Widget Button
+                    Button(action: {
+                        showMovementWidget.toggle()
+                        if showMovementWidget {
+                            showDebugPanel = false
+                            arViewContainer.debugMode = false
+                        }
+                    }) {
+                        Image(systemName: "move.3d")
+                            .font(.system(size: 20))
+                            .foregroundColor(.white)
+                            .padding(12)
+                            .background(Circle().fill(showMovementWidget ? Color.blue : Color.blue.opacity(0.6)))
+                    }
+                    .padding(.trailing, 10)
+                    
+                    // Debug Button
                     Button(action: {
                         showDebugPanel.toggle()
                         arViewContainer.debugMode = showDebugPanel
+                        if showDebugPanel {
+                            showMovementWidget = false
+                        }
                     }) {
                         Image(systemName: "wrench.and.screwdriver")
                             .font(.system(size: 20))
                             .foregroundColor(.white)
                             .padding(12)
-                            .background(Circle().fill(Color.orange.opacity(0.8)))
+                            .background(Circle().fill(showDebugPanel ? Color.orange : Color.orange.opacity(0.6)))
                     }
                     .padding(.trailing, 20)
                     .padding(.top, 60)
@@ -215,6 +259,18 @@ struct ContentView : View {
                 Spacer()
             }
             
+            // Movement Widget
+            if showMovementWidget {
+                VStack {
+                    CameraMovementWidget(arViewContainer: arViewContainer)
+                        .padding(.top, 100)
+                        .padding(.horizontal, 20)
+                    Spacer()
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                .animation(.easeInOut(duration: 0.3), value: showMovementWidget)
+            }
+            
             VStack {
                 Spacer()
                 Button("Sign Out") { session.signOut() }
@@ -223,6 +279,54 @@ struct ContentView : View {
                     .background(.ultraThinMaterial)
                     .clipShape(Capsule())
                     .padding(.bottom, 50)
+            }
+            
+            // Welcome overlay with scrim
+            if showWelcomeOverlay {
+                ZStack {
+                    // Scrim background
+                    Color.black.opacity(0.7)
+                        .edgesIgnoringSafeArea(.all)
+                    
+                    // Welcome text
+                    VStack(spacing: 12) {
+                        Text("Welcome to your")
+                            .font(.system(size: 32, weight: .light, design: .rounded))
+                            .foregroundColor(.white.opacity(0.85))
+                            .tracking(1.5)
+                        
+                        Text("InnerWorld")
+                            .font(.system(size: 48, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .tracking(2.0)
+                            .shadow(color: .purple.opacity(0.4), radius: 15, x: 0, y: 3)
+                            .overlay(
+                                LinearGradient(
+                                    colors: [.white, .white.opacity(0.8)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                                .mask(
+                                    Text("InnerWorld")
+                                        .font(.system(size: 48, weight: .bold, design: .rounded))
+                                        .tracking(2.0)
+                                )
+                            )
+                    }
+                    .scaleEffect(showWelcomeOverlay ? 1.0 : 0.9)
+                    .opacity(showWelcomeOverlay ? 1.0 : 0.0)
+                    .animation(.easeOut(duration: 0.5), value: showWelcomeOverlay)
+                }
+                .transition(.opacity)
+                .animation(.easeInOut(duration: 0.5), value: showWelcomeOverlay)
+                .onAppear {
+                    // Dismiss the overlay after the intro animation completes
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+                        withAnimation(.easeOut(duration: 0.8)) {
+                            showWelcomeOverlay = false
+                        }
+                    }
+                }
             }
         }
         .sheet(isPresented: $showExportedPositions) {

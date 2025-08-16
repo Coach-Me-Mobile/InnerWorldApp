@@ -7,6 +7,21 @@
 
 import SwiftUI
 import RealityKit
+import simd
+
+enum InteractableObject {
+    case bookshelf
+    case desk
+    case chest
+    
+    var entityName: String {
+        switch self {
+        case .bookshelf: return "bigshelf"
+        case .desk: return "desk"
+        case .chest: return "chest_open"
+        }
+    }
+}
 
 class ARViewContainer: ObservableObject {
     var arView: ARView?
@@ -18,14 +33,51 @@ class ARViewContainer: ObservableObject {
     @Published var isRecording: Bool = false
     @Published var capturedPositions: [String] = []
     @Published var currentDeskPosition: String = ""
+    @Published var currentAnchorPosition: String = ""
+    @Published var cameraState = CameraState()
     
     private var originalCameraPosition: SIMD3<Float> = .zero
     private var originalCameraRotation: simd_quatf = simd_quatf()
+    
+    // Hardcoded camera positions from capture
+    private let centerRoomPosition = CameraPosition(
+        translation: SIMD3<Float>(0, 0, 0),  // Anchor stays at origin, scene is positioned
+        rotation: simd_quatf()
+    )
+    
+    // The actual scene offset for the room
+    private let sceneOffset = SIMD3<Float>(0, -1.7, -1)
+    
+    private let bookshelfCameraPosition = CameraPosition(
+        translation: SIMD3<Float>(-0.505, -0.076, 1.246),
+        rotation: simd_quatf(vector: SIMD4<Float>(0.020, -0.130, -0.003, 0.991))
+    )
+    
+    private let deskCameraPosition = CameraPosition(
+        translation: SIMD3<Float>(0.865, -4.960, 1.373),
+        rotation: simd_quatf(vector: SIMD4<Float>(0.191, 0.764, 0.558, 0.261))
+    )
+    
+    private let chestCameraPosition = CameraPosition(
+        translation: SIMD3<Float>(-0.145, -1.794, 4.364),
+        rotation: simd_quatf(vector: SIMD4<Float>(-0.146, 0.791, 0.208, -0.556))
+    )
+    
+    var hasAnyCapturedPositions: Bool {
+        return cameraState.bookshelfPosition != nil ||
+               cameraState.deskPosition != nil ||
+               cameraState.chestPosition != nil
+    }
     
     func setupView() -> ARView {
         let view = ARView(frame: .zero, cameraMode: .nonAR, automaticallyConfigureSession: false)
         view.environment.background = .color(.black)
         self.arView = view
+        
+        // Initialize camera state with hardcoded positions
+        cameraState.bookshelfPosition = bookshelfCameraPosition
+        cameraState.deskPosition = deskCameraPosition
+        cameraState.chestPosition = chestCameraPosition
         
         loadInnerWorldScene(in: view)
         setupGestures(in: view)
@@ -94,13 +146,23 @@ class ARViewContainer: ObservableObject {
             anchor.addChild(loadedEntity)
             
             // Position scene so camera is at eye level in room center
-            loadedEntity.position = [0, -1.7, -1]
+            // The scene itself is offset, not the anchor
+            loadedEntity.position = sceneOffset
+            
+            // Start anchor higher and rotated for intro animation
+            var startTransform = Transform()
+            startTransform.translation = SIMD3<Float>(0, 2.5, 0) // Start 2.5 units higher
+            startTransform.rotation = simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0))
+            anchor.transform = startTransform
             
             // Add the anchor to the scene
             view.scene.addAnchor(anchor)
             
             // Store the anchor reference
             self.sceneAnchor = anchor
+            
+            // Perform intro animation
+            performIntroAnimation(anchor: anchor)
             
             print("Successfully loaded InnerWorldRoom scene")
         } catch {
@@ -126,6 +188,9 @@ class ARViewContainer: ObservableObject {
     func updateRotation(yaw: Float, pitch: Float) {
         guard let anchor = sceneAnchor else { return }
         
+        // Don't allow manual rotation during animation
+        if cameraState.isAnimating { return }
+        
         // CRITICAL: Apply rotations in correct order to prevent tilt
         // First create yaw rotation around world Y axis
         let yawQuat = simd_quatf(angle: -yaw, axis: SIMD3<Float>(0, 1, 0))
@@ -136,6 +201,9 @@ class ARViewContainer: ObservableObject {
         // Combine in correct order: pitch * yaw prevents roll
         // This keeps the horizon level
         anchor.transform.rotation = pitchQuat * yawQuat
+        
+        // Update position display
+        updateCurrentPositionDisplay()
         
         // Check proximity to interactive objects
         checkProximityToInteractables()
@@ -181,8 +249,17 @@ class ARViewContainer: ObservableObject {
         print("Interacted with: \(entity.name)")
         lastTappedObject = entity.name
         
-        // Zoom to bookshelf
-        zoomToBookshelf()
+        // Determine which object was tapped and animate to it
+        if entity.name.contains("shelf") {
+            animateToObject(.bookshelf)
+        } else if entity.name.contains("desk") {
+            animateToObject(.desk)
+        } else if entity.name.contains("chest") {
+            animateToObject(.chest)
+        } else {
+            // Fallback to old zoom behavior
+            zoomToBookshelf()
+        }
         
         // Add visual feedback
         if let modelEntity = entity as? ModelEntity {
@@ -418,11 +495,345 @@ class ARViewContainer: ObservableObject {
     func returnToOriginalView() {
         guard let anchor = sceneAnchor else { return }
         
-        // Animate back to original position
-        withAnimation(.easeInOut(duration: 0.6)) {
-            anchor.position = originalCameraPosition
-            anchor.transform.rotation = originalCameraRotation
-            isZoomedToBookshelf = false
+        // Extract just the yaw (horizontal rotation) from current rotation
+        let currentRotation = anchor.transform.rotation
+        let yawOnlyRotation = extractYawRotation(from: currentRotation)
+        
+        // Create target transform with center position and horizontal rotation only
+        var targetTransform = Transform()
+        targetTransform.translation = centerRoomPosition.translation
+        targetTransform.rotation = yawOnlyRotation  // Keep horizontal facing, remove tilt
+        targetTransform.scale = SIMD3<Float>(1, 1, 1)
+        
+        // Use existing simple animation
+        animateTransform(
+            from: anchor.transform,
+            to: targetTransform,
+            duration: 0.8,
+            completion: {
+                self.cameraState.reset()
+                self.isZoomedToBookshelf = false
+                self.cameraState.isZoomed = false
+                self.interactableObjectNearby = nil
+            }
+        )
+    }
+    
+    private func extractYawRotation(from rotation: simd_quatf) -> simd_quatf {
+        // Convert quaternion to rotation matrix
+        let matrix = float3x3(rotation)
+        
+        // Extract yaw (rotation around Y axis) from the rotation matrix
+        // Using atan2 of the relevant matrix components
+        let yaw = atan2(matrix[0][2], matrix[2][2])
+        
+        // Create quaternion with only yaw rotation (no pitch or roll)
+        return simd_quatf(angle: yaw, axis: SIMD3<Float>(0, 1, 0))
+    }
+    
+    private func performIntroAnimation(anchor: AnchorEntity) {
+        // Target position and rotation (facing desk area)
+        var targetTransform = Transform()
+        targetTransform.translation = centerRoomPosition.translation // Final position at center
+        
+        // Face toward desk area (desk is at positive X, so rotate to face that direction)
+        let deskDirection = Float.pi / 4 // 45 degrees to face desk area
+        targetTransform.rotation = simd_quatf(angle: deskDirection, axis: SIMD3<Float>(0, 1, 0))
+        
+        // Animate with custom intro animation
+        animateIntroSequence(
+            anchor: anchor,
+            targetTransform: targetTransform,
+            duration: 3.5
+        )
+    }
+    
+    private func animateIntroSequence(
+        anchor: AnchorEntity,
+        targetTransform: Transform,
+        duration: TimeInterval
+    ) {
+        let startTime = CACurrentMediaTime()
+        let startTransform = anchor.transform
+        
+        // Create animation timer
+        Timer.scheduledTimer(withTimeInterval: 1/60.0, repeats: true) { timer in
+            let elapsed = CACurrentMediaTime() - startTime
+            let progress = Float(min(elapsed / duration, 1.0))
+            
+            // Custom easing for smooth intro
+            let easedProgress = self.easeOutQuart(progress)
+            
+            // Interpolate vertical position (dropping down)
+            let currentY = simd_mix(
+                startTransform.translation.y,
+                targetTransform.translation.y,
+                easedProgress
+            )
+            
+            // Create spinning motion (360 degrees + final rotation)
+            // Face toward desk area (45 degrees)
+            let deskDirection = Float.pi / 4
+            
+            // Spin 360 degrees plus the final orientation
+            // Use easeOutCubic for the spin to slow down as it approaches final position
+            let spinProgress = self.easeOutCubic(progress)
+            let currentRotation = (Float.pi * 2 + deskDirection) * spinProgress
+            
+            // Apply transform
+            var currentTransform = Transform()
+            currentTransform.translation = SIMD3<Float>(
+                targetTransform.translation.x,
+                currentY,
+                targetTransform.translation.z
+            )
+            currentTransform.rotation = simd_quatf(
+                angle: currentRotation,
+                axis: SIMD3<Float>(0, 1, 0)
+            )
+            currentTransform.scale = SIMD3<Float>(1, 1, 1)
+            
+            anchor.transform = currentTransform
+            
+            // Update position display
+            self.updateCurrentPositionDisplay()
+            
+            if progress >= 1.0 {
+                timer.invalidate()
+                // Ensure final transform is exact
+                anchor.transform = targetTransform
+                self.updateCurrentPositionDisplay()
+            }
         }
+    }
+    
+    private func easeOutQuart(_ t: Float) -> Float {
+        return 1 - pow(1 - t, 4)
+    }
+    
+    private func easeOutCubic(_ t: Float) -> Float {
+        return 1 - pow(1 - t, 3)
+    }
+    
+    private func easeInOutQuad(_ t: Float) -> Float {
+        return t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2
+    }
+    
+    // MARK: - Camera Movement Methods
+    
+    func moveCamera(forward: Float = 0, right: Float = 0, up: Float = 0) {
+        guard let anchor = sceneAnchor else { return }
+        
+        // Don't allow movement during animation
+        if cameraState.isAnimating { return }
+        
+        // Get current rotation to determine forward/right directions
+        let rotation = anchor.transform.rotation
+        
+        // Calculate forward vector (negative Z in local space)
+        let forwardVector = rotation.act(SIMD3<Float>(0, 0, -forward))
+        
+        // Calculate right vector (positive X in local space)
+        let rightVector = rotation.act(SIMD3<Float>(right, 0, 0))
+        
+        // Apply movement
+        anchor.position += forwardVector + rightVector + SIMD3<Float>(0, up, 0)
+        
+        updateCurrentPositionDisplay()
+        checkProximityToInteractables()
+    }
+    
+    func rotateCamera(yaw: Float = 0, pitch: Float = 0) {
+        guard let anchor = sceneAnchor else { return }
+        
+        // Don't allow rotation during animation
+        if cameraState.isAnimating { return }
+        
+        // Apply yaw rotation
+        if yaw != 0 {
+            let yawQuat = simd_quatf(angle: yaw, axis: SIMD3<Float>(0, 1, 0))
+            anchor.transform.rotation = anchor.transform.rotation * yawQuat
+        }
+        
+        updateCurrentPositionDisplay()
+        checkProximityToInteractables()
+    }
+    
+    func tiltCamera(pitch: Float) {
+        guard let anchor = sceneAnchor else { return }
+        
+        // Don't allow tilt during animation
+        if cameraState.isAnimating { return }
+        
+        // Apply pitch rotation
+        let pitchQuat = simd_quatf(angle: pitch, axis: SIMD3<Float>(1, 0, 0))
+        anchor.transform.rotation = pitchQuat * anchor.transform.rotation
+        
+        updateCurrentPositionDisplay()
+    }
+    
+    func capturePositionForObject(_ object: InteractableObject) {
+        guard let anchor = sceneAnchor else { return }
+        
+        let currentPosition = CameraPosition(from: anchor.transform)
+        
+        switch object {
+        case .bookshelf:
+            cameraState.bookshelfPosition = currentPosition
+            print("Captured bookshelf position: \(currentPosition.description)")
+        case .desk:
+            cameraState.deskPosition = currentPosition
+            print("Captured desk position: \(currentPosition.description)")
+        case .chest:
+            cameraState.chestPosition = currentPosition
+            print("Captured chest position: \(currentPosition.description)")
+        }
+    }
+    
+    func clearCapturedCameraPositions() {
+        cameraState.bookshelfPosition = nil
+        cameraState.deskPosition = nil
+        cameraState.chestPosition = nil
+    }
+    
+    func animateToObject(_ object: InteractableObject) {
+        guard let anchor = sceneAnchor else { return }
+        
+        // Get the target position for the object
+        let targetPosition: CameraPosition?
+        switch object {
+        case .bookshelf:
+            targetPosition = cameraState.bookshelfPosition
+        case .desk:
+            targetPosition = cameraState.deskPosition
+        case .chest:
+            targetPosition = cameraState.chestPosition
+        }
+        
+        // If we have a captured position, use it (which we always will with hardcoded values)
+        if let target = targetPosition {
+            // Don't save original transform - we always return to center
+            
+            animateTransform(
+                from: anchor.transform,
+                to: target.transform,
+                duration: 1.2,
+                completion: {
+                    self.cameraState.isZoomed = true
+                    self.isZoomedToBookshelf = true // Keep for UI compatibility
+                    self.interactableObjectNearby = nil
+                }
+            )
+        } else {
+            // Fallback: Calculate position dynamically
+            if let entity = findEntity(named: object.entityName, in: anchor) {
+                animateToEntity(entity)
+            }
+        }
+    }
+    
+    private func animateToEntity(_ entity: Entity) {
+        guard let anchor = sceneAnchor else { return }
+        
+        // Save original transform
+        if cameraState.originalTransform == nil {
+            cameraState.originalTransform = anchor.transform
+        }
+        
+        // Calculate target position based on entity
+        let entityPosition = entity.position(relativeTo: anchor)
+        let entityBounds = entity.visualBounds(relativeTo: anchor)
+        
+        // Calculate optimal viewing distance
+        let boundingRadius = max(
+            entityBounds.extents.x,
+            entityBounds.extents.y,
+            entityBounds.extents.z
+        ) * 0.5
+        
+        let viewingDistance: Float = boundingRadius * 2.5
+        
+        // Create target transform
+        var targetTransform = Transform()
+        targetTransform.translation = SIMD3<Float>(
+            -entityPosition.x,
+            -1.7 - entityPosition.y * 0.5,
+            -entityPosition.z + viewingDistance
+        )
+        targetTransform.rotation = simd_quatf() // Reset rotation for now
+        
+        animateTransform(
+            from: anchor.transform,
+            to: targetTransform,
+            duration: 1.2,
+            completion: {
+                self.cameraState.isZoomed = true
+                self.isZoomedToBookshelf = true
+                self.interactableObjectNearby = nil
+            }
+        )
+    }
+    
+    private func animateTransform(from: Transform, to: Transform, duration: TimeInterval, completion: (() -> Void)? = nil) {
+        guard let anchor = sceneAnchor else { return }
+        
+        // Prevent multiple animations
+        if cameraState.isAnimating { return }
+        
+        cameraState.isAnimating = true
+        cameraState.animationProgress = 0
+        
+        let startTime = CACurrentMediaTime()
+        
+        // Invalidate any existing timer
+        cameraState.animationTimer?.invalidate()
+        
+        // Create animation timer
+        cameraState.animationTimer = Timer.scheduledTimer(withTimeInterval: 1/60.0, repeats: true) { timer in
+            let elapsed = CACurrentMediaTime() - startTime
+            let progress = Float(min(elapsed / duration, 1.0))
+            
+            // Use easing function
+            let easedProgress = EasingFunction.easeInOutCubic(progress)
+            
+            // Interpolate transform
+            let currentTransform = Transform.interpolate(
+                from: from,
+                to: to,
+                progress: easedProgress
+            )
+            
+            anchor.transform = currentTransform
+            self.cameraState.animationProgress = progress
+            
+            // Update position display during animation
+            self.updateCurrentPositionDisplay()
+            
+            if progress >= 1.0 {
+                timer.invalidate()
+                self.cameraState.animationTimer = nil
+                self.cameraState.isAnimating = false
+                self.cameraState.animationProgress = 1.0
+                
+                // Call completion handler
+                completion?()
+            }
+        }
+    }
+    
+    private func updateCurrentPositionDisplay() {
+        guard let anchor = sceneAnchor else {
+            currentAnchorPosition = "No anchor"
+            return
+        }
+        
+        let pos = anchor.position
+        let rot = anchor.transform.rotation
+        
+        currentAnchorPosition = String(
+            format: "Pos: (%.2f, %.2f, %.2f) Rot: (%.2f, %.2f, %.2f, %.2f)",
+            pos.x, pos.y, pos.z,
+            rot.vector.x, rot.vector.y, rot.vector.z, rot.vector.w
+        )
     }
 }
