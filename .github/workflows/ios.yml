@@ -170,9 +170,13 @@ jobs:
           BUILD_NUMBER="${GITHUB_SHA:0:8}"
           VERSION_NUMBER="$(date '+%Y.%m.%d')"
           
+          # Set bundle identifier (not a secret, so we can define it here)
+          BUNDLE_ID="com.thoughtmanifold.InnerWorld"
+          
           echo "📱 Building iOS app..."
           echo "Build: $BUILD_NUMBER"
           echo "Version: $VERSION_NUMBER"
+          echo "Bundle ID: $BUNDLE_ID"
           echo "Has valid team ID: ${HAS_VALID_TEAM_ID:-false}"
           echo "Has certificates: ${HAS_CERTIFICATES:-false}"
           echo "Has ASC credentials: ${HAS_ASC_CREDENTIALS:-false}"
@@ -200,7 +204,7 @@ jobs:
               CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
               CODE_SIGN_STYLE=Automatic \
               DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-              PRODUCT_BUNDLE_IDENTIFIER="$ASC_BUNDLE_ID" \
+              PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
               archive
             
             # Export IPA
