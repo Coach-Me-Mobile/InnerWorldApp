@@ -10,20 +10,17 @@ The unified `assets.sh` script provides complete asset management for your mobil
 # Make script executable (one-time setup)
 chmod +x scripts/assets.sh
 
-# Upload assets to development
+# Upload assets to production
 ./scripts/assets.sh upload ./my-assets/
 
-# Download all production assets
-./scripts/assets.sh download -e prod
+# Download all production assets (unpacked at the path iOS app expects)
+./scripts/assets.sh download assets
 
-# List assets in staging
-./scripts/assets.sh list -e staging
+# List assets in production
+./scripts/assets.sh list
 
-# Sync from dev to staging
-./scripts/assets.sh sync dev staging
-
-# Compare environments
-./scripts/assets.sh compare dev prod
+# Sync from production to local backup
+./scripts/assets.sh sync prod ./backup/
 
 # Get system info
 ./scripts/assets.sh info
@@ -40,16 +37,15 @@ Upload local assets to S3 bucket with intelligent content-type detection.
 ./scripts/assets.sh upload <source_path>
 
 # Options
--e, --env ENV        Environment (dev, staging, prod) [default: dev]
 -t, --target PATH    Target S3 path prefix [default: assets/]
--c, --invalidate     Invalidate CloudFront cache (production only)
+-c, --invalidate     Invalidate CloudFront cache after upload
 -d, --dry-run        Preview what would be uploaded
 --delete             Delete extraneous files from destination
 
 # Examples
-./scripts/assets.sh upload ./images/                    # Upload to dev/assets/
-./scripts/assets.sh upload -e prod -c ./icons/          # Upload to prod + invalidate cache
-./scripts/assets.sh upload -t images/ ./new-logos/      # Upload to dev/images/
+./scripts/assets.sh upload ./images/                    # Upload to prod/assets/
+./scripts/assets.sh upload -c ./icons/                  # Upload to prod + invalidate cache
+./scripts/assets.sh upload -t images/ ./new-logos/      # Upload to prod/images/
 ./scripts/assets.sh upload -d ./assets/                 # Preview upload (dry run)
 ```
 
@@ -62,15 +58,18 @@ Download assets from S3 to local directory.
 ./scripts/assets.sh download [remote_path] [local_path]
 
 # Options
--e, --env ENV        Environment (dev, staging, prod) [default: dev]
 -d, --dry-run        Preview what would be downloaded
 --delete             Delete extraneous local files
 
+# Arguments
+remote_path          S3 path to download (optional, defaults to entire bucket)
+local_path           Local destination path [default: ./ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/]
+
 # Examples
-./scripts/assets.sh download                            # Download all dev assets
-./scripts/assets.sh download -e prod                    # Download all prod assets
+./scripts/assets.sh download                            # Download all prod assets to iOS directory
 ./scripts/assets.sh download images/ ./my-images/       # Download specific folder
 ./scripts/assets.sh download assets/logo.png ./         # Download specific file
+./scripts/assets.sh download -d                         # Preview download (dry run)
 ```
 
 ### **📋 List/Browse Assets**
@@ -82,14 +81,13 @@ Browse and explore assets in S3 buckets.
 ./scripts/assets.sh list [path]
 
 # Options
--e, --env ENV        Environment (dev, staging, prod) [default: dev]
 -l, --long           Show detailed information (size, date)
 -r, --recursive      List all files recursively
 --human-readable     Show file sizes in human readable format
 
 # Examples
-./scripts/assets.sh list                                # List root of dev bucket
-./scripts/assets.sh list -e prod -l                     # Detailed list of prod
+./scripts/assets.sh list                                # List root of prod bucket
+./scripts/assets.sh list -l                             # Detailed list of prod
 ./scripts/assets.sh list -r images/                     # Recursively list images/
 ./scripts/assets.sh list --human-readable assets/       # Human readable sizes
 ```
@@ -108,26 +106,26 @@ Sync assets between environments or local/remote locations.
 -c, --invalidate     Invalidate CloudFront cache if destination is prod
 
 # Examples
-./scripts/assets.sh sync dev staging                    # Environment to environment
-./scripts/assets.sh sync prod ./backup/                 # Remote to local backup
-./scripts/assets.sh sync ./local-assets/ dev            # Local to remote upload
-./scripts/assets.sh sync -d dev prod                     # Preview sync (dry run)
+./scripts/assets.sh sync prod ./backup/                 # Download from prod to local backup
+./scripts/assets.sh sync ./local-assets/ prod           # Upload from local to prod
+./scripts/assets.sh sync ./backup/ ./restore/           # Local to local sync
+./scripts/assets.sh sync -d ./assets/ prod              # Preview sync (dry run)
 ```
 
 ### **⚖️ Compare Assets**
 
-Compare assets between different environments.
+**Note**: Compare functionality is limited as only production environment exists.
 
 ```bash
-# Basic usage
-./scripts/assets.sh compare <env1> <env2>
+# Suggested workflow for asset comparison:
+# 1. Download current production
+./scripts/assets.sh download ./current-prod/
 
-# Options
---summary-only       Show only summary statistics
+# 2. Compare with iOS assets
+diff -r ./current-prod/ ./ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/
 
-# Examples
-./scripts/assets.sh compare dev prod                    # Compare dev vs prod
-./scripts/assets.sh compare --summary-only staging prod # Summary only
+# 3. Upload changes if needed
+./scripts/assets.sh upload ./ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/
 ```
 
 ### **ℹ️ System Info**
@@ -140,14 +138,13 @@ Display bucket status, CloudFront configuration, and AWS authentication info.
 
 ## 🏗️ **Infrastructure Overview**
 
-### **S3 Buckets**
-- **Dev**: `innerworld-dev-app-assets` (Direct S3 access)
-- **Staging**: `innerworld-staging-app-assets` (Direct S3 access)  
+### **S3 Bucket**
 - **Production**: `innerworld-prod-app-assets` (CloudFront CDN)
+  - Region: `us-west-2`
+  - Access: Direct S3 or CloudFront CDN
 
-### **Access Patterns**
-- **Development/Staging**: Direct S3 URLs for fast iteration
-- **Production**: CloudFront CDN for global performance and caching
+### **Access Pattern**
+- **Production**: Direct S3 URLs or CloudFront CDN (when configured)
 
 ### **CloudFront Caching**
 - **Default TTL**: 1 hour (3600 seconds)
@@ -159,25 +156,22 @@ Display bucket status, CloudFront configuration, and AWS authentication info.
 ### **Asset URL Patterns**
 
 ```swift
-// Development/Staging (Direct S3)
-let devAssetURL = "https://innerworld-dev-app-assets.s3.us-east-1.amazonaws.com/assets/logo.png"
+// Production (Direct S3)
+let prodS3URL = "https://innerworld-prod-app-assets.s3.us-west-2.amazonaws.com/assets/logo.png"
 
-// Production (CloudFront CDN)
-let prodAssetURL = "https://d1234567890.cloudfront.net/assets/logo.png"
+// Production (CloudFront CDN - when configured)
+let prodCDNURL = "https://YOUR_CLOUDFRONT_DISTRIBUTION.cloudfront.net/assets/logo.png"
 ```
 
-### **Environment-Specific Loading**
+### **Asset Loading**
 
 ```swift
 func getAssetURL(path: String) -> String {
-    switch Environment.current {
-    case .development:
-        return "https://innerworld-dev-app-assets.s3.us-east-1.amazonaws.com/\(path)"
-    case .staging:
-        return "https://innerworld-staging-app-assets.s3.us-east-1.amazonaws.com/\(path)"
-    case .production:
-        return "https://d1234567890.cloudfront.net/\(path)"
-    }
+    // Currently only production environment is available
+    // Update with your CloudFront distribution ID when configured
+    return "https://innerworld-prod-app-assets.s3.us-west-2.amazonaws.com/\(path)"
+    // Or if CloudFront is configured:
+    // return "https://YOUR_CLOUDFRONT_DISTRIBUTION.cloudfront.net/\(path)"
 }
 ```
 
@@ -237,59 +231,59 @@ aws configure
 ### **🎨 Design Asset Updates**
 
 ```bash
-# 1. Upload new designs to dev for testing
+# 1. Upload new designs to production (use dry-run first for safety)
+./scripts/assets.sh upload -d -t designs/ ./new-designs/
+
+# 2. If dry-run looks good, upload for real
 ./scripts/assets.sh upload -t designs/ ./new-designs/
 
-# 2. Test in development app, then sync to staging
-./scripts/assets.sh sync dev staging
-
-# 3. After approval, sync to production with cache invalidation
-./scripts/assets.sh sync -c staging prod
+# 3. If CloudFront is configured, invalidate cache
+./scripts/assets.sh upload -c -t designs/ ./new-designs/
 ```
 
 ### **📦 App Release Preparation**
 
 ```bash
-# 1. Compare environments to ensure consistency
-./scripts/assets.sh compare staging prod
+# 1. Download production backup before changes
+./scripts/assets.sh download ./backup-$(date +%Y%m%d)/
 
-# 2. Download production backup before changes
-./scripts/assets.sh download -e prod ./backup-$(date +%Y%m%d)/
+# 2. Preview changes with dry-run
+./scripts/assets.sh upload -d ./v2.0-assets/
 
-# 3. Upload release assets with immediate cache clear
-./scripts/assets.sh upload -e prod -c ./v2.0-assets/
+# 3. Upload release assets with cache invalidation (if CloudFront configured)
+./scripts/assets.sh upload -c ./v2.0-assets/
 
 # 4. Verify upload completed
-./scripts/assets.sh list -e prod -l | grep v2.0
+./scripts/assets.sh list -l | grep v2.0
 ```
 
 ### **🔍 Asset Debugging**
 
 ```bash
 # 1. List all assets to find the problematic one
-./scripts/assets.sh list -e prod -r | grep logo
+./scripts/assets.sh list -r | grep logo
 
 # 2. Download specific asset for inspection
-./scripts/assets.sh download -e prod assets/logo.png ./debug/
+./scripts/assets.sh download assets/logo.png ./debug/
 
-# 3. Compare with other environments
-./scripts/assets.sh compare dev prod | grep logo
+# 3. Compare with local version
+diff ./debug/logo.png ./local-assets/logo.png
 
 # 4. Re-upload fixed version
-./scripts/assets.sh upload -e prod -c -t assets/ ./fixed-logo.png
+./scripts/assets.sh upload -c -t assets/ ./fixed-logo.png
 ```
 
 ### **🧹 Environment Cleanup**
 
 ```bash
-# 1. Compare environments to find differences
-./scripts/assets.sh compare --summary-only dev staging
+# 1. Download current production to local
+./scripts/assets.sh download ./current-state/
 
-# 2. Preview what sync would do
-./scripts/assets.sh sync -d --delete dev staging
+# 2. Preview what sync would change
+./scripts/assets.sh sync -d --delete ./new-assets/ prod
 
-# 3. Clean sync (removes extra files)
-./scripts/assets.sh sync --delete dev staging
+# 3. Clean sync to production (removes extra files)
+./scripts/assets.sh sync --delete ./new-assets/ prod
 ```
 
 ## ⚡ **Performance Tips**
@@ -402,6 +396,8 @@ For additional help:
 # Download    → ./scripts/assets.sh download [path] [local]
 # List        → ./scripts/assets.sh list [-l] [path] 
 # Sync        → ./scripts/assets.sh sync <from> <to>
-# Compare     → ./scripts/assets.sh compare <env1> <env2>
 # Info        → ./scripts/assets.sh info
+
+# Note: All operations work with production environment only
+# Default download path: ./ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/
 ```
