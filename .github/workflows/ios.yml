@@ -69,8 +69,11 @@ jobs:
       - name: Get Apple credentials
         run: |
           echo "🔍 Retrieving Apple credentials from AWS Secrets Manager..."
+          echo "🔧 Current AWS Region: $AWS_REGION"
+          echo "🔧 Current AWS Account: $(aws sts get-caller-identity --query Account --output text 2>/dev/null || echo 'Unable to determine')"
           
           # Get Apple Team ID with error handling
+          echo "📱 Fetching Apple Sign-In credentials..."
           if APPLE_SECRETS=$(aws secretsmanager get-secret-value \
             --secret-id "innerworld-prod/apple/signin-key" \
             --query SecretString --output text 2>/dev/null); then
@@ -97,6 +100,7 @@ jobs:
           fi
           
           # Get App Store Connect API key with error handling
+          echo "🏪 Fetching App Store Connect API credentials..."
           if ASC_SECRETS=$(aws secretsmanager get-secret-value \
             --secret-id "innerworld-prod/appstoreconnect/api-key" \
             --query SecretString --output text 2>/dev/null); then
@@ -132,6 +136,10 @@ jobs:
             fi
           else
             echo "⚠️  Failed to retrieve App Store Connect secrets"
+            echo "   This could be due to:"
+            echo "   - Secret doesn't exist: innerworld-prod/appstoreconnect/api-key"
+            echo "   - Insufficient AWS permissions"
+            echo "   - Wrong AWS region/account"
             echo "HAS_ASC_CREDENTIALS=false" >> $GITHUB_ENV
           fi
       
