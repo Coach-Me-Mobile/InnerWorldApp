@@ -34,36 +34,75 @@ class ARViewContainer: ObservableObject {
     
     private func loadInnerWorldScene(in view: ARView) {
         do {
-            let projectPath = "/Users/home/Documents/projects/gauntlet/bounty/inner/ios/InnerWorldApp/ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/Scene.usda"
-            let sceneURL = URL(fileURLWithPath: projectPath)
+            // Try multiple approaches to find the scene file
+            var sceneURL: URL?
             
-            if FileManager.default.fileExists(atPath: projectPath) {
-                print("Loading scene from: \(sceneURL)")
-                
-                // Load the scene entity
-                let loadedEntity = try Entity.load(contentsOf: sceneURL)
-                
-                // Keep scene at full size so we're inside it
-                loadedEntity.scale = [1.0, 1.0, 1.0]
-                
-                // Create an anchor at world origin
-                let anchor = AnchorEntity(world: .zero)
-                anchor.addChild(loadedEntity)
-                
-                // Position scene so camera is at eye level in room center
-                loadedEntity.position = [0, -1.7, -1]
-                
-                // Add the anchor to the scene
-                view.scene.addAnchor(anchor)
-                
-                // Store the anchor reference
-                self.sceneAnchor = anchor
-                
-                print("Successfully loaded InnerWorldRoom scene")
-            } else {
-                print("Scene file not found at: \(projectPath)")
-                createTestScene(in: view)
+            // Approach 1: Look in the main bundle for the copied resource
+            sceneURL = Bundle.main.url(
+                forResource: "Scene",
+                withExtension: "usda",
+                subdirectory: "InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets"
+            )
+            
+            // Approach 2: Try without the full path structure
+            if sceneURL == nil {
+                sceneURL = Bundle.main.url(
+                    forResource: "Scene",
+                    withExtension: "usda",
+                    subdirectory: "InnerWorldRoom.rkassets"
+                )
             }
+            
+            // Approach 3: Look for the file in the app bundle's resource directory
+            if sceneURL == nil {
+                let bundlePath = Bundle.main.bundlePath
+                let possiblePaths = [
+                    "\(bundlePath)/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/Scene.usda",
+                    "\(bundlePath)/InnerWorldRoom.rkassets/Scene.usda",
+                    "\(bundlePath)/Scene.usda"
+                ]
+                
+                for path in possiblePaths {
+                    if FileManager.default.fileExists(atPath: path) {
+                        sceneURL = URL(fileURLWithPath: path)
+                        break
+                    }
+                }
+            }
+            
+            guard let finalSceneURL = sceneURL else {
+                print("Scene.usda not found in bundle")
+                print("Bundle path: \(Bundle.main.bundlePath)")
+                print("Searched locations:")
+                print("  - InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/")
+                print("  - InnerWorldRoom.rkassets/")
+                print("  - Root bundle directory")
+                createTestScene(in: view)
+                return
+            }
+            
+            print("Loading scene from: \(finalSceneURL)")
+            
+            // Load the scene entity
+            let loadedEntity = try Entity.load(contentsOf: finalSceneURL)
+            
+            // Keep scene at full size so we're inside it
+            loadedEntity.scale = [1.0, 1.0, 1.0]
+            
+            // Create an anchor at world origin
+            let anchor = AnchorEntity(world: .zero)
+            anchor.addChild(loadedEntity)
+            
+            // Position scene so camera is at eye level in room center
+            loadedEntity.position = [0, -1.7, -1]
+            
+            // Add the anchor to the scene
+            view.scene.addAnchor(anchor)
+            
+            // Store the anchor reference
+            self.sceneAnchor = anchor
+            
+            print("Successfully loaded InnerWorldRoom scene")
         } catch {
             print("Error loading scene: \(error)")
             createTestScene(in: view)
