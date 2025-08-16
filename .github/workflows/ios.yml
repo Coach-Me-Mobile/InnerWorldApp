@@ -128,50 +128,45 @@ jobs:
           security unlock-keychain -p "" build.keychain
           security set-keychain-settings -t 3600 -u build.keychain
           
-          # Get certificate from AWS Secrets Manager
+          # Get certificate from AWS Secrets Manager (alternative approach)
           if CERT_SECRETS=$(aws secretsmanager get-secret-value \
-            --secret-id "innerworld-prod/apple/certificate" \
+            --secret-id "innerworld-prod/apple/certificates" \
             --query SecretString --output text 2>/dev/null); then
             
-            CERT_DATA=$(echo "$CERT_SECRETS" | jq -r '.certificate_p12 // empty')
-            CERT_PASSWORD=$(echo "$CERT_SECRETS" | jq -r '.password // empty')
+            echo "📱 Importing Apple Developer certificate from AWS..."
+            echo "$CERT_SECRETS" | jq -r '.certificate_p12_base64' | base64 --decode > certificate.p12
+            CERT_PASSWORD=$(echo "$CERT_SECRETS" | jq -r '.certificate_password')
+            security import certificate.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+            security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+            echo "✅ Certificate imported from AWS"
             
-            if [[ -n "$CERT_DATA" && "$CERT_DATA" != "null" ]]; then
-              echo "📱 Importing Apple Developer certificate from AWS..."
-              echo "$CERT_DATA" | base64 --decode > certificate.p12
-              security import certificate.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
-              security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-              echo "✅ Certificate imported from AWS Secrets Manager"
-              echo "HAS_CERTIFICATE=true" >> $GITHUB_ENV
-            else
-              echo "⚠️  Invalid certificate data in AWS Secrets Manager"
-              echo "HAS_CERTIFICATE=false" >> $GITHUB_ENV
-            fi
-          else
-            echo "⚠️  No certificate found in AWS Secrets Manager - will build without signing"
-            echo "HAS_CERTIFICATE=false" >> $GITHUB_ENV
-          fi
-          
-          # Get provisioning profile from AWS Secrets Manager
-          if PROFILE_SECRETS=$(aws secretsmanager get-secret-value \
-            --secret-id "innerworld-prod/apple/provisioning-profile" \
-            --query SecretString --output text 2>/dev/null); then
+            # Install provisioning profile
+            echo "📋 Installing provisioning profile from AWS..."
+            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+            echo "$CERT_SECRETS" | jq -r '.provisioning_profile_base64' | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/InnerWorld.mobileprovision
+            echo "✅ Provisioning profile installed from AWS"
+            echo "HAS_CERTIFICATES=true" >> $GITHUB_ENV
             
-            PROFILE_DATA=$(echo "$PROFILE_SECRETS" | jq -r '.profile_data // empty')
+          # Fallback to GitHub secrets if AWS secrets not available  
+          elif [ -n "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" ]; then
+            echo "📱 Importing Apple Developer certificate from GitHub secrets..."
+            echo "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" | base64 --decode > certificate.p12
+            security import certificate.p12 -k build.keychain -P "${{ secrets.APPLE_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+            security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+            echo "✅ Certificate imported from GitHub"
             
-            if [[ -n "$PROFILE_DATA" && "$PROFILE_DATA" != "null" ]]; then
-              echo "📋 Installing provisioning profile from AWS..."
+            # Install provisioning profile
+            if [ -n "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" ]; then
+              echo "📋 Installing provisioning profile from GitHub secrets..."
               mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-              echo "$PROFILE_DATA" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/InnerWorld.mobileprovision
-              echo "✅ Provisioning profile installed from AWS Secrets Manager"
-              echo "HAS_PROVISIONING_PROFILE=true" >> $GITHUB_ENV
-            else
-              echo "⚠️  Invalid provisioning profile data in AWS Secrets Manager"
-              echo "HAS_PROVISIONING_PROFILE=false" >> $GITHUB_ENV
+              echo "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/InnerWorld.mobileprovision
+              echo "✅ Provisioning profile installed from GitHub"
             fi
+            echo "HAS_CERTIFICATES=true" >> $GITHUB_ENV
+            
           else
-            echo "⚠️  No provisioning profile found in AWS Secrets Manager"
-            echo "HAS_PROVISIONING_PROFILE=false" >> $GITHUB_ENV
+            echo "⚠️  No certificates found in AWS or GitHub - will build without signing"
+            echo "HAS_CERTIFICATES=false" >> $GITHUB_ENV
           fi
       
       - name: Build and archive for TestFlight
@@ -186,12 +181,11 @@ jobs:
           echo "Build: $BUILD_NUMBER"
           echo "Version: $VERSION_NUMBER"
           echo "Has valid team ID: ${HAS_VALID_TEAM_ID:-false}"
-          echo "Has certificates: ${HAS_CERTIFICATE:-false}"
-          echo "Has provisioning profile: ${HAS_PROVISIONING_PROFILE:-false}"
+          echo "Has certificates: ${HAS_CERTIFICATES:-false}"
           echo "Has ASC credentials: ${HAS_ASC_CREDENTIALS:-false}"
           
           # Determine signing strategy based on available credentials
-          if [[ "${HAS_VALID_TEAM_ID}" == "true" && "${HAS_CERTIFICATE}" == "true" && "${HAS_PROVISIONING_PROFILE}" == "true" && "${HAS_ASC_CREDENTIALS}" == "true" ]]; then
+          if [[ "${HAS_VALID_TEAM_ID}" == "true" && "${HAS_CERTIFICATES}" == "true" && "${HAS_ASC_CREDENTIALS}" == "true" ]]; then
             echo "🔐 Using manual code signing with Team ID: $APPLE_TEAM_ID"
             
             # Archive with manual code signing
@@ -241,7 +235,7 @@ jobs:
             
             echo "✅ Deployed to TestFlight: Build $BUILD_NUMBER, Version $VERSION_NUMBER"
             
-          elif [[ "${HAS_VALID_TEAM_ID}" == "true" && "${HAS_CERTIFICATE}" == "true" ]]; then
+          elif [[ "${HAS_VALID_TEAM_ID}" == "true" && "${HAS_CERTIFICATES}" == "true" ]]; then
             echo "🔐 Using automatic code signing with Team ID: $APPLE_TEAM_ID"
             
             # Archive with automatic code signing
@@ -263,10 +257,9 @@ jobs:
           else
             echo "⚠️  Building without code signing for verification only..."
             echo "Missing credentials:"
-            [[ "${HAS_VALID_TEAM_ID}" != "true" ]] && echo "   - Valid Apple Team ID (in AWS Secrets Manager)"
-            [[ "${HAS_CERTIFICATE}" != "true" ]] && echo "   - Apple Certificate (in AWS Secrets Manager)"
-            [[ "${HAS_PROVISIONING_PROFILE}" != "true" ]] && echo "   - Provisioning Profile (in AWS Secrets Manager)"
-            [[ "${HAS_ASC_CREDENTIALS}" != "true" ]] && echo "   - App Store Connect API credentials (in AWS Secrets Manager)"
+            [[ "${HAS_VALID_TEAM_ID}" != "true" ]] && echo "   - Valid Apple Team ID"
+            [[ "${HAS_CERTIFICATES}" != "true" ]] && echo "   - Apple Certificates and Provisioning Profile"
+            [[ "${HAS_ASC_CREDENTIALS}" != "true" ]] && echo "   - App Store Connect API credentials"
             
             # Build without code signing
             xcodebuild \
@@ -281,11 +274,15 @@ jobs:
             
             echo "✅ iOS app builds successfully!"
             echo ""
-            echo "📋 To enable TestFlight deployment, configure these AWS Secrets:"
+            echo "📋 To enable TestFlight deployment, ensure these are configured:"
+            echo "   AWS Secrets:"
             echo "     - innerworld-prod/apple/signin-key (with valid team_id)"
-            echo "     - innerworld-prod/apple/certificate (with certificate_p12, password)"
-            echo "     - innerworld-prod/apple/provisioning-profile (with profile_data)"
             echo "     - innerworld-prod/appstoreconnect/api-key (with key_id, issuer_id, private_key)"
+            echo "     - innerworld-prod/apple/certificates (with certificate_p12_base64, certificate_password, provisioning_profile_base64)"
+            echo "   OR GitHub Secrets (fallback):"
+            echo "     - APPLE_CERTIFICATE_P12_BASE64"
+            echo "     - APPLE_CERTIFICATE_PASSWORD"
+            echo "     - APPLE_PROVISIONING_PROFILE_BASE64"
           fi
       
       - name: Cleanup keychain
