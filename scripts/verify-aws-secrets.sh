@@ -46,23 +46,16 @@ check_secret() {
         
         echo "   Status: ✅ Secret exists"
         
-        # Check for placeholder values
+        # Check for placeholder values (without exposing actual values)
         if echo "$secret_value" | grep -q "REPLACE_WITH\|YOUR_"; then
             echo "   Value: ⚠️  Contains placeholder values - needs manual update"
-            echo "   Placeholders found:"
-            echo "$secret_value" | jq -r 'to_entries[] | select(.value | type == "string" and (contains("REPLACE_WITH") or contains("YOUR_"))) | "     - \(.key): \(.value)"' 2>/dev/null || echo "     - Unable to parse JSON"
+            placeholder_count=$(echo "$secret_value" | jq -r 'to_entries[] | select(.value | type == "string" and (contains("REPLACE_WITH") or contains("YOUR_"))) | .key' 2>/dev/null | wc -l)
+            echo "     Found $placeholder_count placeholder field(s)"
         else
-            echo "   Value: ✅ Appears to be configured"
-            # Show non-sensitive fields
-            if key_id=$(echo "$secret_value" | jq -r '.key_id // empty' 2>/dev/null) && [[ -n "$key_id" ]]; then
-                echo "     Key ID: $key_id"
-            fi
-            if team_id=$(echo "$secret_value" | jq -r '.team_id // empty' 2>/dev/null) && [[ -n "$team_id" ]]; then
-                echo "     Team ID: $team_id"
-            fi
-            if issuer_id=$(echo "$secret_value" | jq -r '.issuer_id // empty' 2>/dev/null) && [[ -n "$issuer_id" ]]; then
-                echo "     Issuer ID: $issuer_id"
-            fi
+            echo "   Value: ✅ Appears to be configured with real values"
+            # Show only non-sensitive metadata
+            field_count=$(echo "$secret_value" | jq 'keys | length' 2>/dev/null || echo "unknown")
+            echo "     Contains $field_count configuration field(s)"
         fi
     else
         echo "   Status: ❌ Secret not found or no access"

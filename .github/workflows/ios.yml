@@ -81,17 +81,18 @@ jobs:
             APPLE_TEAM_ID=$(echo "$APPLE_SECRETS" | jq -r '.team_id // empty')
             
             # Check if team ID is valid (not empty, null, or placeholder)
-            if [[ -n "$APPLE_TEAM_ID" && "$APPLE_TEAM_ID" != "null" && "$APPLE_TEAM_ID" != "YOUR_TEAM_ID" ]]; then
-              echo "✅ Retrieved valid Apple Team ID: $APPLE_TEAM_ID"
+            if [[ -n "$APPLE_TEAM_ID" && "$APPLE_TEAM_ID" != "null" && ! "$APPLE_TEAM_ID" =~ ^(YOUR_|REPLACE_WITH) ]]; then
+              echo "✅ Retrieved valid Apple Team ID"
               echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> $GITHUB_ENV
               echo "HAS_VALID_TEAM_ID=true" >> $GITHUB_ENV
               
               # Also store Apple Client ID for later use
               APPLE_CLIENT_ID=$(echo "$APPLE_SECRETS" | jq -r '.client_id // empty')
               echo "APPLE_CLIENT_ID=$APPLE_CLIENT_ID" >> $GITHUB_ENV
-              echo "🎯 Apple Client ID: $APPLE_CLIENT_ID"
+              echo "🎯 Apple Sign-In configured successfully"
             else
-              echo "⚠️  Invalid or placeholder Team ID found: '$APPLE_TEAM_ID'"
+              echo "⚠️  Invalid or placeholder Apple Team ID detected"
+              echo "   Please update innerworld-prod/apple/signin-key with real values"
               echo "HAS_VALID_TEAM_ID=false" >> $GITHUB_ENV
             fi
           else
@@ -109,10 +110,10 @@ jobs:
             ASC_ISSUER_ID=$(echo "$ASC_SECRETS" | jq -r '.issuer_id // empty')
             
             # Check if App Store Connect credentials are valid (not empty, null, or placeholder)
-            if [[ -n "$ASC_KEY_ID" && "$ASC_KEY_ID" != "null" && "$ASC_KEY_ID" != "YOUR_KEY_ID" && \
-                  -n "$ASC_ISSUER_ID" && "$ASC_ISSUER_ID" != "null" && "$ASC_ISSUER_ID" != "YOUR_ISSUER_ID" ]]; then
-              echo "🔑 App Store Connect Key ID: $ASC_KEY_ID"
-              echo "🏢 App Store Connect Issuer ID: $ASC_ISSUER_ID"
+            if [[ -n "$ASC_KEY_ID" && "$ASC_KEY_ID" != "null" && ! "$ASC_KEY_ID" =~ ^(YOUR_|REPLACE_WITH) && \
+                  -n "$ASC_ISSUER_ID" && "$ASC_ISSUER_ID" != "null" && ! "$ASC_ISSUER_ID" =~ ^(YOUR_|REPLACE_WITH) ]]; then
+              echo "🔑 App Store Connect API configured with valid credentials"
+              echo "🏢 Credentials validated successfully"
               
               # Create App Store Connect API key file
               mkdir -p ~/.appstoreconnect/private_keys
@@ -130,8 +131,8 @@ jobs:
               echo "HAS_ASC_CREDENTIALS=true" >> $GITHUB_ENV
             else
               echo "⚠️  Invalid or placeholder App Store Connect credentials"
-              echo "   Key ID: '$ASC_KEY_ID'"
-              echo "   Issuer ID: '$ASC_ISSUER_ID'"
+              echo "   Detected placeholder or invalid values in secret"
+              echo "   Please update innerworld-prod/appstoreconnect/api-key with real values"
               echo "HAS_ASC_CREDENTIALS=false" >> $GITHUB_ENV
             fi
           else
