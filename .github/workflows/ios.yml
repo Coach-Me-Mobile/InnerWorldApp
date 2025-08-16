@@ -128,25 +128,50 @@ jobs:
           security unlock-keychain -p "" build.keychain
           security set-keychain-settings -t 3600 -u build.keychain
           
-          # Import certificate if available
-          if [ -n "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" ]; then
-            echo "📱 Importing Apple Developer certificate..."
-            echo "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" | base64 --decode > certificate.p12
-            security import certificate.p12 -k build.keychain -P "${{ secrets.APPLE_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
-            security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-            echo "✅ Certificate imported"
+          # Get certificate from AWS Secrets Manager
+          if CERT_SECRETS=$(aws secretsmanager get-secret-value \
+            --secret-id "innerworld-prod/apple/certificate" \
+            --query SecretString --output text 2>/dev/null); then
+            
+            CERT_DATA=$(echo "$CERT_SECRETS" | jq -r '.certificate_p12 // empty')
+            CERT_PASSWORD=$(echo "$CERT_SECRETS" | jq -r '.password // empty')
+            
+            if [[ -n "$CERT_DATA" && "$CERT_DATA" != "null" ]]; then
+              echo "📱 Importing Apple Developer certificate from AWS..."
+              echo "$CERT_DATA" | base64 --decode > certificate.p12
+              security import certificate.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+              security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+              echo "✅ Certificate imported from AWS Secrets Manager"
+              echo "HAS_CERTIFICATE=true" >> $GITHUB_ENV
+            else
+              echo "⚠️  Invalid certificate data in AWS Secrets Manager"
+              echo "HAS_CERTIFICATE=false" >> $GITHUB_ENV
+            fi
           else
-            echo "⚠️  No certificate found - will build without signing"
+            echo "⚠️  No certificate found in AWS Secrets Manager - will build without signing"
+            echo "HAS_CERTIFICATE=false" >> $GITHUB_ENV
           fi
           
-          # Install provisioning profile if available
-          if [ -n "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" ]; then
-            echo "📋 Installing provisioning profile..."
-            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-            echo "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/InnerWorld.mobileprovision
-            echo "✅ Provisioning profile installed"
+          # Get provisioning profile from AWS Secrets Manager
+          if PROFILE_SECRETS=$(aws secretsmanager get-secret-value \
+            --secret-id "innerworld-prod/apple/provisioning-profile" \
+            --query SecretString --output text 2>/dev/null); then
+            
+            PROFILE_DATA=$(echo "$PROFILE_SECRETS" | jq -r '.profile_data // empty')
+            
+            if [[ -n "$PROFILE_DATA" && "$PROFILE_DATA" != "null" ]]; then
+              echo "📋 Installing provisioning profile from AWS..."
+              mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+              echo "$PROFILE_DATA" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/InnerWorld.mobileprovision
+              echo "✅ Provisioning profile installed from AWS Secrets Manager"
+              echo "HAS_PROVISIONING_PROFILE=true" >> $GITHUB_ENV
+            else
+              echo "⚠️  Invalid provisioning profile data in AWS Secrets Manager"
+              echo "HAS_PROVISIONING_PROFILE=false" >> $GITHUB_ENV
+            fi
           else
-            echo "⚠️  No provisioning profile found"
+            echo "⚠️  No provisioning profile found in AWS Secrets Manager"
+            echo "HAS_PROVISIONING_PROFILE=false" >> $GITHUB_ENV
           fi
       
       - name: Build and archive for TestFlight
@@ -161,12 +186,12 @@ jobs:
           echo "Build: $BUILD_NUMBER"
           echo "Version: $VERSION_NUMBER"
           echo "Has valid team ID: ${HAS_VALID_TEAM_ID:-false}"
-          echo "Has certificates: $([[ -n "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" ]] && echo "true" || echo "false")"
-          echo "Has provisioning profile: $([[ -n "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" ]] && echo "true" || echo "false")"
+          echo "Has certificates: ${HAS_CERTIFICATE:-false}"
+          echo "Has provisioning profile: ${HAS_PROVISIONING_PROFILE:-false}"
           echo "Has ASC credentials: ${HAS_ASC_CREDENTIALS:-false}"
           
           # Determine signing strategy based on available credentials
-          if [[ "${HAS_VALID_TEAM_ID}" == "true" && -n "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" && -n "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" && "${HAS_ASC_CREDENTIALS}" == "true" ]]; then
+          if [[ "${HAS_VALID_TEAM_ID}" == "true" && "${HAS_CERTIFICATE}" == "true" && "${HAS_PROVISIONING_PROFILE}" == "true" && "${HAS_ASC_CREDENTIALS}" == "true" ]]; then
             echo "🔐 Using manual code signing with Team ID: $APPLE_TEAM_ID"
             
             # Archive with manual code signing
@@ -216,7 +241,7 @@ jobs:
             
             echo "✅ Deployed to TestFlight: Build $BUILD_NUMBER, Version $VERSION_NUMBER"
             
-          elif [[ "${HAS_VALID_TEAM_ID}" == "true" && -n "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" ]]; then
+          elif [[ "${HAS_VALID_TEAM_ID}" == "true" && "${HAS_CERTIFICATE}" == "true" ]]; then
             echo "🔐 Using automatic code signing with Team ID: $APPLE_TEAM_ID"
             
             # Archive with automatic code signing
@@ -238,11 +263,10 @@ jobs:
           else
             echo "⚠️  Building without code signing for verification only..."
             echo "Missing credentials:"
-            [[ "${HAS_VALID_TEAM_ID}" != "true" ]] && echo "   - Valid Apple Team ID"
-            [[ -z "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" ]] && echo "   - Apple Certificate (APPLE_CERTIFICATE_P12_BASE64)"
-            [[ -z "${{ secrets.APPLE_CERTIFICATE_PASSWORD }}" ]] && echo "   - Certificate Password (APPLE_CERTIFICATE_PASSWORD)"
-            [[ -z "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" ]] && echo "   - Provisioning Profile (APPLE_PROVISIONING_PROFILE_BASE64)"
-            [[ "${HAS_ASC_CREDENTIALS}" != "true" ]] && echo "   - App Store Connect API credentials"
+            [[ "${HAS_VALID_TEAM_ID}" != "true" ]] && echo "   - Valid Apple Team ID (in AWS Secrets Manager)"
+            [[ "${HAS_CERTIFICATE}" != "true" ]] && echo "   - Apple Certificate (in AWS Secrets Manager)"
+            [[ "${HAS_PROVISIONING_PROFILE}" != "true" ]] && echo "   - Provisioning Profile (in AWS Secrets Manager)"
+            [[ "${HAS_ASC_CREDENTIALS}" != "true" ]] && echo "   - App Store Connect API credentials (in AWS Secrets Manager)"
             
             # Build without code signing
             xcodebuild \
@@ -257,14 +281,11 @@ jobs:
             
             echo "✅ iOS app builds successfully!"
             echo ""
-            echo "📋 To enable TestFlight deployment, ensure these are configured:"
-            echo "   AWS Secrets:"
+            echo "📋 To enable TestFlight deployment, configure these AWS Secrets:"
             echo "     - innerworld-prod/apple/signin-key (with valid team_id)"
+            echo "     - innerworld-prod/apple/certificate (with certificate_p12, password)"
+            echo "     - innerworld-prod/apple/provisioning-profile (with profile_data)"
             echo "     - innerworld-prod/appstoreconnect/api-key (with key_id, issuer_id, private_key)"
-            echo "   GitHub Secrets:"
-            echo "     - APPLE_CERTIFICATE_P12_BASE64"
-            echo "     - APPLE_CERTIFICATE_PASSWORD"
-            echo "     - APPLE_PROVISIONING_PROFILE_BASE64"
           fi
       
       - name: Cleanup keychain
