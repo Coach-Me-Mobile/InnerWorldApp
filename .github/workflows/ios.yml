@@ -193,6 +193,7 @@ jobs:
               -destination "generic/platform=iOS" \
               -configuration Release \
               -archivePath InnerWorld.xcarchive \
+              -allowProvisioningUpdates \
               MARKETING_VERSION="$VERSION_NUMBER" \
               CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
               CODE_SIGN_STYLE=Automatic \
@@ -242,6 +243,7 @@ jobs:
               -destination "generic/platform=iOS" \
               -configuration Release \
               -archivePath InnerWorld.xcarchive \
+              -allowProvisioningUpdates \
               MARKETING_VERSION="$VERSION_NUMBER" \
               CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
               CODE_SIGN_STYLE=Automatic \
