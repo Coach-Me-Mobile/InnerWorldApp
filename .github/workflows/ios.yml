@@ -68,31 +68,55 @@ jobs:
       
       - name: Get Apple credentials
         run: |
-          # Get Apple Team ID
-          APPLE_SECRETS=$(aws secretsmanager get-secret-value \
+          echo "🔍 Retrieving Apple credentials from AWS Secrets Manager..."
+          
+          # Get Apple Team ID with error handling
+          if APPLE_SECRETS=$(aws secretsmanager get-secret-value \
             --secret-id "innerworld-prod/apple/signin-key" \
-            --query SecretString --output text)
-          APPLE_TEAM_ID=$(echo "$APPLE_SECRETS" | jq -r '.team_id')
+            --query SecretString --output text 2>/dev/null); then
+            
+            APPLE_TEAM_ID=$(echo "$APPLE_SECRETS" | jq -r '.team_id // empty')
+            
+            # Check if team ID is valid (not empty, null, or placeholder)
+            if [[ -n "$APPLE_TEAM_ID" && "$APPLE_TEAM_ID" != "null" && "$APPLE_TEAM_ID" != "YOUR_TEAM_ID" ]]; then
+              echo "✅ Retrieved valid Apple Team ID: $APPLE_TEAM_ID"
+              echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> $GITHUB_ENV
+              echo "HAS_VALID_TEAM_ID=true" >> $GITHUB_ENV
+            else
+              echo "⚠️  Invalid or placeholder Team ID found: '$APPLE_TEAM_ID'"
+              echo "HAS_VALID_TEAM_ID=false" >> $GITHUB_ENV
+            fi
+          else
+            echo "⚠️  Failed to retrieve Apple secrets - will use automatic signing"
+            echo "HAS_VALID_TEAM_ID=false" >> $GITHUB_ENV
+          fi
           
-          echo "🔍 Retrieved Apple Team ID: $APPLE_TEAM_ID"
-          echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> $GITHUB_ENV
-          
-          # Get App Store Connect API key
-          ASC_SECRETS=$(aws secretsmanager get-secret-value \
+          # Get App Store Connect API key with error handling
+          if ASC_SECRETS=$(aws secretsmanager get-secret-value \
             --secret-id "innerworld-prod/appstoreconnect/api-key" \
-            --query SecretString --output text)
-          
-          ASC_KEY_ID=$(echo "$ASC_SECRETS" | jq -r '.key_id')
-          ASC_ISSUER_ID=$(echo "$ASC_SECRETS" | jq -r '.issuer_id')
-          
-          echo "🔑 App Store Connect Key ID: $ASC_KEY_ID"
-          echo "🏢 App Store Connect Issuer ID: $ASC_ISSUER_ID"
-          
-          mkdir -p ~/.appstoreconnect/private_keys
-          echo "$ASC_SECRETS" | jq -r '.private_key' > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
-          
-          echo "ASC_KEY_ID=$ASC_KEY_ID" >> $GITHUB_ENV
-          echo "ASC_ISSUER_ID=$ASC_ISSUER_ID" >> $GITHUB_ENV
+            --query SecretString --output text 2>/dev/null); then
+            
+            ASC_KEY_ID=$(echo "$ASC_SECRETS" | jq -r '.key_id // empty')
+            ASC_ISSUER_ID=$(echo "$ASC_SECRETS" | jq -r '.issuer_id // empty')
+            
+            if [[ -n "$ASC_KEY_ID" && "$ASC_KEY_ID" != "null" && -n "$ASC_ISSUER_ID" && "$ASC_ISSUER_ID" != "null" ]]; then
+              echo "🔑 App Store Connect Key ID: $ASC_KEY_ID"
+              echo "🏢 App Store Connect Issuer ID: $ASC_ISSUER_ID"
+              
+              mkdir -p ~/.appstoreconnect/private_keys
+              echo "$ASC_SECRETS" | jq -r '.private_key' > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+              
+              echo "ASC_KEY_ID=$ASC_KEY_ID" >> $GITHUB_ENV
+              echo "ASC_ISSUER_ID=$ASC_ISSUER_ID" >> $GITHUB_ENV
+              echo "HAS_ASC_CREDENTIALS=true" >> $GITHUB_ENV
+            else
+              echo "⚠️  Invalid App Store Connect credentials"
+              echo "HAS_ASC_CREDENTIALS=false" >> $GITHUB_ENV
+            fi
+          else
+            echo "⚠️  Failed to retrieve App Store Connect secrets"
+            echo "HAS_ASC_CREDENTIALS=false" >> $GITHUB_ENV
+          fi
       
       - name: Import Apple certificates
         run: |
@@ -134,15 +158,18 @@ jobs:
           VERSION_NUMBER="$(date '+%Y.%m.%d')"
           
           echo "📱 Building iOS app..."
-          echo "Team ID: $APPLE_TEAM_ID"
           echo "Build: $BUILD_NUMBER"
           echo "Version: $VERSION_NUMBER"
+          echo "Has valid team ID: ${HAS_VALID_TEAM_ID:-false}"
+          echo "Has certificates: $([[ -n "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" ]] && echo "true" || echo "false")"
+          echo "Has provisioning profile: $([[ -n "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" ]] && echo "true" || echo "false")"
+          echo "Has ASC credentials: ${HAS_ASC_CREDENTIALS:-false}"
           
-          # Determine if we can code sign
-          if [ -n "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" ] && [ -n "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" ]; then
-            echo "🔐 Building with code signing..."
+          # Determine signing strategy based on available credentials
+          if [[ "${HAS_VALID_TEAM_ID}" == "true" && -n "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" && -n "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" && "${HAS_ASC_CREDENTIALS}" == "true" ]]; then
+            echo "🔐 Using manual code signing with Team ID: $APPLE_TEAM_ID"
             
-            # Archive with code signing
+            # Archive with manual code signing
             xcodebuild \
               -project InnerWorld.xcodeproj \
               -scheme InnerWorld \
@@ -189,8 +216,33 @@ jobs:
             
             echo "✅ Deployed to TestFlight: Build $BUILD_NUMBER, Version $VERSION_NUMBER"
             
+          elif [[ "${HAS_VALID_TEAM_ID}" == "true" && -n "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" ]]; then
+            echo "🔐 Using automatic code signing with Team ID: $APPLE_TEAM_ID"
+            
+            # Archive with automatic code signing
+            xcodebuild \
+              -project InnerWorld.xcodeproj \
+              -scheme InnerWorld \
+              -destination "generic/platform=iOS" \
+              -configuration Release \
+              -archivePath InnerWorld.xcarchive \
+              MARKETING_VERSION="$VERSION_NUMBER" \
+              CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+              CODE_SIGN_STYLE=Automatic \
+              DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+              archive
+            
+            echo "✅ iOS app archived successfully (automatic signing)!"
+            echo "📋 Manual TestFlight upload required (missing App Store Connect API key or provisioning profile)"
+            
           else
-            echo "⚠️  Missing certificates - building without code signing for verification..."
+            echo "⚠️  Building without code signing for verification only..."
+            echo "Missing credentials:"
+            [[ "${HAS_VALID_TEAM_ID}" != "true" ]] && echo "   - Valid Apple Team ID"
+            [[ -z "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" ]] && echo "   - Apple Certificate (APPLE_CERTIFICATE_P12_BASE64)"
+            [[ -z "${{ secrets.APPLE_CERTIFICATE_PASSWORD }}" ]] && echo "   - Certificate Password (APPLE_CERTIFICATE_PASSWORD)"
+            [[ -z "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" ]] && echo "   - Provisioning Profile (APPLE_PROVISIONING_PROFILE_BASE64)"
+            [[ "${HAS_ASC_CREDENTIALS}" != "true" ]] && echo "   - App Store Connect API credentials"
             
             # Build without code signing
             xcodebuild \
@@ -204,10 +256,15 @@ jobs:
               build
             
             echo "✅ iOS app builds successfully!"
-            echo "📋 To enable TestFlight deployment, add these GitHub secrets:"
-            echo "   - APPLE_CERTIFICATE_P12_BASE64"
-            echo "   - APPLE_CERTIFICATE_PASSWORD"
-            echo "   - APPLE_PROVISIONING_PROFILE_BASE64"
+            echo ""
+            echo "📋 To enable TestFlight deployment, ensure these are configured:"
+            echo "   AWS Secrets:"
+            echo "     - innerworld-prod/apple/signin-key (with valid team_id)"
+            echo "     - innerworld-prod/appstoreconnect/api-key (with key_id, issuer_id, private_key)"
+            echo "   GitHub Secrets:"
+            echo "     - APPLE_CERTIFICATE_P12_BASE64"
+            echo "     - APPLE_CERTIFICATE_PASSWORD"
+            echo "     - APPLE_PROVISIONING_PROFILE_BASE64"
           fi
       
       - name: Cleanup keychain
