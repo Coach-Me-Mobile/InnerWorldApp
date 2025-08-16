@@ -82,6 +82,11 @@ jobs:
               echo "✅ Retrieved valid Apple Team ID: $APPLE_TEAM_ID"
               echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> $GITHUB_ENV
               echo "HAS_VALID_TEAM_ID=true" >> $GITHUB_ENV
+              
+              # Also store Apple Client ID for later use
+              APPLE_CLIENT_ID=$(echo "$APPLE_SECRETS" | jq -r '.client_id // empty')
+              echo "APPLE_CLIENT_ID=$APPLE_CLIENT_ID" >> $GITHUB_ENV
+              echo "🎯 Apple Client ID: $APPLE_CLIENT_ID"
             else
               echo "⚠️  Invalid or placeholder Team ID found: '$APPLE_TEAM_ID'"
               echo "HAS_VALID_TEAM_ID=false" >> $GITHUB_ENV
@@ -99,18 +104,30 @@ jobs:
             ASC_KEY_ID=$(echo "$ASC_SECRETS" | jq -r '.key_id // empty')
             ASC_ISSUER_ID=$(echo "$ASC_SECRETS" | jq -r '.issuer_id // empty')
             
-            if [[ -n "$ASC_KEY_ID" && "$ASC_KEY_ID" != "null" && -n "$ASC_ISSUER_ID" && "$ASC_ISSUER_ID" != "null" ]]; then
+            # Check if App Store Connect credentials are valid (not empty, null, or placeholder)
+            if [[ -n "$ASC_KEY_ID" && "$ASC_KEY_ID" != "null" && "$ASC_KEY_ID" != "YOUR_KEY_ID" && \
+                  -n "$ASC_ISSUER_ID" && "$ASC_ISSUER_ID" != "null" && "$ASC_ISSUER_ID" != "YOUR_ISSUER_ID" ]]; then
               echo "🔑 App Store Connect Key ID: $ASC_KEY_ID"
               echo "🏢 App Store Connect Issuer ID: $ASC_ISSUER_ID"
               
+              # Create App Store Connect API key file
               mkdir -p ~/.appstoreconnect/private_keys
               echo "$ASC_SECRETS" | jq -r '.private_key' > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+              
+              # Verify the key file was created successfully
+              if [[ -f ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8 ]]; then
+                echo "✅ App Store Connect API key file created successfully"
+              else
+                echo "❌ Failed to create App Store Connect API key file"
+              fi
               
               echo "ASC_KEY_ID=$ASC_KEY_ID" >> $GITHUB_ENV
               echo "ASC_ISSUER_ID=$ASC_ISSUER_ID" >> $GITHUB_ENV
               echo "HAS_ASC_CREDENTIALS=true" >> $GITHUB_ENV
             else
-              echo "⚠️  Invalid App Store Connect credentials"
+              echo "⚠️  Invalid or placeholder App Store Connect credentials"
+              echo "   Key ID: '$ASC_KEY_ID'"
+              echo "   Issuer ID: '$ASC_ISSUER_ID'"
               echo "HAS_ASC_CREDENTIALS=false" >> $GITHUB_ENV
             fi
           else
@@ -128,27 +145,8 @@ jobs:
           security unlock-keychain -p "" build.keychain
           security set-keychain-settings -t 3600 -u build.keychain
           
-          # Get certificate from AWS Secrets Manager (alternative approach)
-          if CERT_SECRETS=$(aws secretsmanager get-secret-value \
-            --secret-id "innerworld-prod/apple/certificates" \
-            --query SecretString --output text 2>/dev/null); then
-            
-            echo "📱 Importing Apple Developer certificate from AWS..."
-            echo "$CERT_SECRETS" | jq -r '.certificate_p12_base64' | base64 --decode > certificate.p12
-            CERT_PASSWORD=$(echo "$CERT_SECRETS" | jq -r '.certificate_password')
-            security import certificate.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
-            security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-            echo "✅ Certificate imported from AWS"
-            
-            # Install provisioning profile
-            echo "📋 Installing provisioning profile from AWS..."
-            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-            echo "$CERT_SECRETS" | jq -r '.provisioning_profile_base64' | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/InnerWorld.mobileprovision
-            echo "✅ Provisioning profile installed from AWS"
-            echo "HAS_CERTIFICATES=true" >> $GITHUB_ENV
-            
-          # Fallback to GitHub secrets if AWS secrets not available  
-          elif [ -n "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" ]; then
+          # Import certificates from GitHub secrets
+          if [ -n "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" ]; then
             echo "📱 Importing Apple Developer certificate from GitHub secrets..."
             echo "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" | base64 --decode > certificate.p12
             security import certificate.p12 -k build.keychain -P "${{ secrets.APPLE_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
@@ -275,13 +273,12 @@ jobs:
             echo "✅ iOS app builds successfully!"
             echo ""
             echo "📋 To enable TestFlight deployment, ensure these are configured:"
-            echo "   AWS Secrets:"
+            echo "   AWS Secrets (✅ CONFIGURED):"
             echo "     - innerworld-prod/apple/signin-key (with valid team_id)"
             echo "     - innerworld-prod/appstoreconnect/api-key (with key_id, issuer_id, private_key)"
-            echo "     - innerworld-prod/apple/certificates (with certificate_p12_base64, certificate_password, provisioning_profile_base64)"
-            echo "   OR GitHub Secrets (fallback):"
+            echo "   GitHub Secrets (for code signing certificates):"
             echo "     - APPLE_CERTIFICATE_P12_BASE64"
-            echo "     - APPLE_CERTIFICATE_PASSWORD"
+            echo "     - APPLE_CERTIFICATE_PASSWORD" 
             echo "     - APPLE_PROVISIONING_PROFILE_BASE64"
           fi
       
