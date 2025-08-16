@@ -31,10 +31,6 @@ This is the cleanest approach for managing multiple developers.
                 "s3:PutObjectAcl"
             ],
             "Resource": [
-                "arn:aws:s3:::innerworld-dev-app-assets",
-                "arn:aws:s3:::innerworld-dev-app-assets/*",
-                "arn:aws:s3:::innerworld-staging-app-assets",
-                "arn:aws:s3:::innerworld-staging-app-assets/*",
                 "arn:aws:s3:::innerworld-prod-app-assets",
                 "arn:aws:s3:::innerworld-prod-app-assets/*"
             ]
@@ -157,15 +153,13 @@ You now have access to InnerWorld's S3 asset management system. Here's your setu
    ./assets.sh upload ./my-test-images/
    ```
 
-## S3 Buckets You Have Access To:
-- Dev: innerworld-dev-app-assets
-- Staging: innerworld-staging-app-assets  
+## S3 Bucket You Have Access To:
 - Production: innerworld-prod-app-assets
 
 ## Quick Commands:
 - Upload: `./assets.sh upload ./my-assets/`
-- Download: `./assets.sh download -e prod`
-- List: `./assets.sh list -e staging`
+- Download: `./assets.sh download`
+- List: `./assets.sh list`
 - Help: `./assets.sh --help`
 
 ## Documentation:
@@ -229,7 +223,7 @@ After setting up a developer, test their access:
 # Have them run these commands
 aws sts get-caller-identity
 ./assets.sh info
-./assets.sh list -e dev
+./assets.sh list
 ```
 
 Expected output:
