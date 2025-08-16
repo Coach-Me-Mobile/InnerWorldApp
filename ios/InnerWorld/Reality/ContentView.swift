@@ -321,7 +321,7 @@ struct ContentView : View {
                 .animation(.easeInOut(duration: 0.5), value: showWelcomeOverlay)
                 .onAppear {
                     // Dismiss the overlay after the intro animation completes
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
                         withAnimation(.easeOut(duration: 0.8)) {
                             showWelcomeOverlay = false
                         }

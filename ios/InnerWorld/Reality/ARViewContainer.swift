@@ -38,6 +38,7 @@ class ARViewContainer: ObservableObject {
     
     private var originalCameraPosition: SIMD3<Float> = .zero
     private var originalCameraRotation: simd_quatf = simd_quatf()
+    private var objectOriginalPositions: [Entity: SIMD3<Float>] = [:]
     
     // Hardcoded camera positions from capture
     private let centerRoomPosition = CameraPosition(
@@ -161,8 +162,11 @@ class ARViewContainer: ObservableObject {
             // Store the anchor reference
             self.sceneAnchor = anchor
             
-            // Perform intro animation
-            performIntroAnimation(anchor: anchor)
+            // Setup objects for falling animation
+            setupObjectsForFallingAnimation(in: loadedEntity)
+            
+            // Perform intro animation (camera spiral + objects falling)
+            performIntroAnimation(anchor: anchor, sceneEntity: loadedEntity)
             
             print("Successfully loaded InnerWorldRoom scene")
         } catch {
@@ -531,7 +535,33 @@ class ARViewContainer: ObservableObject {
         return simd_quatf(angle: yaw, axis: SIMD3<Float>(0, 1, 0))
     }
     
-    private func performIntroAnimation(anchor: AnchorEntity) {
+    private func setupObjectsForFallingAnimation(in sceneEntity: Entity) {
+        // Store original positions for each object
+        var originalPositions: [Entity: SIMD3<Float>] = [:]
+        
+        // List of object names to animate
+        let objectNames = ["bigshelf", "desk", "chest_open", "plant_shelf", "tallish_plant", 
+                          "big_plant", "stereostack", "bike", "water_cooler", "trashcan",
+                          "bulletin_board", "whiteboard", "stair", "drafting", "clipboard",
+                          "paper_stack", "paper_stacks", "polaroids", "watercan"]
+        
+        // Find and setup each object
+        for objectName in objectNames {
+            if let object = findEntity(named: objectName, in: sceneEntity) {
+                // Store original position
+                originalPositions[object] = object.position
+                
+                // Calculate fall height (max 10 units above original position, but not higher than skydome)
+                let fallHeight = Float.random(in: 8.0...12.0)
+                object.position.y += fallHeight
+            }
+        }
+        
+        // Store positions for animation
+        self.objectOriginalPositions = originalPositions
+    }
+    
+    private func performIntroAnimation(anchor: AnchorEntity, sceneEntity: Entity) {
         // Target position and rotation (facing desk area)
         var targetTransform = Transform()
         targetTransform.translation = centerRoomPosition.translation // Final position at center
@@ -540,17 +570,19 @@ class ARViewContainer: ObservableObject {
         let deskDirection = Float.pi / 4 // 45 degrees to face desk area
         targetTransform.rotation = simd_quatf(angle: deskDirection, axis: SIMD3<Float>(0, 1, 0))
         
-        // Animate with custom intro animation
+        // Animate with custom intro animation (camera + objects)
         animateIntroSequence(
             anchor: anchor,
             targetTransform: targetTransform,
-            duration: 3.5
+            sceneEntity: sceneEntity,
+            duration: 5.0  // Extended to 5 seconds for slower, more cinematic effect
         )
     }
     
     private func animateIntroSequence(
         anchor: AnchorEntity,
         targetTransform: Transform,
+        sceneEntity: Entity,
         duration: TimeInterval
     ) {
         let startTime = CACurrentMediaTime()
@@ -564,7 +596,7 @@ class ARViewContainer: ObservableObject {
             // Custom easing for smooth intro
             let easedProgress = self.easeOutQuart(progress)
             
-            // Interpolate vertical position (dropping down)
+            // Animate camera position (dropping down)
             let currentY = simd_mix(
                 startTransform.translation.y,
                 targetTransform.translation.y,
@@ -580,7 +612,7 @@ class ARViewContainer: ObservableObject {
             let spinProgress = self.easeOutCubic(progress)
             let currentRotation = (Float.pi * 2 + deskDirection) * spinProgress
             
-            // Apply transform
+            // Apply camera transform
             var currentTransform = Transform()
             currentTransform.translation = SIMD3<Float>(
                 targetTransform.translation.x,
@@ -595,15 +627,64 @@ class ARViewContainer: ObservableObject {
             
             anchor.transform = currentTransform
             
+            // Animate falling objects with staggered timing
+            for (object, originalPosition) in self.objectOriginalPositions {
+                // Stagger the fall based on object's original X position for visual interest
+                let staggerDelay = Float(abs(originalPosition.x) * 0.02) // Reduced delay for slower fall
+                
+                // Make objects fall slower by adjusting the progress curve
+                // They start falling immediately but take longer to complete
+                let fallDuration = 2.0 // Objects take 2x longer to fall than camera takes to descend
+                let objectProgress = max(0, min(1, (progress * Float(duration / fallDuration)) - staggerDelay))
+                
+                // Use bounce easing for objects falling
+                let objectEasedProgress = self.easeOutBounce(objectProgress)
+                
+                // Interpolate Y position from current (elevated) to original
+                let currentObjectY = simd_mix(
+                    object.position.y,
+                    originalPosition.y,
+                    objectEasedProgress
+                )
+                
+                // Update object position (only Y changes)
+                object.position = SIMD3<Float>(
+                    originalPosition.x,
+                    currentObjectY,
+                    originalPosition.z
+                )
+            }
+            
             // Update position display
             self.updateCurrentPositionDisplay()
             
             if progress >= 1.0 {
                 timer.invalidate()
-                // Ensure final transform is exact
+                // Ensure final positions are exact
                 anchor.transform = targetTransform
+                
+                // Reset all objects to exact original positions
+                for (object, originalPosition) in self.objectOriginalPositions {
+                    object.position = originalPosition
+                }
+                
                 self.updateCurrentPositionDisplay()
             }
+        }
+    }
+    
+    private func easeOutBounce(_ t: Float) -> Float {
+        if t < 1 / 2.75 {
+            return 7.5625 * t * t
+        } else if t < 2 / 2.75 {
+            let t2 = t - 1.5 / 2.75
+            return 7.5625 * t2 * t2 + 0.75
+        } else if t < 2.5 / 2.75 {
+            let t2 = t - 2.25 / 2.75
+            return 7.5625 * t2 * t2 + 0.9375
+        } else {
+            let t2 = t - 2.625 / 2.75
+            return 7.5625 * t2 * t2 + 0.984375
         }
     }
     
