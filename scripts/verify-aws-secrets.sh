@@ -10,7 +10,7 @@ set -e
 
 PROJECT_NAME="innerworld"
 ENVIRONMENT="prod"
-REGION="us-east-1"
+REGION="us-west-2"
 
 echo "🔍 Verifying AWS Secrets Manager Configuration"
 echo "=============================================="
