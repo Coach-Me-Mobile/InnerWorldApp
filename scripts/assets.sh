@@ -32,8 +32,6 @@ VERSION="1.0.0"
 get_bucket_name() {
     local env=$1
     case "$env" in
-        dev) echo "innerworld-dev-app-assets" ;;
-        staging) echo "innerworld-staging-app-assets" ;;
         prod) echo "innerworld-prod-app-assets" ;;
         *) echo "" ;;
     esac
@@ -43,8 +41,6 @@ get_bucket_name() {
 get_cloudfront_id() {
     local env=$1
     case "$env" in
-        dev) echo "" ;;  # Dev uses direct S3 access
-        staging) echo "" ;;  # Staging uses direct S3 access
         prod) 
             # Get CloudFront distribution ID from Terraform output or set manually
             # To get ID: terraform output -json | jq -r '.s3.value.cloudfront_distribution_id'
@@ -97,25 +93,21 @@ print_usage() {
     echo "  help      Show detailed help for a command"
     echo ""
     echo -e "${YELLOW}Global Options:${NC}"
-    echo "  -e, --env ENV        Environment (dev, staging, prod) [default: dev]"
     echo "  -p, --profile PROF   AWS CLI profile [default: \$AWS_PROFILE or 'default']"
     echo "  -v, --verbose        Verbose output"
     echo "  -h, --help           Show this help message"
     echo ""
     echo -e "${YELLOW}Examples:${NC}"
-    echo "  $0 upload ./my-assets/              # Upload to dev environment"
-    echo "  $0 download -e prod images/         # Download images from production"
-    echo "  $0 list -e staging                  # List staging assets"
-    echo "  $0 sync dev staging                 # Sync from dev to staging"
-    echo "  $0 compare dev prod                 # Compare dev vs prod assets"
+    echo "  $0 upload ./my-assets/              # Upload to production"
+    echo "  $0 download images/                 # Download images from production"
+    echo "  $0 list                             # List production assets"
+    echo "  $0 sync ./local-assets/ ./backup/   # Sync local to backup"
     echo ""
     echo -e "${YELLOW}For detailed help on any command:${NC}"
     echo "  $0 help <command>"
     echo ""
-    echo -e "${BLUE}S3 Buckets:${NC}"
-    echo "  dev:     $(get_bucket_name dev)"
-    echo "  staging: $(get_bucket_name staging)" 
-    echo "  prod:    $(get_bucket_name prod)"
+    echo -e "${BLUE}S3 Bucket:${NC}"
+    echo "  production: $(get_bucket_name prod)"
 }
 
 check_dependencies() {
@@ -144,7 +136,7 @@ validate_environment() {
     local bucket=$(get_bucket_name "$env")
     if [[ -z "$bucket" ]]; then
         log_error "Invalid environment: $env"
-        echo "Valid environments: dev, staging, prod"
+        echo "Only 'prod' environment is available"
         exit 1
     fi
 }
@@ -223,16 +215,16 @@ cmd_upload_help() {
     echo "  --delete             Delete extraneous files from destination"
     echo ""
     echo "Examples:"
-    echo "  $0 upload ./my-images/                    # Upload to dev/assets/"
-    echo "  $0 upload -e prod -c ./icons/             # Upload to prod with cache invalidation"
-    echo "  $0 upload -t images/ ./new-images/        # Upload to dev/images/"
+    echo "  $0 upload ./my-images/                    # Upload to prod/assets/"
+    echo "  $0 upload -c ./icons/                     # Upload to prod with cache invalidation"
+    echo "  $0 upload -t images/ ./new-images/        # Upload to prod/images/"
     echo "  $0 upload -d ./assets/                    # Dry run to preview changes"
 }
 
 cmd_upload() {
     local source_path=""
     local target_prefix="assets/"
-    local environment="dev"
+    local environment="prod"
     local invalidate_cache="false"
     local dry_run="false"
     local delete_extra="false"
@@ -240,7 +232,6 @@ cmd_upload() {
     # Parse upload-specific arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
-            -e|--env) environment="$2"; shift 2 ;;
             -t|--target) target_prefix="$2"; [[ "$target_prefix" != */ ]] && target_prefix="${target_prefix}/"; shift 2 ;;
             -c|--invalidate) invalidate_cache="true"; shift ;;
             -d|--dry-run) dry_run="true"; shift ;;
@@ -272,8 +263,8 @@ cmd_upload() {
     echo "  AWS Profile: $AWS_PROFILE"
     echo ""
     
-    # Confirmation for production
-    if [[ "$environment" == "prod" && "$dry_run" != "true" ]]; then
+    # Confirmation for production uploads
+    if [[ "$dry_run" != "true" ]]; then
         log_warning "You are uploading to PRODUCTION environment!"
         read -p "Are you sure you want to continue? (y/N): " -n 1 -r
         echo ""
@@ -307,7 +298,7 @@ cmd_upload() {
             log_success "Upload completed successfully!"
             
             # CloudFront invalidation if requested
-            if [[ "$invalidate_cache" == "true" && "$environment" == "prod" ]]; then
+            if [[ "$invalidate_cache" == "true" ]]; then
                 invalidate_cloudfront_cache "$target_prefix"
             fi
         else
@@ -361,8 +352,7 @@ cmd_download_help() {
     echo "  local_path           Local destination path [default: ./downloaded-assets/]"
     echo ""
     echo "Examples:"
-    echo "  $0 download                               # Download all dev assets"
-    echo "  $0 download -e prod                       # Download all prod assets"
+    echo "  $0 download                               # Download all production assets"
     echo "  $0 download images/ ./local-images/       # Download specific folder"
     echo "  $0 download assets/logo.png ./            # Download specific file"
 }
@@ -370,14 +360,13 @@ cmd_download_help() {
 cmd_download() {
     local remote_path=""
     local local_path="./downloaded-assets/"
-    local environment="dev"
+    local environment="prod"
     local dry_run="false"
     local delete_extra="false"
     
     # Parse download-specific arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
-            -e|--env) environment="$2"; shift 2 ;;
             -d|--dry-run) dry_run="true"; shift ;;
             --delete) delete_extra="true"; shift ;;
             -h|--help) cmd_download_help; exit 0 ;;
@@ -459,15 +448,15 @@ cmd_list_help() {
     echo "  path                 S3 path to list (optional, defaults to root)"
     echo ""
     echo "Examples:"
-    echo "  $0 list                          # List root of dev bucket"
-    echo "  $0 list -e prod -l               # Detailed list of prod bucket"
+    echo "  $0 list                          # List root of production bucket"
+    echo "  $0 list -l                       # Detailed list of production bucket"
     echo "  $0 list -r images/               # Recursively list images folder"
     echo "  $0 list --human-readable assets/ # List with human readable sizes"
 }
 
 cmd_list() {
     local path=""
-    local environment="dev"
+    local environment="prod"
     local detailed="false"
     local recursive="false"
     local human_readable="false"
@@ -475,7 +464,6 @@ cmd_list() {
     # Parse list-specific arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
-            -e|--env) environment="$2"; shift 2 ;;
             -l|--long) detailed="true"; shift ;;
             -r|--recursive) recursive="true"; shift ;;
             --human-readable) human_readable="true"; shift ;;
@@ -558,14 +546,13 @@ cmd_sync_help() {
     echo "  -c, --invalidate     Invalidate CloudFront cache if destination is prod"
     echo ""
     echo "Arguments:"
-    echo "  source               Source environment (dev, staging, prod) or local path"
-    echo "  destination          Destination environment (dev, staging, prod) or local path"
+    echo "  source               Source: 'prod' or local path"
+    echo "  destination          Destination: 'prod' or local path"
     echo ""
     echo "Examples:"
-    echo "  $0 sync dev staging                      # Sync from dev to staging"
     echo "  $0 sync prod ./backup/                   # Download prod assets to local"
-    echo "  $0 sync ./local-assets/ dev              # Upload local assets to dev"
-    echo "  $0 sync -d dev prod                      # Dry run sync from dev to prod"
+    echo "  $0 sync ./local-assets/ prod             # Upload local assets to prod"
+    echo "  $0 sync -d ./backup/ prod                # Dry run sync from local to prod"
 }
 
 cmd_sync() {
@@ -604,8 +591,8 @@ cmd_sync() {
     local source_path=""
     local dest_path=""
     
-    # Check if source is an environment or local path
-    if [[ "$source" =~ ^(dev|staging|prod)$ ]]; then
+    # Check if source is prod environment or local path
+    if [[ "$source" == "prod" ]]; then
         validate_environment "$source"
         source_path="s3://$(get_bucket_name "$source")/"
     else
@@ -616,8 +603,8 @@ cmd_sync() {
         source_path="$source"
     fi
     
-    # Check if destination is an environment or local path
-    if [[ "$destination" =~ ^(dev|staging|prod)$ ]]; then
+    # Check if destination is prod environment or local path
+    if [[ "$destination" == "prod" ]]; then
         validate_environment "$destination"
         dest_path="s3://$(get_bucket_name "$destination")/"
     else
@@ -694,52 +681,22 @@ cmd_compare_help() {
     echo "  --summary-only       Show only summary statistics"
     echo ""
     echo "Arguments:"
-    echo "  env1                 First environment (dev, staging, prod)"
-    echo "  env2                 Second environment (dev, staging, prod)"
+    echo "  Note: This command has been simplified since only production is available"
     echo ""
     echo "Examples:"
-    echo "  $0 compare dev prod                      # Compare dev vs prod"
-    echo "  $0 compare --summary-only staging prod   # Show only summary"
+    echo "  $0 compare prod prod                     # Compare current state"
 }
 
 cmd_compare() {
-    local env1=""
-    local env2=""
-    local summary_only="false"
+    log_warning "Compare command simplified: Only production environment is available"
+    log_info "Use 'list' command to browse production assets"
+    log_info "Use 'download' command to create local backups for comparison"
     
-    # Parse compare-specific arguments
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --summary-only) summary_only="true"; shift ;;
-            -h|--help) cmd_compare_help; exit 0 ;;
-            -*) log_error "Unknown compare option: $1"; exit 1 ;;
-            *)
-                if [[ -z "$env1" ]]; then
-                    env1="$1"
-                else
-                    env2="$1"
-                fi
-                shift
-                ;;
-        esac
-    done
-    
-    if [[ -z "$env1" || -z "$env2" ]]; then
-        log_error "Both environments are required for comparison"
-        cmd_compare_help
-        exit 1
-    fi
-    
-    validate_environment "$env1"
-    validate_environment "$env2"
-    
-    local bucket1=$(get_bucket_name "$env1")
-    local bucket2=$(get_bucket_name "$env2")
-    
-    log_header "Comparing Assets"
-    echo "  Environment 1: $env1 (s3://$bucket1/)"
-    echo "  Environment 2: $env2 (s3://$bucket2/)"
     echo ""
+    echo "Suggested workflow for asset comparison:"
+    echo "  1. Download current production: ./assets.sh download ./current-prod/"
+    echo "  2. Compare with local assets: diff -r ./current-prod/ ./new-assets/"
+    echo "  3. Upload changes: ./assets.sh upload ./new-assets/"
     
     # Get file lists for both environments
     log_info "Fetching asset lists..."
@@ -808,19 +765,17 @@ cmd_info() {
     log_header "InnerWorld Asset Management Info"
     echo ""
     
-    echo -e "${YELLOW}S3 Buckets:${NC}"
-    for env in dev staging prod; do
-        local bucket=$(get_bucket_name "$env")
-        echo "  $env: $bucket"
-        
-        # Check if bucket exists and get basic info
-        if aws s3 ls "s3://$bucket/" --profile "$AWS_PROFILE" &> /dev/null; then
-            local count=$(aws s3 ls "s3://$bucket/" --recursive --profile "$AWS_PROFILE" | wc -l)
-            echo "    Status: ✅ Accessible ($count assets)"
-        else
-            echo "    Status: ❌ Not accessible or doesn't exist"
-        fi
-    done
+    echo -e "${YELLOW}S3 Bucket:${NC}"
+    local bucket=$(get_bucket_name "prod")
+    echo "  production: $bucket"
+    
+    # Check if bucket exists and get basic info
+    if aws s3 ls "s3://$bucket/" --profile "$AWS_PROFILE" &> /dev/null; then
+        local count=$(aws s3 ls "s3://$bucket/" --recursive --profile "$AWS_PROFILE" | wc -l)
+        echo "    Status: ✅ Accessible ($count assets)"
+    else
+        echo "    Status: ❌ Not accessible or doesn't exist"
+    fi
     echo ""
     
     echo -e "${YELLOW}CloudFront:${NC}"
@@ -830,7 +785,6 @@ cmd_info() {
     else
         echo "  Production: ⚠️  Not configured (update script with distribution ID)"
     fi
-    echo "  Dev/Staging: Direct S3 access (no CloudFront)"
     echo ""
     
     echo -e "${YELLOW}AWS Configuration:${NC}"
@@ -878,10 +832,6 @@ COMMAND=""
 # Parse global arguments first
 while [[ $# -gt 0 ]]; do
     case $1 in
-        -e|--env)
-            # This will be handled by individual commands
-            break
-            ;;
         -p|--profile)
             AWS_PROFILE="$2"
             shift 2

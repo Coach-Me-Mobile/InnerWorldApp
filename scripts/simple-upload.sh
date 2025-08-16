@@ -12,7 +12,7 @@ set -e
 # Configuration
 AWS_REGION="us-east-1"
 AWS_PROFILE="${AWS_PROFILE:-default}"
-ENVIRONMENT="dev"
+ENVIRONMENT="prod"
 TARGET_PREFIX="assets/"
 
 # Colors
@@ -24,8 +24,6 @@ NC='\033[0m'
 get_bucket_name() {
     local env=$1
     case "$env" in
-        dev) echo "innerworld-dev-app-assets" ;;
-        staging) echo "innerworld-staging-app-assets" ;;
         prod) echo "innerworld-prod-app-assets" ;;
         *) echo "" ;;
     esac
@@ -37,7 +35,7 @@ print_usage() {
     echo "Usage: $0 [OPTIONS] <directory_path>"
     echo ""
     echo "Options:"
-    echo "  -e, --env ENV        Environment (dev, staging, prod) [default: dev]"
+    echo "  -e, --env ENV        Environment (only 'prod' available) [default: prod]"
     echo "  -t, --target PATH    Target S3 path prefix [default: assets/]"
     echo "  -d, --dry-run        Show what would be uploaded"
     echo "  -h, --help           Show this help"

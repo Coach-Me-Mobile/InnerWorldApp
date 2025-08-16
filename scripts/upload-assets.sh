@@ -26,8 +26,6 @@ AWS_REGION="us-east-1"
 get_bucket_name() {
     local env=$1
     case "$env" in
-        dev) echo "innerworld-dev-app-assets" ;;
-        staging) echo "innerworld-staging-app-assets" ;;
         prod) echo "innerworld-prod-app-assets" ;;
         *) echo "" ;;
     esac
@@ -67,7 +65,7 @@ print_usage() {
     echo "Usage: $0 [OPTIONS] <directory_path>"
     echo ""
     echo "Options:"
-    echo "  -e, --env ENV        Environment (dev, staging, prod) [default: dev]"
+    echo "  -e, --env ENV        Environment (only 'prod' available) [default: prod]"
     echo "  -p, --profile PROF   AWS CLI profile [default: \$AWS_PROFILE or 'default']"
     echo "  -t, --target PATH    Target S3 path prefix [default: assets/]"
     echo "  -c, --invalidate     Invalidate CloudFront cache after upload (production only)"
@@ -81,10 +79,8 @@ print_usage() {
     echo "  $0 -e staging -t images/ ./icons/      # Upload to staging under 'images/' prefix"
     echo "  $0 -d ./assets/                        # Dry run to see what would be uploaded"
     echo ""
-    echo "S3 Buckets:"
-    echo "  dev:     $(get_bucket_name dev)"
-    echo "  staging: $(get_bucket_name staging)" 
-    echo "  prod:    $(get_bucket_name prod)"
+    echo "S3 Bucket:"
+    echo "  production: $(get_bucket_name prod)"
 }
 
 log_info() {
@@ -129,7 +125,7 @@ validate_environment() {
     local bucket=$(get_bucket_name "$env")
     if [[ -z "$bucket" ]]; then
         log_error "Invalid environment: $env"
-        echo "Valid environments: dev, staging, prod"
+        echo "Only 'prod' environment is available"
         exit 1
     fi
 }
@@ -321,7 +317,7 @@ upload_assets() {
 # ARGUMENT PARSING
 # ==============================================================================
 
-ENVIRONMENT="dev"
+ENVIRONMENT="prod"
 TARGET_PREFIX="assets/"
 INVALIDATE_CACHE="false"
 DRY_RUN="false"

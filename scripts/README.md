@@ -159,27 +159,27 @@ Scripts require AWS IAM permissions for:
 ### **🎨 Asset Development Workflow**
 
 ```bash
-# 1. Upload new assets to dev for testing
-./scripts/assets.sh upload ./new-designs/
+# 1. Download current production for backup
+./scripts/assets.sh download ./backup/
 
-# 2. Test in mobile app, then promote to staging
-./scripts/assets.sh sync dev staging
+# 2. Upload new assets to production
+./scripts/assets.sh upload -c ./new-designs/
 
-# 3. After approval, deploy to production
-./scripts/assets.sh upload -e prod -c ./final-assets/
+# 3. Verify changes
+./scripts/assets.sh list
 ```
 
-### **🔄 Environment Sync Workflow**
+### **🔄 Asset Management Workflow**
 
 ```bash
-# 1. Compare environments
-./scripts/assets.sh compare dev staging
+# 1. Create local backup
+./scripts/assets.sh download ./backup/
 
-# 2. Sync differences
-./scripts/assets.sh sync dev staging
+# 2. Upload new assets
+./scripts/assets.sh upload -c ./new-assets/
 
-# 3. Verify sync completed
-./scripts/assets.sh compare dev staging --summary-only
+# 3. Verify upload completed
+./scripts/assets.sh list
 ```
 
 ### **🧪 Testing Workflow**
@@ -204,22 +204,22 @@ Scripts require AWS IAM permissions for:
 ### **🚀 Deployment Workflow**
 
 ```bash
-# 1. Start development environment
-./scripts/dev-start.sh
-
-# 2. Build and test
+# 1. Build and test backend (if needed)
+cd backend
 ./scripts/build-for-terraform.sh
 ./scripts/test-unit.sh
 
-# 3. Upload assets
-./scripts/assets.sh upload -e staging ./assets/
+# 2. Upload assets to production
+cd ..
+./scripts/assets.sh upload -c ./assets/
 
-# 4. Deploy via Terraform (manual)
-cd infrastructure/environments/staging
+# 3. Deploy via Terraform (manual)
+cd infrastructure/environments/prod
 terraform apply
 
-# 5. Validate deployment
-./scripts/test-health.sh
+# 4. Validate deployment
+cd ../../..
+./scripts/validate-api-endpoints.sh
 ```
 
 ## 🐛 **Troubleshooting**
@@ -275,9 +275,9 @@ aws s3 ls s3://innerworld-dev-app-assets/
 | Task | Script | Example |
 |------|--------|---------|
 | Upload assets | `assets.sh upload` | `./scripts/assets.sh upload ./images/` |
-| Download assets | `assets.sh download` | `./scripts/assets.sh download -e prod` |
-| List assets | `assets.sh list` | `./scripts/assets.sh list -e staging -l` |
-| Sync environments | `assets.sh sync` | `./scripts/assets.sh sync dev staging` |
+| Download assets | `assets.sh download` | `./scripts/assets.sh download` |
+| List assets | `assets.sh list` | `./scripts/assets.sh list -l` |
+| Sync to backup | `assets.sh sync` | `./scripts/assets.sh sync prod ./backup/` |
 | Test backend | `test-unit.sh` | `./scripts/test-unit.sh` |
 | Build for deploy | `build-for-terraform.sh` | `./scripts/build-for-terraform.sh` |
 | Check AWS setup | `check-aws-tools.sh` | `./scripts/check-aws-tools.sh` |
