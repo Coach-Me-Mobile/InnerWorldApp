@@ -184,7 +184,8 @@ jobs:
             echo "   Using API Key: $ASC_KEY_ID"
             echo "   📝 Note: No manual certificates needed - API handles everything automatically!"
             
-            # Archive with automatic signing using App Store Connect API authentication
+            # Archive with explicit Distribution code signing using App Store Connect API
+            echo "🔐 Forcing Apple Distribution certificate usage..."
             xcodebuild \
               -project InnerWorld.xcodeproj \
               -scheme InnerWorld \
@@ -198,8 +199,10 @@ jobs:
               MARKETING_VERSION="$VERSION_NUMBER" \
               CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
               CODE_SIGN_STYLE=Automatic \
+              CODE_SIGN_IDENTITY="Apple Distribution" \
               DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
               PRODUCT_BUNDLE_IDENTIFIER="com.thoughtmanifold.InnerWorld" \
+              PROVISIONING_PROFILE_SPECIFIER="" \
               archive
             
             # Export IPA
