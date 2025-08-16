@@ -98,7 +98,7 @@ print_usage() {
     echo "  -h, --help           Show this help message"
     echo ""
     echo -e "${YELLOW}Examples:${NC}"
-    echo "  $0 upload ./my-assets/              # Upload to production"
+    echo "  $0 upload ./ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/ # Upload iOS assets to production"
     echo "  $0 download images/                 # Download images from production"
     echo "  $0 list                             # List production assets"
     echo "  $0 sync ./local-assets/ ./backup/   # Sync local to backup"
@@ -215,10 +215,10 @@ cmd_upload_help() {
     echo "  --delete             Delete extraneous files from destination"
     echo ""
     echo "Examples:"
-    echo "  $0 upload ./my-images/                    # Upload to prod/assets/"
-    echo "  $0 upload -c ./icons/                     # Upload to prod with cache invalidation"
+    echo "  $0 upload ./ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/ # Upload iOS assets to prod/assets/"
+    echo "  $0 upload -c ./ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/ # Upload iOS assets with cache invalidation"
     echo "  $0 upload -t images/ ./new-images/        # Upload to prod/images/"
-    echo "  $0 upload -d ./assets/                    # Dry run to preview changes"
+    echo "  $0 upload -d ./ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/ # Dry run to preview changes"
 }
 
 cmd_upload() {
@@ -349,7 +349,7 @@ cmd_download_help() {
     echo ""
     echo "Arguments:"
     echo "  remote_path          S3 path to download (optional, defaults to entire bucket)"
-    echo "  local_path           Local destination path [default: ./downloaded-assets/]"
+    echo "  local_path           Local destination path [default: ./ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/]"
     echo ""
     echo "Examples:"
     echo "  $0 download                               # Download all production assets"
@@ -359,7 +359,7 @@ cmd_download_help() {
 
 cmd_download() {
     local remote_path=""
-    local local_path="./downloaded-assets/"
+    local local_path="./ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/"
     local environment="prod"
     local dry_run="false"
     local delete_extra="false"
@@ -550,8 +550,8 @@ cmd_sync_help() {
     echo "  destination          Destination: 'prod' or local path"
     echo ""
     echo "Examples:"
-    echo "  $0 sync prod ./backup/                   # Download prod assets to local"
-    echo "  $0 sync ./local-assets/ prod             # Upload local assets to prod"
+    echo "  $0 sync prod ./ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/ # Download prod assets to iOS directory"
+    echo "  $0 sync ./ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/ prod # Upload iOS assets to prod"
     echo "  $0 sync -d ./backup/ prod                # Dry run sync from local to prod"
 }
 
@@ -695,8 +695,8 @@ cmd_compare() {
     echo ""
     echo "Suggested workflow for asset comparison:"
     echo "  1. Download current production: ./assets.sh download ./current-prod/"
-    echo "  2. Compare with local assets: diff -r ./current-prod/ ./new-assets/"
-    echo "  3. Upload changes: ./assets.sh upload ./new-assets/"
+    echo "  2. Compare with iOS assets: diff -r ./current-prod/ ./ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/"
+    echo "  3. Upload changes: ./assets.sh upload ./ios/InnerWorld/InnerWorldRoom/Sources/InnerWorldRoom/InnerWorldRoom.rkassets/"
     
     # Get file lists for both environments
     log_info "Fetching asset lists..."
