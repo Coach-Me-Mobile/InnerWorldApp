@@ -66,83 +66,69 @@ jobs:
             echo "🔄 Automatic TestFlight deployment (main branch)"
           fi
       
-      - name: Get Apple credentials
+      - name: Retrieve secrets from AWS Secrets Manager
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: |
+            innerworld-prod/apple/signin-key
+            innerworld-prod/appstoreconnect/api-key
+          parse-json-secrets: true
+
+      - name: Validate and setup credentials
         run: |
-          echo "🔍 Retrieving Apple credentials from AWS Secrets Manager..."
+          echo "🔍 Validating retrieved AWS Secrets Manager credentials..."
           echo "🔧 Current AWS Region: $AWS_REGION"
           echo "🔧 Current AWS Account: $(aws sts get-caller-identity --query Account --output text 2>/dev/null || echo 'Unable to determine')"
           
-          # Get Apple Team ID with error handling
-          echo "📱 Fetching Apple Sign-In credentials..."
-          if APPLE_SECRETS=$(aws secretsmanager get-secret-value \
-            --secret-id "innerworld-prod/apple/signin-key" \
-            --query SecretString --output text 2>/dev/null); then
-            
-            APPLE_TEAM_ID=$(echo "$APPLE_SECRETS" | jq -r '.team_id // empty')
-            
-            # Check if team ID is valid (not empty, null, or placeholder)
-            if [[ -n "$APPLE_TEAM_ID" && "$APPLE_TEAM_ID" != "null" && ! "$APPLE_TEAM_ID" =~ ^(YOUR_|REPLACE_WITH) ]]; then
-              echo "✅ Retrieved valid Apple Team ID"
-              echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> $GITHUB_ENV
-              echo "HAS_VALID_TEAM_ID=true" >> $GITHUB_ENV
-              
-              # Also store Apple Client ID for later use
-              APPLE_CLIENT_ID=$(echo "$APPLE_SECRETS" | jq -r '.client_id // empty')
-              echo "APPLE_CLIENT_ID=$APPLE_CLIENT_ID" >> $GITHUB_ENV
-              echo "🎯 Apple Sign-In configured successfully"
-            else
-              echo "⚠️  Invalid or placeholder Apple Team ID detected"
-              echo "   Please update innerworld-prod/apple/signin-key with real values"
-              echo "HAS_VALID_TEAM_ID=false" >> $GITHUB_ENV
-            fi
+          # Validate Apple Team ID
+          echo "📱 Validating Apple Sign-In credentials..."
+          if [[ -n "$APPLE_TEAM_ID" && "$APPLE_TEAM_ID" != "null" && ! "$APPLE_TEAM_ID" =~ ^(YOUR_|REPLACE_WITH) ]]; then
+            echo "✅ Valid Apple Team ID found: $APPLE_TEAM_ID"
+            echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> $GITHUB_ENV
+            echo "APPLE_CLIENT_ID=$APPLE_CLIENT_ID" >> $GITHUB_ENV
+            echo "HAS_VALID_TEAM_ID=true" >> $GITHUB_ENV
+            echo "🎯 Apple Sign-In configured successfully"
           else
-            echo "⚠️  Failed to retrieve Apple secrets - will use automatic signing"
+            echo "⚠️  Invalid or missing Apple Team ID: '$APPLE_TEAM_ID'"
+            echo "   Please update innerworld-prod/apple/signin-key with valid team_id"
             echo "HAS_VALID_TEAM_ID=false" >> $GITHUB_ENV
           fi
           
-          # Get App Store Connect API key with error handling
-          echo "🏪 Fetching App Store Connect API credentials..."
-          if ASC_SECRETS=$(aws secretsmanager get-secret-value \
-            --secret-id "innerworld-prod/appstoreconnect/api-key" \
-            --query SecretString --output text 2>/dev/null); then
+          # Validate App Store Connect credentials
+          echo "🏪 Validating App Store Connect API credentials..."
+          if [[ -n "$ASC_KEY_ID" && "$ASC_KEY_ID" != "null" && ! "$ASC_KEY_ID" =~ ^(YOUR_|REPLACE_WITH) && \
+                -n "$ASC_ISSUER_ID" && "$ASC_ISSUER_ID" != "null" && ! "$ASC_ISSUER_ID" =~ ^(YOUR_|REPLACE_WITH) ]]; then
+            echo "🔑 Valid App Store Connect API credentials found"
+            echo "🏢 Key ID: $ASC_KEY_ID"
+            echo "🏢 Issuer ID: $ASC_ISSUER_ID"
             
-            ASC_KEY_ID=$(echo "$ASC_SECRETS" | jq -r '.key_id // empty')
-            ASC_ISSUER_ID=$(echo "$ASC_SECRETS" | jq -r '.issuer_id // empty')
+            # Create App Store Connect API key file
+            mkdir -p ~/.appstoreconnect/private_keys
+            echo "$ASC_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
             
-            # Check if App Store Connect credentials are valid (not empty, null, or placeholder)
-            if [[ -n "$ASC_KEY_ID" && "$ASC_KEY_ID" != "null" && ! "$ASC_KEY_ID" =~ ^(YOUR_|REPLACE_WITH) && \
-                  -n "$ASC_ISSUER_ID" && "$ASC_ISSUER_ID" != "null" && ! "$ASC_ISSUER_ID" =~ ^(YOUR_|REPLACE_WITH) ]]; then
-              echo "🔑 App Store Connect API configured with valid credentials"
-              echo "🏢 Credentials validated successfully"
-              
-              # Create App Store Connect API key file
-              mkdir -p ~/.appstoreconnect/private_keys
-              echo "$ASC_SECRETS" | jq -r '.private_key' > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
-              
-              # Verify the key file was created successfully
-              if [[ -f ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8 ]]; then
-                echo "✅ App Store Connect API key file created successfully"
-              else
-                echo "❌ Failed to create App Store Connect API key file"
-              fi
-              
-              echo "ASC_KEY_ID=$ASC_KEY_ID" >> $GITHUB_ENV
-              echo "ASC_ISSUER_ID=$ASC_ISSUER_ID" >> $GITHUB_ENV
-              echo "HAS_ASC_CREDENTIALS=true" >> $GITHUB_ENV
+            # Verify the key file was created successfully
+            if [[ -f ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8 ]]; then
+              echo "✅ App Store Connect API key file created successfully"
             else
-              echo "⚠️  Invalid or placeholder App Store Connect credentials"
-              echo "   Detected placeholder or invalid values in secret"
-              echo "   Please update innerworld-prod/appstoreconnect/api-key with real values"
-              echo "HAS_ASC_CREDENTIALS=false" >> $GITHUB_ENV
+              echo "❌ Failed to create App Store Connect API key file"
             fi
+            
+            echo "ASC_KEY_ID=$ASC_KEY_ID" >> $GITHUB_ENV
+            echo "ASC_ISSUER_ID=$ASC_ISSUER_ID" >> $GITHUB_ENV
+            echo "HAS_ASC_CREDENTIALS=true" >> $GITHUB_ENV
           else
-            echo "⚠️  Failed to retrieve App Store Connect secrets"
-            echo "   This could be due to:"
-            echo "   - Secret doesn't exist: innerworld-prod/appstoreconnect/api-key"
-            echo "   - Insufficient AWS permissions"
-            echo "   - Wrong AWS region/account"
+            echo "⚠️  Invalid or missing App Store Connect credentials"
+            echo "   Key ID: '$ASC_KEY_ID'"
+            echo "   Issuer ID: '$ASC_ISSUER_ID'"
+            echo "   Please update innerworld-prod/appstoreconnect/api-key with valid credentials"
             echo "HAS_ASC_CREDENTIALS=false" >> $GITHUB_ENV
           fi
+        env:
+          APPLE_TEAM_ID: ${{ env.INNERWORLD_PROD_APPLE_SIGNIN_KEY_TEAM_ID }}
+          APPLE_CLIENT_ID: ${{ env.INNERWORLD_PROD_APPLE_SIGNIN_KEY_CLIENT_ID }}
+          ASC_KEY_ID: ${{ env.INNERWORLD_PROD_APPSTORECONNECT_API_KEY_KEY_ID }}
+          ASC_ISSUER_ID: ${{ env.INNERWORLD_PROD_APPSTORECONNECT_API_KEY_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ env.INNERWORLD_PROD_APPSTORECONNECT_API_KEY_PRIVATE_KEY }}
       
       - name: Import Apple certificates
         run: |
