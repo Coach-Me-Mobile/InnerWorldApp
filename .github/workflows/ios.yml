@@ -184,9 +184,9 @@ jobs:
           
           # Determine signing strategy based on available credentials
           if [[ "${HAS_VALID_TEAM_ID}" == "true" && "${HAS_CERTIFICATES}" == "true" && "${HAS_ASC_CREDENTIALS}" == "true" ]]; then
-            echo "🔐 Using manual code signing with Team ID: $APPLE_TEAM_ID"
+            echo "🔐 Using automatic code signing with Team ID: $APPLE_TEAM_ID"
             
-            # Archive with manual code signing
+            # Archive with automatic code signing (works with distribution certificates)
             xcodebuild \
               -project InnerWorld.xcodeproj \
               -scheme InnerWorld \
@@ -195,9 +195,8 @@ jobs:
               -archivePath InnerWorld.xcarchive \
               MARKETING_VERSION="$VERSION_NUMBER" \
               CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-              CODE_SIGN_STYLE=Manual \
+              CODE_SIGN_STYLE=Automatic \
               DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-              PROVISIONING_PROFILE_SPECIFIER="InnerWorld" \
               archive
             
             # Export IPA
