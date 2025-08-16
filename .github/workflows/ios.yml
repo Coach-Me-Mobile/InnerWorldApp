@@ -147,7 +147,7 @@ jobs:
           
           # Import certificates from GitHub secrets
           if [ -n "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" ]; then
-            echo "📱 Importing Apple Developer certificate from GitHub secrets..."
+            echo "📱 Importing Apple Distribution certificate from GitHub secrets..."
             echo "${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}" | base64 --decode > certificate.p12
             security import certificate.p12 -k build.keychain -P "${{ secrets.APPLE_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
             security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
@@ -184,20 +184,21 @@ jobs:
           
           # Determine signing strategy based on available credentials
           if [[ "${HAS_VALID_TEAM_ID}" == "true" && "${HAS_CERTIFICATES}" == "true" && "${HAS_ASC_CREDENTIALS}" == "true" ]]; then
-            echo "🔐 Using automatic code signing with Team ID: $APPLE_TEAM_ID"
+            echo "🔐 Using manual code signing with Team ID: $APPLE_TEAM_ID"
             
-            # Archive with automatic code signing (works with distribution certificates)
+            # Archive with manual code signing (distribution certificate required)
             xcodebuild \
               -project InnerWorld.xcodeproj \
               -scheme InnerWorld \
               -destination "generic/platform=iOS" \
               -configuration Release \
               -archivePath InnerWorld.xcarchive \
-              -allowProvisioningUpdates \
               MARKETING_VERSION="$VERSION_NUMBER" \
               CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-              CODE_SIGN_STYLE=Automatic \
+              CODE_SIGN_STYLE=Manual \
               DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+              PROVISIONING_PROFILE_SPECIFIER="com.thoughtmanifold.InnerWorld AppStore" \
+              CODE_SIGN_IDENTITY="iPhone Distribution" \
               archive
             
             # Export IPA
@@ -234,23 +235,24 @@ jobs:
             echo "✅ Deployed to TestFlight: Build $BUILD_NUMBER, Version $VERSION_NUMBER"
             
           elif [[ "${HAS_VALID_TEAM_ID}" == "true" && "${HAS_CERTIFICATES}" == "true" ]]; then
-            echo "🔐 Using automatic code signing with Team ID: $APPLE_TEAM_ID"
+            echo "🔐 Using manual code signing with Team ID: $APPLE_TEAM_ID"
             
-            # Archive with automatic code signing
+            # Archive with manual code signing
             xcodebuild \
               -project InnerWorld.xcodeproj \
               -scheme InnerWorld \
               -destination "generic/platform=iOS" \
               -configuration Release \
               -archivePath InnerWorld.xcarchive \
-              -allowProvisioningUpdates \
               MARKETING_VERSION="$VERSION_NUMBER" \
               CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-              CODE_SIGN_STYLE=Automatic \
+              CODE_SIGN_STYLE=Manual \
               DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+              PROVISIONING_PROFILE_SPECIFIER="com.thoughtmanifold.InnerWorld AppStore" \
+              CODE_SIGN_IDENTITY="iPhone Distribution" \
               archive
             
-            echo "✅ iOS app archived successfully (automatic signing)!"
+            echo "✅ iOS app archived successfully (manual signing)!"
             echo "📋 Manual TestFlight upload required (missing App Store Connect API key or provisioning profile)"
             
           else
@@ -277,10 +279,13 @@ jobs:
             echo "   AWS Secrets (✅ CONFIGURED):"
             echo "     - innerworld-prod/apple/signin-key (with valid team_id)"
             echo "     - innerworld-prod/appstoreconnect/api-key (with key_id, issuer_id, private_key)"
-            echo "   GitHub Secrets (for code signing certificates):"
-            echo "     - APPLE_CERTIFICATE_P12_BASE64"
+            echo "   GitHub Secrets (for manual code signing):"
+            echo "     - APPLE_CERTIFICATE_P12_BASE64 (iOS Distribution certificate)"
             echo "     - APPLE_CERTIFICATE_PASSWORD" 
-            echo "     - APPLE_PROVISIONING_PROFILE_BASE64"
+            echo "     - APPLE_PROVISIONING_PROFILE_BASE64 (App Store provisioning profile)"
+            echo ""
+            echo "   📝 IMPORTANT: Use 'iOS Distribution' certificate and 'App Store' provisioning profile"
+            echo "   📝 The provisioning profile should be named: 'com.thoughtmanifold.InnerWorld AppStore'"
           fi
       
       - name: Cleanup keychain
