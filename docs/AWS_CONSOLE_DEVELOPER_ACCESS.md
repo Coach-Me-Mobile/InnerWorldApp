@@ -127,24 +127,30 @@ aws configure
 # Default output format: json
 ```
 
-### **Use the Upload Script**
+### **Use the Asset Management Script**
 
 ```bash
-# Download the upload script
-curl -O https://raw.githubusercontent.com/your-repo/scripts/upload-assets.sh
-chmod +x upload-assets.sh
+# Download the unified asset management script
+curl -O https://raw.githubusercontent.com/your-repo/scripts/assets.sh
+chmod +x assets.sh
 
 # Upload assets to dev environment
-./upload-assets.sh ./my-assets/
+./assets.sh upload ./my-assets/
 
 # Upload to production with CloudFront cache invalidation
-./upload-assets.sh -e prod -c ./production-assets/
+./assets.sh upload -e prod -c ./production-assets/
 
-# Dry run to see what would be uploaded
-./upload-assets.sh -d ./assets/
+# Download assets from production
+./assets.sh download -e prod
+
+# List assets in staging
+./assets.sh list -e staging
+
+# Sync between environments
+./assets.sh sync dev staging
 
 # Get help
-./upload-assets.sh --help
+./assets.sh --help
 ```
 
 ## 🔒 **Security Best Practices**
