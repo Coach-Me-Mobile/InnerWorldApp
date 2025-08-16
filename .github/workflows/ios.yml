@@ -183,22 +183,27 @@ jobs:
           echo "Has ASC credentials: ${HAS_ASC_CREDENTIALS:-false}"
           
           # Determine signing strategy based on available credentials
-          if [[ "${HAS_VALID_TEAM_ID}" == "true" && "${HAS_CERTIFICATES}" == "true" && "${HAS_ASC_CREDENTIALS}" == "true" ]]; then
-            echo "🔐 Using manual code signing with Team ID: $APPLE_TEAM_ID"
+          if [[ "${HAS_VALID_TEAM_ID}" == "true" && "${HAS_ASC_CREDENTIALS}" == "true" ]]; then
+            echo "🔐 Using automatic code signing with App Store Connect API authentication"
+            echo "   Team ID: $APPLE_TEAM_ID"
+            echo "   Using API Key: $ASC_KEY_ID"
+            echo "   📝 Note: No manual certificates needed - API handles everything automatically!"
             
-            # Archive with manual code signing (distribution certificate required)
+            # Archive with automatic signing using App Store Connect API authentication
             xcodebuild \
               -project InnerWorld.xcodeproj \
               -scheme InnerWorld \
               -destination "generic/platform=iOS" \
               -configuration Release \
               -archivePath InnerWorld.xcarchive \
+              -allowProvisioningUpdates \
+              -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+              -authenticationKeyID "$ASC_KEY_ID" \
+              -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
               MARKETING_VERSION="$VERSION_NUMBER" \
               CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-              CODE_SIGN_STYLE=Manual \
+              CODE_SIGN_STYLE=Automatic \
               DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-              PROVISIONING_PROFILE_SPECIFIER="com.thoughtmanifold.InnerWorld AppStore" \
-              CODE_SIGN_IDENTITY="iPhone Distribution" \
               archive
             
             # Export IPA
@@ -257,10 +262,9 @@ jobs:
             
           else
             echo "⚠️  Building without code signing for verification only..."
-            echo "Missing credentials:"
-            [[ "${HAS_VALID_TEAM_ID}" != "true" ]] && echo "   - Valid Apple Team ID"
-            [[ "${HAS_CERTIFICATES}" != "true" ]] && echo "   - Apple Certificates and Provisioning Profile"
-            [[ "${HAS_ASC_CREDENTIALS}" != "true" ]] && echo "   - App Store Connect API credentials"
+            echo "Missing credentials for App Store Connect API signing:"
+            [[ "${HAS_VALID_TEAM_ID}" != "true" ]] && echo "   - Valid Apple Team ID (AWS Secrets Manager)"
+            [[ "${HAS_ASC_CREDENTIALS}" != "true" ]] && echo "   - App Store Connect API credentials (AWS Secrets Manager)"
             
             # Build without code signing
             xcodebuild \
@@ -279,13 +283,10 @@ jobs:
             echo "   AWS Secrets (✅ CONFIGURED):"
             echo "     - innerworld-prod/apple/signin-key (with valid team_id)"
             echo "     - innerworld-prod/appstoreconnect/api-key (with key_id, issuer_id, private_key)"
-            echo "   GitHub Secrets (for manual code signing):"
-            echo "     - APPLE_CERTIFICATE_P12_BASE64 (iOS Distribution certificate)"
-            echo "     - APPLE_CERTIFICATE_PASSWORD" 
-            echo "     - APPLE_PROVISIONING_PROFILE_BASE64 (App Store provisioning profile)"
             echo ""
-            echo "   📝 IMPORTANT: Use 'iOS Distribution' certificate and 'App Store' provisioning profile"
-            echo "   📝 The provisioning profile should be named: 'com.thoughtmanifold.InnerWorld AppStore'"
+            echo "   ✅ MODERN APPROACH: Using App Store Connect API for automatic signing"
+            echo "   📝 No GitHub certificate secrets needed - API manages certificates automatically!"
+            echo "   📝 This is Apple's recommended approach for CI/CD in 2024"
           fi
       
       - name: Cleanup keychain
